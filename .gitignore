@@ -1,1 +1,8 @@
+/config.pri
+Makefile
+.help/
+.moc/
+.obj/
+.rcc/
+.ui/
 *~
