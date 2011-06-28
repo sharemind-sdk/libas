@@ -76,7 +76,7 @@ char * token_string_value(const struct Token * t, size_t * length) {
     if (length)
         *length = l;
 
-    char * s = malloc(sizeof(char) * l);
+    char * s = malloc(sizeof(char) * (l + 1));
     if (unlikely(!s))
         return NULL;
 
@@ -98,7 +98,7 @@ char * token_string_value(const struct Token * t, size_t * length) {
                 case 'b':  *op = '\b'; break;
                 case 'f':  *op = '\f'; break;
                 case 'a':  *op = '\a'; break;
-                /** \todo \xFFFF.. and \377 syntax. */
+                case '0':  *op = '\0'; break; /**< \todo proper \xFFFF.. and \377 syntax. */
                 case '\'': /* *op = '\''; break; */
                 case '"':  /* *op = '"';  break; */
                 case '?':  /* *op = '?';  break; */
@@ -110,6 +110,7 @@ char * token_string_value(const struct Token * t, size_t * length) {
         op++;
     }
 
+    s[l] = '\0';
     return s;
 }
 
