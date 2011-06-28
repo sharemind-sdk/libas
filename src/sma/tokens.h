@@ -11,12 +11,7 @@ extern "C" {
 #endif
 
 #define SMA_ENUM_TokenType \
-    (TOKEN_START) \
-    (TOKEN_BOM) \
-    (TOKEN_WHITESPACE) \
-    (TOKEN_COMMENT) \
     (TOKEN_NEWLINE) \
-    (TOKEN_EOF) \
     (TOKEN_DIRECTIVE) \
     (TOKEN_HEX) \
     (TOKEN_STRING) \
