@@ -248,7 +248,7 @@ tokenize_keyword2:
 
     TOKENIZE_INC_CHECK_EOF(tokenize_ok);
     switch (*c) {
-        case 'a' ... 'z': case 'A' ... 'Z': case '_':
+        case '0' ... '9': case 'a' ... 'z': case 'A' ... 'Z': case '_':
             lastToken->length++;
             break;
         case ' ': case '\t': case '\r': case '\v': case '\f':
