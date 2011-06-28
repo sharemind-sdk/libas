@@ -4,6 +4,7 @@ TEMPLATE = app
 TARGET = ../../bin/sma
 
 SOURCES += \
+    ../vm/instr.c \
     main.c \
     stdion.c \
     tokenizer.c \
