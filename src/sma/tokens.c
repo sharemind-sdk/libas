@@ -124,6 +124,11 @@ struct Tokens * tokens_new() {
     return ts;
 }
 
+void tokens_free(struct Tokens * ts) {
+    free(ts->array);
+    free(ts);
+}
+
 void tokens_print(const struct Tokens *ts) {
     assert(ts);
     int newLine = 1;

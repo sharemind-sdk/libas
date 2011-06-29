@@ -41,6 +41,8 @@ struct Tokens {
 
 struct Tokens * tokens_new();
 
+void tokens_free(struct Tokens * ts);
+
 void tokens_print(const struct Tokens *ts);
 
 struct Token * tokens_append(struct Tokens * ts, enum SMA_TokenType type,
