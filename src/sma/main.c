@@ -1,21 +1,60 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "../vm/instr.h"
+#include "../codeblock.h"
 #include "../preprocessor.h"
 #include "../trie.h"
 #include "../vector.h"
+#include "../vm/instr.h"
 #include "tokens.h"
 #include "tokenizer.h"
 
-struct Label {
+struct LabelSlot {
+    size_t linkingUnit;
+    size_t section;
+    size_t extraOffset;
+    union SVM_IBlock * cbdata;
+    const struct Token * token; /* NULL if this slot is already filled */
+};
+
+int LabelSlot_filled(struct LabelSlot * s, void * d) {
+    assert(s);
+    if (s->token == NULL)
+        return 1;
+    *((struct LabelSlot **) d) = s;
+    return 0;
+}
+
+SVM_VECTOR_DECLARE(LabelSlots,struct LabelSlot,)
+SVM_VECTOR_DEFINE(LabelSlots,struct LabelSlot,malloc,free,realloc)
+
+int LabelSlots_allSlotsFilled(struct LabelSlots * ss, void * d) {
+    return LabelSlots_foreach_with_data(ss, &LabelSlot_filled, d);
+}
+
+int LabelSlot_fill(struct LabelSlot * s, void * vl);
+
+SVM_TRIE_DECLARE(LabelSlotsTrie,struct LabelSlots)
+SVM_TRIE_DEFINE(LabelSlotsTrie,struct LabelSlots,malloc,free)
+
+struct LabelLocation {
     size_t linkingUnit;
     size_t section;
     size_t offset;
 };
 
-SVM_TRIE_DECLARE(LabelLocations,struct Label)
-SVM_TRIE_DEFINE(LabelLocations,struct Label,malloc,free)
+SVM_TRIE_DECLARE(LabelLocations,struct LabelLocation)
+SVM_TRIE_DEFINE(LabelLocations,struct LabelLocation,malloc,free)
+
+int LabelSlot_fill(struct LabelSlot * s, void * vl) {
+    assert(s);
+    assert(vl);
+    assert(s->token);
+    struct LabelLocation * l = (struct LabelLocation *) vl;
+    s->cbdata->sizet[0] = s->extraOffset + l->offset; /**< \todo check overflow? */
+    s->token = NULL;
+    return 1;
+}
 
 enum Section_Type {
     SECTION_TYPE_TEXT = 0,
@@ -29,7 +68,10 @@ enum Section_Type {
 
 struct Section {
     size_t length;
-    char * data;
+    union {
+        char * data;
+        union SVM_IBlock * cbdata;
+    };
 };
 
 void Section_init(struct Section * s) {
@@ -67,7 +109,7 @@ SVM_VECTOR_DEFINE(LinkingUnits,struct LinkingUnit,malloc,free,realloc)
     ((PASS_ONE_UNKNOWN_DIRECTIVE,)) \
     ((PASS_ONE_UNKNOWN_INSTRUCTION,)) \
     ((PASS_ONE_INVALID_PARAMETER,)) \
-    ((PASS_ONE_INVALID_ALIGNMENT,))
+    ((PASS_ONE_UNDEFINED_LABEL,))
 SVM_ENUM_CUSTOM_DEFINE(SMA_Pass_One_Error , SMA_ENUM_Pass_One_Error);
 SVM_ENUM_DECLARE_TOSTRING(SMA_Pass_One_Error);
 SVM_ENUM_CUSTOM_DEFINE_TOSTRING(SMA_Pass_One_Error, SMA_ENUM_Pass_One_Error);
@@ -92,20 +134,27 @@ SVM_ENUM_CUSTOM_DEFINE_TOSTRING(SMA_Pass_One_Error, SMA_ENUM_Pass_One_Error);
         PASS_ONE_DO_EOL(eof,noexpect); \
     } else (void) 0
 
-int pass_one(const struct Tokens * ts, struct LinkingUnits * lus, struct LabelLocations * ll) {
+int pass_one(const struct Tokens * ts, struct LinkingUnits * lus) {
     assert(ts);
     assert(lus);
     assert(lus->size == 0u);
-    assert(ll);
+
+    int returnStatus;
+
+    struct LabelLocations ll;
+    LabelLocations_init(&ll);
+
+    struct LabelSlotsTrie lst;
+    LabelSlotsTrie_init(&lst);
 
     struct LinkingUnit * lu = LinkingUnits_push(lus);
     if (!lu)
-        return PASS_ONE_OUT_OF_MEMORY;
+        goto pass_one_out_of_memory;
 
     LinkingUnit_init(lu);
 
     if (ts->numTokens <= 0)
-        return PASS_ONE_OK;
+        goto pass_one_ok;
 
     struct Token * t = &ts->array[0u];
     struct Token * e = &ts->array[ts->numTokens];
@@ -127,23 +176,32 @@ pass_one_newline:
             break;
         case TOKEN_LABEL:
         {
-            char * label = malloc(t->length + 1);
+            char * label = token_label_label_new(t);
             if (!label)
                     goto pass_one_out_of_memory;
-            strncpy(label, t->text, t->length);
-            label[t->length] = '\x00';
 
-            if (LabelLocations_find(ll, label)) {
+            int newValue;
+            struct LabelLocation * l = LabelLocations_get_or_insert(&ll, label, &newValue);
+            if (!l) {
+                free(label);
+                goto pass_one_out_of_memory;
+            }
+
+            /* Check for duplicate label: */
+            if (!newValue) {
                 free(label);
                 goto pass_one_duplicate_label;
-            } else {
-                struct Label * l = LabelLocations_get_or_insert(ll, label);
-                free(label);
-                if (!l)
-                    goto pass_one_out_of_memory;
-                l->linkingUnit = lu_index;
-                l->section = section_index;
-                l->offset = lu->sections[section_index].length;
+            }
+
+            l->linkingUnit = lu_index;
+            l->section = section_index;
+            l->offset = lu->sections[section_index].length;
+
+            /* Fill pending label slots: */
+            struct LabelSlots * slots = LabelSlotsTrie_find(&lst, label);
+            free(label);
+            if (slots) {
+                LabelSlots_foreach_with_data(slots, &LabelSlot_fill, l);
             }
             break;
         }
@@ -171,7 +229,7 @@ pass_one_newline:
                     section_index = SECTION_TYPE_TEXT;
                 }
 
-                PASS_ONE_INC_DO_EOL(pass_one_ok,pass_one_unexpected_token);
+                PASS_ONE_INC_DO_EOL(pass_one_check_labels,pass_one_unexpected_token);
             } else if (t->length == 8u && strncmp(t->text, ".section", t->length) == 0) {
                 PASS_ONE_INC_CHECK_EOF(pass_one_unexpected_eof);
                 if (t->type != TOKEN_KEYWORD)
@@ -193,9 +251,15 @@ pass_one_newline:
                     goto pass_one_invalid_parameter;
                 }
             } else if (t->length == 5u && strncmp(t->text, ".data", t->length) == 0) {
+                if (section_index == SECTION_TYPE_TEXT)
+                    goto pass_one_unexpected_token;
+
                 multiplier = 1u;
                 goto pass_one_data_or_fill;
             } else if (t->length == 5u && strncmp(t->text, ".fill", t->length) == 0) {
+                if (section_index == SECTION_TYPE_TEXT || section_index == SECTION_TYPE_BIND)
+                    goto pass_one_unexpected_token;
+
                 PASS_ONE_INC_CHECK_EOF(pass_one_unexpected_eof);
 
                 if (t->type != TOKEN_HEX)
@@ -212,25 +276,26 @@ pass_one_newline:
 
                 goto pass_one_data_or_fill;
             } else if (t->length == 13u && strncmp(t->text, ".bind_syscall", t->length) == 0) {
+                if (section_index == SECTION_TYPE_TEXT || section_index == SECTION_TYPE_BIND)
+                    goto pass_one_unexpected_token;
+
                 fprintf(stderr, "TODO\n");
-                abort();
+                goto pass_one_unknown_directive;
             } else {
                 goto pass_one_unknown_directive;
             }
             break;
         case TOKEN_KEYWORD:
         {
-            if ((lu->sections[section_index].length % (sizeof(uint64_t))) != 0) {
-                printf("Alignment is %lu\n", lu->sections[section_index].length % (sizeof(uint64_t)));
-                goto pass_one_invalid_alignment;
-            }
             size_t args = 0u;
             size_t l = t->length;
-            char * name = (char *) malloc(sizeof(char) * (l + 1u));
+            char * name = malloc(sizeof(char) * (l + 1u));
             if (!name)
                 goto pass_one_out_of_memory;
             strncpy(name, t->text, l);
 
+            const struct Token * ot = t;
+            /* Collect instruction name and count arguments: */
             for (;;) {
                 t++;
                 if (t == e)
@@ -256,28 +321,97 @@ pass_one_newline:
                     goto pass_one_invalid_parameter;
                 }
             }
-
             name[l] = '\0';
+
+            /* Detect and check instruction: */
             const struct SVM_Instruction * i = SVM_Instruction_from_name(name);
             free(name);
             if (!i)
                 goto pass_one_unknown_instruction;
-
             if (i->numargs != args)
                 goto pass_one_invalid_parameter;
 
-            lu->sections[section_index].length += sizeof(uint64_t) * (args + 1);
-            PASS_ONE_DO_EOL(pass_one_ok,pass_one_unexpected_token);
+            /* Allocate whole instruction: */
+            char * newData = realloc(lu->sections[section_index].data, sizeof(union SVM_IBlock) * (lu->sections[section_index].length + args + 1));
+            if (!newData)
+                goto pass_one_out_of_memory;
+            lu->sections[section_index].data = newData;
+            union SVM_IBlock * instr = &lu->sections[section_index].cbdata[lu->sections[section_index].length];
+            lu->sections[section_index].length += args + 1;
+
+            /* Write instruction code */
+            instr->uint64[0] = i->code;
+
+            /* Write arguments: */
+            for (;;) {
+                if (++ot == t)
+                    break;
+                if (ot->type == TOKEN_HEX) {
+                    instr++;
+                    if (ot->text[0] == '-') {
+                        instr->int64[0] = -token_hex_value(ot);
+                    } else {
+                        instr->uint64[0] = token_hex_value(ot);
+                    }
+                } else if (ot->type == TOKEN_LABEL || ot->type == TOKEN_LABEL_O) {
+                    instr++;
+                    char * label = token_label_label_new(ot);
+                    if (!label)
+                        goto pass_one_out_of_memory;
+
+                    struct LabelLocation * loc = LabelLocations_find(&ll, label);
+                    if (loc) {
+                        free(label);
+                        instr->sizet[0] = loc->offset + token_label_offset(ot); /**< \todo check overflow? */
+                    } else {
+                        int newValue;
+                        struct LabelSlots * slots = LabelSlotsTrie_get_or_insert(&lst, label, &newValue);
+                        free(label);
+                        if (!slots)
+                            goto pass_one_out_of_memory;
+
+                        if (newValue)
+                            LabelSlots_init(slots);
+
+                        struct LabelSlot * slot = LabelSlots_push(slots);
+                        if (!slot)
+                            goto pass_one_out_of_memory;
+
+                        slot->linkingUnit = lu_index;
+                        slot->section = section_index;
+                        slot->extraOffset = token_label_offset(ot); /**< \todo check overflow? */
+                        slot->cbdata = instr;
+                        slot->token = ot;
+                    }
+                } else {
+                    assert(ot->type == TOKEN_KEYWORD);
+                }
+            }
+
+            PASS_ONE_DO_EOL(pass_one_check_labels,pass_one_unexpected_token);
             abort();
         }
         default:
             goto pass_one_unexpected_token;
     } /* switch */
 
-    if (++t == e)
-        goto pass_one_ok;
+    if (++t != e)
+        goto pass_one_newline;
 
-    goto pass_one_newline;
+pass_one_check_labels:
+
+    /* Check for undefined labels: */
+    {
+        struct LabelSlot * undefinedSlot;
+        if (LabelSlotsTrie_foreach_with_data(&lst, &LabelSlots_allSlotsFilled, &undefinedSlot))
+            goto pass_one_ok;
+
+        assert(undefinedSlot);
+        char * undefinedSlotName = token_label_label_new(undefinedSlot->token);
+        fprintf(stderr, "Undefined label: %s\n", undefinedSlotName);
+        free(undefinedSlotName);
+        goto pass_one_undefined_label;
+    }
 
 pass_one_data_or_fill:
 
@@ -318,38 +452,38 @@ pass_one_data_opt_param:
     int neg = (t->text[0] == '-');
     uint64_t v = token_hex_value(t);
     switch (type) {
-        case 1u: /* uint8 */
+        case 0u: /* uint8 */
             if (neg || v > 255u)
                 goto pass_one_invalid_parameter;
             break;
-        case 2u: /* uint16 */
+        case 1u: /* uint16 */
             if (neg || v > 65535u)
                 goto pass_one_invalid_parameter;
             break;
-        case 3u: /* uint32 */
+        case 2u: /* uint32 */
             if (neg || v > 16777216u)
                 goto pass_one_invalid_parameter;
             break;
-        case 4u: /* uint64 */
+        case 3u: /* uint64 */
             if (neg)
                 goto pass_one_invalid_parameter;
             break;
-        case 5u: /* int8 */
+        case 4u: /* int8 */
             if ((neg && v > 128u) || (!neg && v > 127u))
                 goto pass_one_invalid_parameter;
             break;
-        case 6u: /* int16 */
+        case 5u: /* int16 */
             if ((neg && v > 32768u) || (!neg && v > 32767u))
                 goto pass_one_invalid_parameter;
             break;
-        case 7u: /* int32 */
+        case 6u: /* int32 */
             if ((neg && v > 2147483648u) || (!neg && v > 2147483647u))
                 goto pass_one_invalid_parameter;
             break;
-        case 8u: /* int64 */
+        case 7u: /* int64 */
             /* All tokenized values should be OK. */
             break;
-        case 9u: /* float32 */
+        case 8u: /* float32 */
             if (neg || v > 16777216u)
                 goto pass_one_invalid_parameter;
             break;
@@ -362,10 +496,12 @@ pass_one_data_opt_param:
     goto pass_one_newline;
 
 pass_one_ok:
-    return PASS_ONE_OK;
+    returnStatus = PASS_ONE_OK;
+    goto pass_one_free_and_return;
 
 pass_one_out_of_memory:
-    return PASS_ONE_OUT_OF_MEMORY;
+    returnStatus = PASS_ONE_OUT_OF_MEMORY;
+    goto pass_one_free_and_return;
 
 pass_one_unexpected_token:
     tmp = malloc(t->length + 1);
@@ -373,25 +509,37 @@ pass_one_unexpected_token:
     tmp[t->length] = '\0';
     fprintf(stderr, "Unexpected %s(%s)\n", SMA_TokenType_toString(t->type), tmp);
     free(tmp);
-    return PASS_ONE_UNEXPECTED_TOKEN;
+    returnStatus = PASS_ONE_UNEXPECTED_TOKEN;
+    goto pass_one_free_and_return;
 
 pass_one_unexpected_eof:
-    return PASS_ONE_UNEXPECTED_EOF;
+    returnStatus = PASS_ONE_UNEXPECTED_EOF;
+    goto pass_one_free_and_return;
 
 pass_one_duplicate_label:
-    return PASS_ONE_DUPLICATE_LABEL;
+    returnStatus = PASS_ONE_DUPLICATE_LABEL;
+    goto pass_one_free_and_return;
 
 pass_one_unknown_directive:
-    return PASS_ONE_UNKNOWN_DIRECTIVE;
+    returnStatus = PASS_ONE_UNKNOWN_DIRECTIVE;
+    goto pass_one_free_and_return;
 
 pass_one_unknown_instruction:
-    return PASS_ONE_UNKNOWN_INSTRUCTION;
+    returnStatus = PASS_ONE_UNKNOWN_INSTRUCTION;
+    goto pass_one_free_and_return;
 
 pass_one_invalid_parameter:
-    return PASS_ONE_INVALID_PARAMETER;
+    returnStatus = PASS_ONE_INVALID_PARAMETER;
+    goto pass_one_free_and_return;
 
-pass_one_invalid_alignment:
-    return PASS_ONE_INVALID_ALIGNMENT;
+pass_one_undefined_label:
+    returnStatus = PASS_ONE_UNDEFINED_LABEL;
+    goto pass_one_free_and_return;
+
+pass_one_free_and_return:
+    LabelSlotsTrie_destroy_with(&lst, &LabelSlots_destroy);
+    LabelLocations_destroy(&ll);
+    return returnStatus;
 }
 
 
@@ -410,6 +558,8 @@ int main() {
         "push reg 0x9\n"
         "push stack 0x8\n"
         "halt 0x255\n"
+        "jmp imm :cae\n"
+        "jmp imm :cae2b\n"
         "nop\n";
 
     /* Tokenize: */
@@ -427,23 +577,24 @@ int main() {
     struct LinkingUnits lus;
     LinkingUnits_init(&lus);
 
-    struct LabelLocations ll;
-    LabelLocations_init(&ll);
-
-    int r = pass_one(ts, &lus, &ll);
-    if (r != 0)
+    int r = pass_one(ts, &lus);
+    if (r != PASS_ONE_OK)
         goto main_pass_one_fail;
 
     /* PASS 2: Assemble */
     /** \todo PASS 2 */
 
-    free(ts);
+    LinkingUnits_destroy_with(&lus, &LinkingUnit_destroy);
+    tokens_free(ts);
+
     return EXIT_SUCCESS;
 
 main_pass_one_fail:
 
+    LinkingUnits_destroy_with(&lus, &LinkingUnit_destroy);
+    tokens_free(ts);
+
     fprintf(stderr, "Pass 1 failed with %s!\n", SMA_Pass_One_Error_toString(r));
-    free(ts);
     return EXIT_FAILURE;
 
 main_tokenize_fail:
