@@ -276,7 +276,7 @@ pass_one_newline:
 
                 goto pass_one_data_or_fill;
             } else if (t->length == 13u && strncmp(t->text, ".bind_syscall", t->length) == 0) {
-                if (section_index == SECTION_TYPE_TEXT || section_index == SECTION_TYPE_BIND)
+                if (section_index != SECTION_TYPE_BIND)
                     goto pass_one_unexpected_token;
 
                 fprintf(stderr, "TODO\n");
