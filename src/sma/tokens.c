@@ -10,6 +10,23 @@
 
 SVM_ENUM_DEFINE_TOSTRING(SMA_TokenType, SMA_ENUM_TokenType);
 
+static uint64_t read_hex(const char * c, size_t l) {
+    const char * e = c + l;
+    uint64_t v = 0u;
+    do {
+        char base;
+        switch (*c) {
+            case '0' ... '9': base = '0'; break;
+            case 'a' ... 'f': base = 'a'; break;
+            case 'A' ... 'F': base = 'A'; break;
+            default:
+                abort();
+        }
+        v = (v * 16) + (*c - base);
+    } while (++c < e);
+    return v;
+}
+
 uint64_t token_hex_value(const struct Token * t) {
     assert(t);
     assert(t->type == TOKEN_HEX);
@@ -32,18 +49,7 @@ uint64_t token_hex_value(const struct Token * t) {
         i = 2;
     }
 
-    uint64_t v = 0u;
-    do {
-        char base;
-        switch (t->text[i]) {
-            case '0' ... '9': base = '0'; break;
-            case 'a' ... 'f': base = 'a'; break;
-            case 'A' ... 'F': base = 'A'; break;
-            default:
-                abort();
-        }
-        v = (v * 16) + (t->text[i] - base);
-    } while (++i < t->length);
+    uint64_t v = read_hex(t->text + i, t->length - i);
 
     if (t->text[0] != '-')
         return v;
@@ -114,6 +120,46 @@ char * token_string_value(const struct Token * t, size_t * length) {
     return s;
 }
 
+char * token_label_label_new(const struct Token *t) {
+    assert(t);
+    assert(t->type == TOKEN_LABEL || t->type == TOKEN_LABEL_O);
+    size_t l;
+    if (t->type == TOKEN_LABEL) {
+        assert(t->length >= 2u);
+        l = t->length;
+    } else {
+        assert(t->length >= 6u);
+        for (l = 2; t->text[l] != '+'; l++) /* Do nothing */;
+        assert(t->text[l + 1] == '0');
+        assert(t->text[l + 2] == 'x');
+    }
+
+    char * c = malloc(l);
+    if (!c)
+        return NULL;
+
+    l--;
+    strncpy(c, t->text + 1, l);
+    c[l] = '\x00';
+    return c;
+}
+
+uint64_t token_label_offset(const struct Token *t) {
+    assert(t);
+    assert(t->type == TOKEN_LABEL || t->type == TOKEN_LABEL_O);
+    assert(t->text[0] == ':');
+    if (t->type == TOKEN_LABEL) {
+        assert(t->length >= 2u);
+        return 0;
+    } else {
+        assert(t->length >= 6u);
+        const char * h = t->text + 2;
+        while (*h != '+')
+            h++;
+        h += 3;
+        return read_hex(h, t->length - (h - t->text));
+    }
+}
 
 struct Tokens * tokens_new() {
     struct Tokens * ts = malloc(sizeof(struct Tokens));

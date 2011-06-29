@@ -34,6 +34,9 @@ uint64_t token_hex_value(const struct Token * t);
 size_t token_string_length(const struct Token * t);
 char * token_string_value(const struct Token * t, size_t * length);
 
+char * token_label_label_new(const struct Token *t);
+uint64_t token_label_offset(const struct Token *t);
+
 struct Tokens {
     size_t numTokens;
     struct Token * array;
