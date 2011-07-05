@@ -6,3 +6,4 @@ Makefile
 .rcc/
 .ui/
 *~
+*.kate-swp
