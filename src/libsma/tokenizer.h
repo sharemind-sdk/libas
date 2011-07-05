@@ -10,7 +10,7 @@ extern "C" {
 
 struct SMA_Tokens;
 
-struct SMA_Tokens * SMA_tokenize(const char * program, size_t length, size_t * errorSl, size_t *errorSc);
+struct SMA_Tokens * SMA_tokenize(const void * program, size_t length, size_t * errorSl, size_t *errorSc);
 
 #ifdef __cplusplus
 } /* extern "C" { */

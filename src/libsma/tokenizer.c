@@ -23,13 +23,13 @@
             goto tokenize_error_oom; \
     }
 
-struct SMA_Tokens * SMA_tokenize(const char * program, size_t length,
+struct SMA_Tokens * SMA_tokenize(const void * program, size_t length,
                                  size_t * errorSl, size_t *errorSc)
 {
     assert(program);
     const char * c = program;
     const char * t;
-    const char * const e = program + length;
+    const char * const e = c + length;
 
     size_t sl = 1u, sc = 1u;
 
