@@ -24,43 +24,38 @@ int main() {
         "nop\n";
 
     /* Tokenize: */
+    struct SMA_Tokens * ts;
+    {
+        size_t sl = 0u;
+        size_t sc = 0u;
+        ts = SMA_tokenize(program, strlen(program), &sl, &sc);
+        if (unlikely(!ts)) {
+            fprintf(stderr, "Tokenization failed at (%lu,%lu)!\n", sl, sc);
+            return EXIT_FAILURE;
+        }
+        SMA_tokens_print(ts);
+    }
 
-    size_t sl = 0u;
-    size_t sc = 0u;
-    struct SMA_Tokens * ts = SMA_tokenize(program, strlen(program), &sl, &sc);
-    if (!ts)
-        goto main_tokenize_fail;
-
-    SMA_tokens_print(ts);
-
-    /* PASS 1: Get label values */
-
+    /* Assemble the linking units: */
     struct SMA_LinkingUnits lus;
-    SMA_LinkingUnits_init(&lus);
+    {
+        SMA_LinkingUnits_init(&lus);
+        enum SMA_Assemble_Error r = SMA_assemble(ts, &lus);
+        if (r != SMA_ASSEMBLE_OK) {
+            SMA_LinkingUnits_destroy_with(&lus, &SMA_LinkingUnit_destroy);
+            SMA_tokens_free(ts);
 
-    enum SMA_Assemble_Error r = SMA_assemble(ts, &lus);
-    if (r != SMA_ASSEMBLE_OK)
-        goto main_pass_one_fail;
+            fprintf(stderr, "Pass 1 failed with %s!\n", SMA_Assemble_Error_toString(r));
+            return EXIT_FAILURE;
+        }
+        SMA_tokens_free(ts);
+    }
 
-    /* PASS 2: Assemble */
-    /** \todo PASS 2 */
+    /* Generate the Sharemind Executable */
+    /** \todo Generate the Sharemind Executable */
 
     SMA_LinkingUnits_destroy_with(&lus, &SMA_LinkingUnit_destroy);
-    SMA_tokens_free(ts);
 
     return EXIT_SUCCESS;
-
-main_pass_one_fail:
-
-    SMA_LinkingUnits_destroy_with(&lus, &SMA_LinkingUnit_destroy);
-    SMA_tokens_free(ts);
-
-    fprintf(stderr, "Pass 1 failed with %s!\n", SMA_Assemble_Error_toString(r));
-    return EXIT_FAILURE;
-
-main_tokenize_fail:
-
-    fprintf(stderr, "Tokenization failed at (%lu,%lu)!\n", sl, sc);
-    return EXIT_FAILURE;
 
 }
