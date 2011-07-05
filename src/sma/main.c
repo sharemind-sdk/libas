@@ -27,16 +27,16 @@ int main() {
 
     size_t sl = 0u;
     size_t sc = 0u;
-    struct Tokens * ts = tokenize(program, strlen(program), &sl, &sc);
+    struct SMA_Tokens * ts = SMA_tokenize(program, strlen(program), &sl, &sc);
     if (!ts)
         goto main_tokenize_fail;
 
-    tokens_print(ts);
+    SMA_tokens_print(ts);
 
     /* PASS 1: Get label values */
 
-    struct LinkingUnits lus;
-    LinkingUnits_init(&lus);
+    struct SMA_LinkingUnits lus;
+    SMA_LinkingUnits_init(&lus);
 
     enum SMA_Assemble_Error r = SMA_assemble(ts, &lus);
     if (r != SMA_ASSEMBLE_OK)
@@ -45,15 +45,15 @@ int main() {
     /* PASS 2: Assemble */
     /** \todo PASS 2 */
 
-    LinkingUnits_destroy_with(&lus, &LinkingUnit_destroy);
-    tokens_free(ts);
+    SMA_LinkingUnits_destroy_with(&lus, &SMA_LinkingUnit_destroy);
+    SMA_tokens_free(ts);
 
     return EXIT_SUCCESS;
 
 main_pass_one_fail:
 
-    LinkingUnits_destroy_with(&lus, &LinkingUnit_destroy);
-    tokens_free(ts);
+    SMA_LinkingUnits_destroy_with(&lus, &SMA_LinkingUnit_destroy);
+    SMA_tokens_free(ts);
 
     fprintf(stderr, "Pass 1 failed with %s!\n", SMA_Assemble_Error_toString(r));
     return EXIT_FAILURE;

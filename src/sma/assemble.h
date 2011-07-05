@@ -10,19 +10,19 @@
 extern "C" {
 #endif
 
-struct Tokens;
+struct SMA_Tokens;
 
 enum Section_Type {
-    SECTION_TYPE_TEXT = 0,
-    SECTION_TYPE_RODATA = 1,
-    SECTION_TYPE_DATA = 2,
-    SECTION_TYPE_BSS = 3,
-    SECTION_TYPE_BIND = 4,
-    SECTION_TYPE_DEBUG = 5,
-    SECTION_TYPE_COUNT = 6
+    SMA_SECTION_TYPE_TEXT = 0,
+    SMA_SECTION_TYPE_RODATA = 1,
+    SMA_SECTION_TYPE_DATA = 2,
+    SMA_SECTION_TYPE_BSS = 3,
+    SMA_SECTION_TYPE_BIND = 4,
+    SMA_SECTION_TYPE_DEBUG = 5,
+    SMA_SECTION_TYPE_COUNT = 6
 };
 
-struct Section {
+struct SMA_Section {
     size_t length;
     union {
         char * data;
@@ -30,18 +30,18 @@ struct Section {
     };
 };
 
-void Section_init(struct Section * s);
-void Section_destroy(struct Section * s);
+void SMA_Section_init(struct SMA_Section * s);
+void SMA_Section_destroy(struct SMA_Section * s);
 
 
-struct LinkingUnit {
-    struct Section sections[SECTION_TYPE_COUNT];
+struct SMA_LinkingUnit {
+    struct SMA_Section sections[SMA_SECTION_TYPE_COUNT];
 };
 
-void LinkingUnit_init(struct LinkingUnit * lu);
-void LinkingUnit_destroy(struct LinkingUnit * lu);
+void SMA_LinkingUnit_init(struct SMA_LinkingUnit * lu);
+void SMA_LinkingUnit_destroy(struct SMA_LinkingUnit * lu);
 
-SVM_VECTOR_DECLARE(LinkingUnits,struct LinkingUnit,)
+SVM_VECTOR_DECLARE(SMA_LinkingUnits,struct SMA_LinkingUnit,)
 
 #define SMA_ENUM_Assemble_Error \
     ((SMA_ASSEMBLE_OK, = 0)) \
@@ -57,7 +57,8 @@ SVM_ENUM_CUSTOM_DEFINE(SMA_Assemble_Error, SMA_ENUM_Assemble_Error);
 SVM_ENUM_DECLARE_TOSTRING(SMA_Assemble_Error);
 
 
-enum SMA_Assemble_Error SMA_assemble(const struct Tokens * ts, struct LinkingUnits * lus);
+enum SMA_Assemble_Error SMA_assemble(const struct SMA_Tokens * ts,
+                                     struct SMA_LinkingUnits * lus);
 
 #ifdef __cplusplus
 } /* extern "C" { */

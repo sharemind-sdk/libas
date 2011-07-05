@@ -18,12 +18,14 @@
 
 #define NEWTOKEN(d,type,text,sl,sc) \
     if (1) { \
-        d = tokens_append(ts, (type), (text), (sl), (sc)); \
+        d = SMA_tokens_append(ts, (type), (text), (sl), (sc)); \
         if (!d) \
             goto tokenize_error_oom; \
     }
 
-struct Tokens * tokenize(const char * program, size_t length, size_t * errorSl, size_t *errorSc) {
+struct SMA_Tokens * SMA_tokenize(const char * program, size_t length,
+                                 size_t * errorSl, size_t *errorSc)
+{
     assert(program);
     const char * c = program;
     const char * t;
@@ -31,11 +33,11 @@ struct Tokens * tokenize(const char * program, size_t length, size_t * errorSl, 
 
     size_t sl = 1u, sc = 1u;
 
-    struct Tokens * ts = tokens_new();
+    struct SMA_Tokens * ts = SMA_tokens_new();
     if (unlikely(!ts))
         return NULL;
     ts->numTokens = 0u;
-    struct Token * lastToken = NULL;
+    struct SMA_Token * lastToken = NULL;
 
     size_t hexmin = 0u;
 
@@ -69,8 +71,8 @@ tokenize_begin2:
 
     switch (*c) {
         case '\n':
-            if (lastToken && lastToken->type != TOKEN_NEWLINE) {
-                NEWTOKEN(lastToken, TOKEN_NEWLINE, c, sl, sc);
+            if (lastToken && lastToken->type != SMA_TOKEN_NEWLINE) {
+                NEWTOKEN(lastToken, SMA_TOKEN_NEWLINE, c, sl, sc);
                 lastToken->length = 1u;
             }
         case ' ': case '\t': case '\r': case '\v': case '\f':
@@ -118,7 +120,7 @@ tokenize_directive:
         default:
             goto tokenize_error;
     }
-    NEWTOKEN(lastToken, TOKEN_DIRECTIVE, c - 1, sl, sc);
+    NEWTOKEN(lastToken, SMA_TOKEN_DIRECTIVE, c - 1, sl, sc);
     lastToken->length = 2u;
     goto tokenize_keyword2;
 
@@ -130,7 +132,7 @@ tokenize_hex:
         default:
             goto tokenize_error;
     }
-    NEWTOKEN(lastToken, TOKEN_HEX, c - 2 - hexmin, sl, sc);
+    NEWTOKEN(lastToken, SMA_TOKEN_HEX, c - 2 - hexmin, sl, sc);
     lastToken->length = 3u + hexmin;
     hexmin = 0u;
 
@@ -174,7 +176,7 @@ tokenize_string:
             continue;
         }
     } while (likely(*c != '"'));
-    NEWTOKEN(lastToken, TOKEN_STRING, t, sl, sc);
+    NEWTOKEN(lastToken, SMA_TOKEN_STRING, t, sl, sc);
     lastToken->length = c - t + 1u;
     TOKENIZE_INC_CHECK_EOF(tokenize_ok);
     goto tokenize_begin2;
@@ -188,7 +190,7 @@ tokenize_label:
         default:
             goto tokenize_error;
     }
-    NEWTOKEN(lastToken, TOKEN_LABEL, c - 1, sl, sc);
+    NEWTOKEN(lastToken, SMA_TOKEN_LABEL, c - 1, sl, sc);
     lastToken->length = 2u;
 
 tokenize_label2:
@@ -235,12 +237,12 @@ tokenize_label3:
             goto tokenize_error;
     }
     lastToken->length += 4u;
-    lastToken->type = TOKEN_LABEL_O;
+    lastToken->type = SMA_TOKEN_LABEL_O;
     goto tokenize_hex2;
 
 tokenize_keyword:
 
-    NEWTOKEN(lastToken, TOKEN_KEYWORD, c, sl, sc);
+    NEWTOKEN(lastToken, SMA_TOKEN_KEYWORD, c, sl, sc);
     lastToken->length = 1u;
     goto tokenize_keyword2;
 
@@ -271,7 +273,7 @@ tokenize_keyword2:
     goto tokenize_keyword2;
 
 tokenize_ok:
-    tokens_pop_back_newlines(ts);
+    SMA_tokens_pop_back_newlines(ts);
     return ts;
 
 tokenize_error:
@@ -283,7 +285,7 @@ tokenize_error:
 
 tokenize_error_oom:
 
-    tokens_free(ts);
+    SMA_tokens_free(ts);
 
     return NULL;
 }

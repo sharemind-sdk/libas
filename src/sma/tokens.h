@@ -11,17 +11,17 @@ extern "C" {
 #endif
 
 #define SMA_ENUM_TokenType \
-    (TOKEN_NEWLINE) \
-    (TOKEN_DIRECTIVE) \
-    (TOKEN_HEX) \
-    (TOKEN_STRING) \
-    (TOKEN_LABEL_O) \
-    (TOKEN_LABEL) \
-    (TOKEN_KEYWORD)
+    (SMA_TOKEN_NEWLINE) \
+    (SMA_TOKEN_DIRECTIVE) \
+    (SMA_TOKEN_HEX) \
+    (SMA_TOKEN_STRING) \
+    (SMA_TOKEN_LABEL_O) \
+    (SMA_TOKEN_LABEL) \
+    (SMA_TOKEN_KEYWORD)
 SVM_ENUM_DEFINE(SMA_TokenType, SMA_ENUM_TokenType);
 SVM_ENUM_DECLARE_TOSTRING(SMA_TokenType);
 
-struct Token {
+struct SMA_Token {
     enum SMA_TokenType type;
     const char * text;
     size_t start_line;
@@ -29,29 +29,32 @@ struct Token {
     size_t length;
 };
 
-uint64_t token_hex_value(const struct Token * t);
+uint64_t SMA_token_hex_value(const struct SMA_Token * t);
 
-size_t token_string_length(const struct Token * t);
-char * token_string_value(const struct Token * t, size_t * length);
+size_t SMA_token_string_length(const struct SMA_Token * t);
+char * SMA_token_string_value(const struct SMA_Token * t, size_t * length);
 
-char * token_label_label_new(const struct Token *t);
-uint64_t token_label_offset(const struct Token *t);
+char * SMA_token_label_label_new(const struct SMA_Token *t);
+uint64_t SMA_token_label_offset(const struct SMA_Token *t);
 
-struct Tokens {
+struct SMA_Tokens {
     size_t numTokens;
-    struct Token * array;
+    struct SMA_Token * array;
 };
 
-struct Tokens * tokens_new();
+struct SMA_Tokens * SMA_tokens_new();
 
-void tokens_free(struct Tokens * ts);
+void SMA_tokens_free(struct SMA_Tokens * ts);
 
-void tokens_print(const struct Tokens *ts);
+void SMA_tokens_print(const struct SMA_Tokens *ts);
 
-struct Token * tokens_append(struct Tokens * ts, enum SMA_TokenType type,
-                             const char * start, size_t start_line, size_t start_column);
+struct SMA_Token * SMA_tokens_append(struct SMA_Tokens * ts,
+                                     enum SMA_TokenType type,
+                                     const char * start,
+                                     size_t start_line,
+                                     size_t start_column);
 
-void tokens_pop_back_newlines(struct Tokens * ts);
+void SMA_tokens_pop_back_newlines(struct SMA_Tokens * ts);
 
 #ifdef __cplusplus
 } /* extern "C" { */

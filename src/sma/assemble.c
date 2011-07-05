@@ -8,69 +8,67 @@
 #include "tokens.h"
 
 
-void Section_init(struct Section * s) {
+void SMA_Section_init(struct SMA_Section * s) {
     s->length = 0u;
     s->data = NULL;
 }
 
-void Section_destroy(struct Section * s) {
+void SMA_Section_destroy(struct SMA_Section * s) {
     free(s->data);
 }
 
-void LinkingUnit_init(struct LinkingUnit * lu) {
-    for (size_t i = 0u; i < SECTION_TYPE_COUNT; i++)
-        Section_init(&lu->sections[i]);
+void SMA_LinkingUnit_init(struct SMA_LinkingUnit * lu) {
+    for (size_t i = 0u; i < SMA_SECTION_TYPE_COUNT; i++)
+        SMA_Section_init(&lu->sections[i]);
 }
 
-void LinkingUnit_destroy(struct LinkingUnit * lu) {
-    for (size_t i = 0u; i < SECTION_TYPE_COUNT; i++)
-        Section_destroy(&lu->sections[i]);
+void SMA_LinkingUnit_destroy(struct SMA_LinkingUnit * lu) {
+    for (size_t i = 0u; i < SMA_SECTION_TYPE_COUNT; i++)
+        SMA_Section_destroy(&lu->sections[i]);
 }
 
-SVM_VECTOR_DEFINE(LinkingUnits,struct LinkingUnit,malloc,free,realloc)
+SVM_VECTOR_DEFINE(SMA_LinkingUnits,struct SMA_LinkingUnit,malloc,free,realloc)
 
-struct LabelSlot {
+struct SMA_LabelSlot {
     size_t linkingUnit;
     size_t section;
     size_t extraOffset;
     union SVM_IBlock * cbdata;
-    const struct Token * token; /* NULL if this slot is already filled */
+    const struct SMA_Token * token; /* NULL if this slot is already filled */
 };
 
-int LabelSlot_filled(struct LabelSlot * s, void * d) {
+int SMA_LabelSlot_filled(struct SMA_LabelSlot * s, void * d) {
     assert(s);
     if (s->token == NULL)
         return 1;
-    *((struct LabelSlot **) d) = s;
+    *((struct SMA_LabelSlot **) d) = s;
     return 0;
 }
 
-SVM_VECTOR_DECLARE(LabelSlots,struct LabelSlot,)
-SVM_VECTOR_DEFINE(LabelSlots,struct LabelSlot,malloc,free,realloc)
+SVM_VECTOR_DECLARE(SMA_LabelSlots,struct SMA_LabelSlot,)
+SVM_VECTOR_DEFINE(SMA_LabelSlots,struct SMA_LabelSlot,malloc,free,realloc)
 
-int LabelSlots_allSlotsFilled(struct LabelSlots * ss, void * d) {
-    return LabelSlots_foreach_with_data(ss, &LabelSlot_filled, d);
+int SMA_LabelSlots_allSlotsFilled(struct SMA_LabelSlots * ss, void * d) {
+    return SMA_LabelSlots_foreach_with_data(ss, &SMA_LabelSlot_filled, d);
 }
 
-int LabelSlot_fill(struct LabelSlot * s, void * vl);
+SVM_TRIE_DECLARE(SMA_LabelSlotsTrie,struct SMA_LabelSlots)
+SVM_TRIE_DEFINE(SMA_LabelSlotsTrie,struct SMA_LabelSlots,malloc,free)
 
-SVM_TRIE_DECLARE(LabelSlotsTrie,struct LabelSlots)
-SVM_TRIE_DEFINE(LabelSlotsTrie,struct LabelSlots,malloc,free)
-
-struct LabelLocation {
+struct SMA_LabelLocation {
     size_t linkingUnit;
     size_t section;
     size_t offset;
 };
 
-SVM_TRIE_DECLARE(LabelLocations,struct LabelLocation)
-SVM_TRIE_DEFINE(LabelLocations,struct LabelLocation,malloc,free)
+SVM_TRIE_DECLARE(SMA_LabelLocations,struct SMA_LabelLocation)
+SVM_TRIE_DEFINE(SMA_LabelLocations,struct SMA_LabelLocation,malloc,free)
 
-int LabelSlot_fill(struct LabelSlot * s, void * vl) {
+int SMA_LabelSlot_fill(struct SMA_LabelSlot * s, void * vl) {
     assert(s);
     assert(vl);
     assert(s->token);
-    struct LabelLocation * l = (struct LabelLocation *) vl;
+    struct SMA_LabelLocation * l = (struct SMA_LabelLocation *) vl;
     s->cbdata->sizet[0] = s->extraOffset + l->offset; /**< \todo check overflow? */
     s->token = NULL;
     return 1;
@@ -87,7 +85,7 @@ SVM_ENUM_CUSTOM_DEFINE_TOSTRING(SMA_Assemble_Error, SMA_ENUM_Assemble_Error);
     if (1) { \
         if (t >= e) \
             goto eof; \
-        if (t->type != TOKEN_NEWLINE) \
+        if (t->type != SMA_TOKEN_NEWLINE) \
             goto noexpect; \
         goto sma_assemble_newline; \
     } else (void) 0
@@ -98,33 +96,35 @@ SVM_ENUM_CUSTOM_DEFINE_TOSTRING(SMA_Assemble_Error, SMA_ENUM_Assemble_Error);
         SMA_ASSEMBLE_DO_EOL(eof,noexpect); \
     } else (void) 0
 
-enum SMA_Assemble_Error SMA_assemble(const struct Tokens * ts, struct LinkingUnits * lus) {
+enum SMA_Assemble_Error SMA_assemble(const struct SMA_Tokens * ts,
+                                     struct SMA_LinkingUnits * lus)
+{
     assert(ts);
     assert(lus);
     assert(lus->size == 0u);
 
     int returnStatus;
 
-    struct LabelLocations ll;
-    LabelLocations_init(&ll);
+    struct SMA_LabelLocations ll;
+    SMA_LabelLocations_init(&ll);
 
-    struct LabelSlotsTrie lst;
-    LabelSlotsTrie_init(&lst);
+    struct SMA_LabelSlotsTrie lst;
+    SMA_LabelSlotsTrie_init(&lst);
 
-    struct LinkingUnit * lu = LinkingUnits_push(lus);
+    struct SMA_LinkingUnit * lu = SMA_LinkingUnits_push(lus);
     if (!lu)
         goto sma_assemble_out_of_memory;
 
-    LinkingUnit_init(lu);
+    SMA_LinkingUnit_init(lu);
 
     if (ts->numTokens <= 0)
         goto sma_assemble_ok;
 
-    struct Token * t = &ts->array[0u];
-    struct Token * e = &ts->array[ts->numTokens];
+    struct SMA_Token * t = &ts->array[0u];
+    struct SMA_Token * e = &ts->array[ts->numTokens];
 
     size_t lu_index = 0u;
-    int section_index = SECTION_TYPE_TEXT;
+    int section_index = SMA_SECTION_TYPE_TEXT;
 
     /* for .data and .fill: */
     size_t multiplier;
@@ -136,16 +136,16 @@ enum SMA_Assemble_Error SMA_assemble(const struct Tokens * ts, struct LinkingUni
 
 sma_assemble_newline:
     switch (t->type) {
-        case TOKEN_NEWLINE:
+        case SMA_TOKEN_NEWLINE:
             break;
-        case TOKEN_LABEL:
+        case SMA_TOKEN_LABEL:
         {
-            char * label = token_label_label_new(t);
+            char * label = SMA_token_label_label_new(t);
             if (!label)
                     goto sma_assemble_out_of_memory;
 
             int newValue;
-            struct LabelLocation * l = LabelLocations_get_or_insert(&ll, label, &newValue);
+            struct SMA_LabelLocation * l = SMA_LabelLocations_get_or_insert(&ll, label, &newValue);
             if (!l) {
                 free(label);
                 goto sma_assemble_out_of_memory;
@@ -162,20 +162,20 @@ sma_assemble_newline:
             l->offset = lu->sections[section_index].length;
 
             /* Fill pending label slots: */
-            struct LabelSlots * slots = LabelSlotsTrie_find(&lst, label);
+            struct SMA_LabelSlots * slots = SMA_LabelSlotsTrie_find(&lst, label);
             free(label);
             if (slots) {
-                LabelSlots_foreach_with_data(slots, &LabelSlot_fill, l);
+                SMA_LabelSlots_foreach_with_data(slots, &SMA_LabelSlot_fill, l);
             }
             break;
         }
-        case TOKEN_DIRECTIVE:
+        case SMA_TOKEN_DIRECTIVE:
             if (t->length == 13u && strncmp(t->text, ".linking_unit", t->length) == 0) {
                 SMA_ASSEMBLE_INC_CHECK_EOF(sma_assemble_unexpected_eof);
-                if (t->type != TOKEN_HEX)
+                if (t->type != SMA_TOKEN_HEX)
                     goto sma_assemble_invalid_parameter;
 
-                uint64_t v = token_hex_value(t);
+                uint64_t v = SMA_token_hex_value(t);
                 if (v >= 256)
                     goto sma_assemble_invalid_parameter;
 
@@ -183,56 +183,56 @@ sma_assemble_newline:
                     if (v > lus->size)
                         goto sma_assemble_invalid_parameter;
                     if (v == lus->size) {
-                        lu = LinkingUnits_push(lus);
+                        lu = SMA_LinkingUnits_push(lus);
                         if (!lu)
                             goto sma_assemble_out_of_memory;
                     } else {
-                        lu = LinkingUnits_get_pointer(lus, v);
+                        lu = SMA_LinkingUnits_get_pointer(lus, v);
                     }
                     lu_index = v;
-                    section_index = SECTION_TYPE_TEXT;
+                    section_index = SMA_SECTION_TYPE_TEXT;
                 }
 
                 SMA_ASSEMBLE_INC_DO_EOL(sma_assemble_check_labels,sma_assemble_unexpected_token);
             } else if (t->length == 8u && strncmp(t->text, ".section", t->length) == 0) {
                 SMA_ASSEMBLE_INC_CHECK_EOF(sma_assemble_unexpected_eof);
-                if (t->type != TOKEN_KEYWORD)
+                if (t->type != SMA_TOKEN_KEYWORD)
                     goto sma_assemble_invalid_parameter;
 
                 if (t->length == 4u && strncmp(t->text, "TEXT", t->length) == 0) {
-                    section_index = SECTION_TYPE_TEXT;
+                    section_index = SMA_SECTION_TYPE_TEXT;
                 } else if (t->length == 6u && strncmp(t->text, "RODATA", t->length) == 0) {
-                    section_index = SECTION_TYPE_RODATA;
+                    section_index = SMA_SECTION_TYPE_RODATA;
                 } else if (t->length == 4u && strncmp(t->text, "DATA", t->length) == 0) {
-                    section_index = SECTION_TYPE_DATA;
+                    section_index = SMA_SECTION_TYPE_DATA;
                 } else if (t->length == 3u && strncmp(t->text, "BSS", t->length) == 0) {
-                    section_index = SECTION_TYPE_BSS;
+                    section_index = SMA_SECTION_TYPE_BSS;
                 } else if (t->length == 4u && strncmp(t->text, "BIND", t->length) == 0) {
-                    section_index = SECTION_TYPE_BIND;
+                    section_index = SMA_SECTION_TYPE_BIND;
                 } else if (t->length == 5u && strncmp(t->text, "DEBUG", t->length) == 0) {
-                    section_index = SECTION_TYPE_DEBUG;
+                    section_index = SMA_SECTION_TYPE_DEBUG;
                 } else {
                     goto sma_assemble_invalid_parameter;
                 }
             } else if (t->length == 5u && strncmp(t->text, ".data", t->length) == 0) {
-                if (section_index == SECTION_TYPE_TEXT)
+                if (section_index == SMA_SECTION_TYPE_TEXT)
                     goto sma_assemble_unexpected_token;
 
                 multiplier = 1u;
                 goto sma_assemble_data_or_fill;
             } else if (t->length == 5u && strncmp(t->text, ".fill", t->length) == 0) {
-                if (section_index == SECTION_TYPE_TEXT || section_index == SECTION_TYPE_BIND)
+                if (section_index == SMA_SECTION_TYPE_TEXT || section_index == SMA_SECTION_TYPE_BIND)
                     goto sma_assemble_unexpected_token;
 
                 SMA_ASSEMBLE_INC_CHECK_EOF(sma_assemble_unexpected_eof);
 
-                if (t->type != TOKEN_HEX)
+                if (t->type != SMA_TOKEN_HEX)
                     goto sma_assemble_invalid_parameter;
 
                 if (t->text[0] == '-')
                     goto sma_assemble_invalid_parameter;
 
-                uint64_t m = token_hex_value(t);
+                uint64_t m = SMA_token_hex_value(t);
                 if (m >= 65536)
                     goto sma_assemble_invalid_parameter;
 
@@ -240,7 +240,7 @@ sma_assemble_newline:
 
                 goto sma_assemble_data_or_fill;
             } else if (t->length == 13u && strncmp(t->text, ".bind_syscall", t->length) == 0) {
-                if (section_index != SECTION_TYPE_BIND)
+                if (section_index != SMA_SECTION_TYPE_BIND)
                     goto sma_assemble_unexpected_token;
 
                 fprintf(stderr, "TODO\n");
@@ -249,7 +249,7 @@ sma_assemble_newline:
                 goto sma_assemble_unknown_directive;
             }
             break;
-        case TOKEN_KEYWORD:
+        case SMA_TOKEN_KEYWORD:
         {
             size_t args = 0u;
             size_t l = t->length;
@@ -258,15 +258,15 @@ sma_assemble_newline:
                 goto sma_assemble_out_of_memory;
             strncpy(name, t->text, l);
 
-            const struct Token * ot = t;
+            const struct SMA_Token * ot = t;
             /* Collect instruction name and count arguments: */
             for (;;) {
                 t++;
                 if (t == e)
                     break;
-                if (t->type == TOKEN_NEWLINE) {
+                if (t->type == SMA_TOKEN_NEWLINE) {
                     break;
-                } else if (t->type == TOKEN_KEYWORD) {
+                } else if (t->type == SMA_TOKEN_KEYWORD) {
                     size_t newSize = l + t->length + 1u;
                     if (newSize < l)
                         goto sma_assemble_invalid_parameter;
@@ -279,7 +279,7 @@ sma_assemble_newline:
                     name[l] = '_';
                     strncpy(name + l + 1u, t->text, t->length);
                     l = newSize;
-                } else if (t->type == TOKEN_HEX || t->type == TOKEN_LABEL || t->type == TOKEN_LABEL_O) {
+                } else if (t->type == SMA_TOKEN_HEX || t->type == SMA_TOKEN_LABEL || t->type == SMA_TOKEN_LABEL_O) {
                     args++;
                 } else {
                     goto sma_assemble_invalid_parameter;
@@ -310,45 +310,45 @@ sma_assemble_newline:
             for (;;) {
                 if (++ot == t)
                     break;
-                if (ot->type == TOKEN_HEX) {
+                if (ot->type == SMA_TOKEN_HEX) {
                     instr++;
                     if (ot->text[0] == '-') {
-                        instr->int64[0] = -token_hex_value(ot);
+                        instr->int64[0] = -SMA_token_hex_value(ot);
                     } else {
-                        instr->uint64[0] = token_hex_value(ot);
+                        instr->uint64[0] = SMA_token_hex_value(ot);
                     }
-                } else if (ot->type == TOKEN_LABEL || ot->type == TOKEN_LABEL_O) {
+                } else if (ot->type == SMA_TOKEN_LABEL || ot->type == SMA_TOKEN_LABEL_O) {
                     instr++;
-                    char * label = token_label_label_new(ot);
+                    char * label = SMA_token_label_label_new(ot);
                     if (!label)
                         goto sma_assemble_out_of_memory;
 
-                    struct LabelLocation * loc = LabelLocations_find(&ll, label);
+                    struct SMA_LabelLocation * loc = SMA_LabelLocations_find(&ll, label);
                     if (loc) {
                         free(label);
-                        instr->sizet[0] = loc->offset + token_label_offset(ot); /**< \todo check overflow? */
+                        instr->sizet[0] = loc->offset + SMA_token_label_offset(ot); /**< \todo check overflow? */
                     } else {
                         int newValue;
-                        struct LabelSlots * slots = LabelSlotsTrie_get_or_insert(&lst, label, &newValue);
+                        struct SMA_LabelSlots * slots = SMA_LabelSlotsTrie_get_or_insert(&lst, label, &newValue);
                         free(label);
                         if (!slots)
                             goto sma_assemble_out_of_memory;
 
                         if (newValue)
-                            LabelSlots_init(slots);
+                            SMA_LabelSlots_init(slots);
 
-                        struct LabelSlot * slot = LabelSlots_push(slots);
+                        struct SMA_LabelSlot * slot = SMA_LabelSlots_push(slots);
                         if (!slot)
                             goto sma_assemble_out_of_memory;
 
                         slot->linkingUnit = lu_index;
                         slot->section = section_index;
-                        slot->extraOffset = token_label_offset(ot); /**< \todo check overflow? */
+                        slot->extraOffset = SMA_token_label_offset(ot); /**< \todo check overflow? */
                         slot->cbdata = instr;
                         slot->token = ot;
                     }
                 } else {
-                    assert(ot->type == TOKEN_KEYWORD);
+                    assert(ot->type == SMA_TOKEN_KEYWORD);
                 }
             }
 
@@ -366,12 +366,12 @@ sma_assemble_check_labels:
 
     /* Check for undefined labels: */
     {
-        struct LabelSlot * undefinedSlot;
-        if (LabelSlotsTrie_foreach_with_data(&lst, &LabelSlots_allSlotsFilled, &undefinedSlot))
+        struct SMA_LabelSlot * undefinedSlot;
+        if (SMA_LabelSlotsTrie_foreach_with_data(&lst, &SMA_LabelSlots_allSlotsFilled, &undefinedSlot))
             goto sma_assemble_ok;
 
         assert(undefinedSlot);
-        char * undefinedSlotName = token_label_label_new(undefinedSlot->token);
+        char * undefinedSlotName = SMA_token_label_label_new(undefinedSlot->token);
         fprintf(stderr, "Undefined label: %s\n", undefinedSlotName);
         free(undefinedSlotName);
         goto sma_assemble_undefined_label;
@@ -381,7 +381,7 @@ sma_assemble_data_or_fill:
 
     SMA_ASSEMBLE_INC_CHECK_EOF(sma_assemble_unexpected_eof);
 
-    if (t->type != TOKEN_KEYWORD)
+    if (t->type != SMA_TOKEN_KEYWORD)
         goto sma_assemble_invalid_parameter;
 
     if (t->length == 5u && strncmp(t->text, "uint8", t->length) == 0) {
@@ -410,11 +410,11 @@ sma_assemble_data_or_fill:
 
 sma_assemble_data_opt_param:
 
-    if (t->type != TOKEN_HEX)
+    if (t->type != SMA_TOKEN_HEX)
         goto sma_assemble_invalid_parameter;
 
     int neg = (t->text[0] == '-');
-    uint64_t v = token_hex_value(t);
+    uint64_t v = SMA_token_hex_value(t);
     switch (type) {
         case 0u: /* uint8 */
             if (neg || v > 255u)
@@ -501,7 +501,7 @@ sma_assemble_undefined_label:
     goto sma_assemble_free_and_return;
 
 sma_assemble_free_and_return:
-    LabelSlotsTrie_destroy_with(&lst, &LabelSlots_destroy);
-    LabelLocations_destroy(&ll);
+    SMA_LabelSlotsTrie_destroy_with(&lst, &SMA_LabelSlots_destroy);
+    SMA_LabelLocations_destroy(&ll);
     return returnStatus;
 }
