@@ -5,6 +5,7 @@ TARGET = ../../bin/sma
 
 SOURCES += \
     ../vm/instr.c \
+    assemble.c \
     main.c \
     stdion.c \
     tokenizer.c \
