@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "assemble.h"
-#include "tokens.h"
-#include "tokenizer.h"
+#include "../libsma/assemble.h"
+#include "../libsma/tokens.h"
+#include "../libsma/tokenizer.h"
 
 
 int main() {

@@ -1,14 +1,10 @@
 include(../../vm.pri)
 
 TEMPLATE = app
-TARGET = ../../bin/sma
+TARGET = sma
+DESTDIR = ../../bin/
+
+LIBS += -L../../lib -lsma
 
 SOURCES += \
-    ../vm/instr.c \
-    assemble.c \
     main.c \
-    stdion.c \
-    tokenizer.c \
-    tokens.c
-
-QMAKE_CFLAGS += -fstrict-aliasing -Wstrict-aliasing=1
