@@ -129,7 +129,7 @@ char * SMA_token_label_label_new(const struct SMA_Token *t) {
         l = t->length;
     } else {
         assert(t->length >= 6u);
-        for (l = 2; t->text[l] != '+'; l++) /* Do nothing */;
+        for (l = 2; t->text[l] != '+' && t->text[l] != '-'; l++) /* Do nothing */;
         assert(t->text[l + 1] == '0');
         assert(t->text[l + 2] == 'x');
     }
