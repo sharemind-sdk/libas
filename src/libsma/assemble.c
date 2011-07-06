@@ -11,7 +11,7 @@
 
 struct SMA_LabelLocation {
     size_t linkingUnit;
-    size_t section;
+    int section;
     size_t offset;
 };
 
@@ -20,10 +20,13 @@ SVM_TRIE_DEFINE(SMA_LabelLocations,struct SMA_LabelLocation,malloc,free)
 
 struct SMA_LabelSlot {
     size_t linkingUnit;
-    size_t section;
+    int section;
     size_t extraOffset;
     int negativeOffset;
-    union SVM_IBlock * cbdata;
+    size_t jmpOffset;
+    size_t jmpArgs;
+    union SVM_IBlock ** cbdata;
+    size_t cbdata_index;
     const struct SMA_Token * token; /* NULL if this slot is already filled */
 };
 
@@ -55,11 +58,35 @@ int SMA_LabelSlot_fill(struct SMA_LabelSlot * s, struct SMA_LabelLocation * l) {
     assert(s);
     assert(s->token);
     assert(l);
-    s->cbdata->sizet[0] = s->extraOffset;
-    if (s->negativeOffset) {
-        s->cbdata->sizet[0] -= l->offset; /**< \todo check overflow? */
+
+    size_t absTarget = l->offset;
+    if (s->negativeOffset % 2) {
+        absTarget -= s->extraOffset; /**< \todo check overflow/underflow? */
     } else {
-        s->cbdata->sizet[0] += l->offset; /**< \todo check overflow? */
+        absTarget += s->extraOffset; /**< \todo check overflow/underflow? */
+    }
+
+    if (s->negativeOffset < 2) { /* Normal absolute label */
+        (*s->cbdata)[s->cbdata_index].uint64[0] = absTarget;
+    } else { /* Relative jump label */
+        if (s->linkingUnit != l->linkingUnit)
+            return 0;
+
+        if (s->section != l->section)
+            return 0;
+
+        assert(s->section == SMA_SECTION_TYPE_TEXT);
+        assert(s->jmpOffset < l->offset); /* Because we're one-pass. */
+
+        if (absTarget < s->jmpOffset) {
+            /** \todo Maybe check whether there's really an instruction there */
+            (*s->cbdata)[s->cbdata_index].int64[0] = absTarget - s->jmpOffset;  /**< \todo check underflow? */
+        } else if (absTarget > s->jmpOffset + 1 + s->jmpArgs) {
+            /** \todo Maybe check whether there's really an instruction there */
+            (*s->cbdata)[s->cbdata_index].int64[0] = absTarget - s->jmpOffset - s->jmpArgs - 2;
+        } else {
+            return 0;
+        }
     }
     s->token = NULL;
     return 1;
@@ -159,7 +186,8 @@ sma_assemble_newline:
             struct SMA_LabelSlots * slots = SMA_LabelSlotsTrie_find(&lst, label);
             free(label);
             if (slots) {
-                SMA_LabelSlots_foreach_with_labelLocationPointer(slots, &SMA_LabelSlot_fill, l);
+                if (!SMA_LabelSlots_foreach_with_labelLocationPointer(slots, &SMA_LabelSlot_fill, l))
+                    goto sma_assemble_invalid_label;
             }
             break;
         }
@@ -245,6 +273,9 @@ sma_assemble_newline:
             break;
         case SMA_TOKEN_KEYWORD:
         {
+            if (unlikely(section_index != SMA_SECTION_TYPE_TEXT))
+                goto sma_assemble_unexpected_token;
+
             size_t args = 0u;
             size_t l = t->length;
             char * name = malloc(sizeof(char) * (l + 1u));
@@ -288,6 +319,23 @@ sma_assemble_newline:
             if (unlikely(i->numargs != args))
                 goto sma_assemble_invalid_parameter;
 
+            /* Detect offset for jump instructions */
+            size_t jmpOffset;
+            int doJumpLabel;
+            {
+                union { uint64_t code; char c[8]; } x;
+                x.code = i->code;
+                if (x.c[0] == 0x04     /* Check for jump namespace */
+                    && x.c[2] == 0x01) /* and imm first argument OLB */
+                {
+                    jmpOffset = lu->sections[section_index].length;
+                    doJumpLabel = 1;
+                } else {
+                    jmpOffset = 0u;
+                    doJumpLabel = 0;
+                }
+            }
+
             /* Allocate whole instruction: */
             char * newData = realloc(lu->sections[section_index].data, sizeof(union SVM_IBlock) * (lu->sections[section_index].length + args + 1));
             if (unlikely(!newData))
@@ -304,6 +352,7 @@ sma_assemble_newline:
                 if (++ot == t)
                     break;
                 if (ot->type == SMA_TOKEN_HEX) {
+                    doJumpLabel = 0; /* Past first argument */
                     instr++;
                     if (unlikely(ot->text[0] == '-')) {
                         instr->int64[0] = -SMA_token_hex_value(ot);
@@ -318,14 +367,38 @@ sma_assemble_newline:
 
                     struct SMA_LabelLocation * loc = SMA_LabelLocations_find(&ll, label);
                     int negative;
-                    uint64_t labelOffset = SMA_token_label_offset(ot, negative);
+                    uint64_t labelOffset = SMA_token_label_offset(ot, &negative);
                     if (loc) {
                         free(label);
-                        instr->sizet[0] = loc->offset;
+
+                        size_t absTarget = loc->offset;
                         if (negative) {
-                            instr->sizet[0] -= labelOffset; /**< \todo check overflow? */
+                            absTarget -= labelOffset; /**< \todo check overflow/underflow? */
                         } else {
-                            instr->sizet[0] += labelOffset; /**< \todo check overflow? */
+                            absTarget += labelOffset; /**< \todo check overflow/underflow? */
+                        }
+
+                        if (doJumpLabel) {
+                            assert(jmpOffset >= loc->offset); /* Because we're one-pass. */
+
+                            if (loc->linkingUnit != lu_index)
+                                goto sma_assemble_invalid_label;
+
+                            assert(section_index == SMA_SECTION_TYPE_TEXT);
+                            if (loc->section != section_index)
+                                goto sma_assemble_invalid_label;
+
+                            if (absTarget < jmpOffset) {
+                                /** \todo Maybe check whether there's really an instruction there */
+                                instr->int64[0] = absTarget - jmpOffset;  /**< \todo check underflow? */
+                            } else if (absTarget > jmpOffset + 1 + args) {
+                                /** \todo Maybe check whether there's really an instruction there */
+                                instr->int64[0] = absTarget - jmpOffset - args - 2;
+                            } else {
+                                goto sma_assemble_invalid_label;
+                            }
+                        } else {
+                            instr->uint64[0] = absTarget;
                         }
                     } else {
                         int newValue;
@@ -345,9 +418,14 @@ sma_assemble_newline:
                         slot->section = section_index;
                         slot->extraOffset = labelOffset;
                         slot->negativeOffset = negative;
-                        slot->cbdata = instr;
+                        slot->negativeOffset += doJumpLabel * 2; /* Signal a relative jump label */
+                        slot->jmpOffset = jmpOffset;
+                        slot->jmpArgs = args;
+                        slot->cbdata = &lu->sections[section_index].cbdata;
+                        slot->cbdata_index = instr - lu->sections[section_index].cbdata;
                         slot->token = ot;
                     }
+                    doJumpLabel = 0; /* Past first argument */
                 } else {
                     assert(ot->type == SMA_TOKEN_KEYWORD);
                 }
@@ -499,6 +577,10 @@ sma_assemble_invalid_parameter:
 
 sma_assemble_undefined_label:
     returnStatus = SMA_ASSEMBLE_UNDEFINED_LABEL;
+    goto sma_assemble_free_and_return;
+
+sma_assemble_invalid_label:
+    returnStatus = SMA_ASSEMBLE_INVALID_LABEL;
     goto sma_assemble_free_and_return;
 
 sma_assemble_free_and_return:

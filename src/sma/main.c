@@ -13,7 +13,7 @@ int main() {
         "resizestack 0x10\n"
         ":test mov imm 0x256 reg 0x9\n"
         "mov imm 0x257 stack 0x8\n"
-        "jmp imm 0x1\n"
+        ":here jmp imm :here+0x3\n"
         "nop\n"
         "nop\n"
         "push imm 0x255\n"
