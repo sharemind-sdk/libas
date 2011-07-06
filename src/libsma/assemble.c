@@ -9,53 +9,6 @@
 #include "tokens.h"
 
 
-void SMA_Section_init(struct SMA_Section * s) {
-    s->length = 0u;
-    s->data = NULL;
-}
-
-void SMA_Section_destroy(struct SMA_Section * s) {
-    free(s->data);
-}
-
-void SMA_LinkingUnit_init(struct SMA_LinkingUnit * lu) {
-    for (size_t i = 0u; i < SMA_SECTION_TYPE_COUNT; i++)
-        SMA_Section_init(&lu->sections[i]);
-}
-
-void SMA_LinkingUnit_destroy(struct SMA_LinkingUnit * lu) {
-    for (size_t i = 0u; i < SMA_SECTION_TYPE_COUNT; i++)
-        SMA_Section_destroy(&lu->sections[i]);
-}
-
-SVM_VECTOR_DEFINE(SMA_LinkingUnits,struct SMA_LinkingUnit,malloc,free,realloc)
-
-struct SMA_LabelSlot {
-    size_t linkingUnit;
-    size_t section;
-    size_t extraOffset;
-    union SVM_IBlock * cbdata;
-    const struct SMA_Token * token; /* NULL if this slot is already filled */
-};
-
-int SMA_LabelSlot_filled(struct SMA_LabelSlot * s, void * d) {
-    assert(s);
-    if (s->token == NULL)
-        return 1;
-    *((struct SMA_LabelSlot **) d) = s;
-    return 0;
-}
-
-SVM_VECTOR_DECLARE(SMA_LabelSlots,struct SMA_LabelSlot,)
-SVM_VECTOR_DEFINE(SMA_LabelSlots,struct SMA_LabelSlot,malloc,free,realloc)
-
-int SMA_LabelSlots_allSlotsFilled(struct SMA_LabelSlots * ss, void * d) {
-    return SMA_LabelSlots_foreach_with_data(ss, &SMA_LabelSlot_filled, d);
-}
-
-SVM_TRIE_DECLARE(SMA_LabelSlotsTrie,struct SMA_LabelSlots)
-SVM_TRIE_DEFINE(SMA_LabelSlotsTrie,struct SMA_LabelSlots,malloc,free)
-
 struct SMA_LabelLocation {
     size_t linkingUnit;
     size_t section;
@@ -65,11 +18,42 @@ struct SMA_LabelLocation {
 SVM_TRIE_DECLARE(SMA_LabelLocations,struct SMA_LabelLocation)
 SVM_TRIE_DEFINE(SMA_LabelLocations,struct SMA_LabelLocation,malloc,free)
 
-int SMA_LabelSlot_fill(struct SMA_LabelSlot * s, void * vl) {
+struct SMA_LabelSlot {
+    size_t linkingUnit;
+    size_t section;
+    size_t extraOffset;
+    union SVM_IBlock * cbdata;
+    const struct SMA_Token * token; /* NULL if this slot is already filled */
+};
+
+int SMA_LabelSlot_filled(struct SMA_LabelSlot * s, struct SMA_LabelSlot ** d) {
     assert(s);
-    assert(vl);
+    if (s->token == NULL)
+        return 1;
+    (*d) = s;
+    return 0;
+}
+
+SVM_VECTOR_DECLARE(SMA_LabelSlots,struct SMA_LabelSlot,)
+SVM_VECTOR_DEFINE(SMA_LabelSlots,struct SMA_LabelSlot,malloc,free,realloc)
+SVM_VECTOR_DECLARE_FOREACH_WITH(SMA_LabelSlots,struct SMA_LabelSlot,labelLocationPointer,struct SMA_LabelLocation *,struct SMA_LabelLocation * p)
+SVM_VECTOR_DEFINE_FOREACH_WITH(SMA_LabelSlots,struct SMA_LabelSlot,labelLocationPointer,struct SMA_LabelLocation *,struct SMA_LabelLocation * p,p)
+SVM_VECTOR_DECLARE_FOREACH_WITH(SMA_LabelSlots,struct SMA_LabelSlot,labelSlotPointerPointer,struct SMA_LabelSlot **,struct SMA_LabelSlot ** p)
+SVM_VECTOR_DEFINE_FOREACH_WITH(SMA_LabelSlots,struct SMA_LabelSlot,labelSlotPointerPointer,struct SMA_LabelSlot **,struct SMA_LabelSlot ** p,p)
+
+int SMA_LabelSlots_allSlotsFilled(struct SMA_LabelSlots * ss, struct SMA_LabelSlot ** d) {
+    return SMA_LabelSlots_foreach_with_labelSlotPointerPointer(ss, &SMA_LabelSlot_filled, d);
+}
+
+SVM_TRIE_DECLARE(SMA_LabelSlotsTrie,struct SMA_LabelSlots)
+SVM_TRIE_DEFINE(SMA_LabelSlotsTrie,struct SMA_LabelSlots,malloc,free)
+SVM_TRIE_DECLARE_FOREACH_WITH(SMA_LabelSlotsTrie,struct SMA_LabelSlots,labelSlotPointerPointer,struct SMA_LabelSlot **,struct SMA_LabelSlot ** p)
+SVM_TRIE_DEFINE_FOREACH_WITH(SMA_LabelSlotsTrie,struct SMA_LabelSlots,labelSlotPointerPointer,struct SMA_LabelSlot **,struct SMA_LabelSlot ** p,p)
+
+int SMA_LabelSlot_fill(struct SMA_LabelSlot * s, struct SMA_LabelLocation * l) {
+    assert(s);
     assert(s->token);
-    struct SMA_LabelLocation * l = (struct SMA_LabelLocation *) vl;
+    assert(l);
     s->cbdata->sizet[0] = s->extraOffset + l->offset; /**< \todo check overflow? */
     s->token = NULL;
     return 1;
@@ -169,7 +153,7 @@ sma_assemble_newline:
             struct SMA_LabelSlots * slots = SMA_LabelSlotsTrie_find(&lst, label);
             free(label);
             if (slots) {
-                SMA_LabelSlots_foreach_with_data(slots, &SMA_LabelSlot_fill, l);
+                SMA_LabelSlots_foreach_with_labelLocationPointer(slots, &SMA_LabelSlot_fill, l);
             }
             break;
         }
@@ -370,7 +354,7 @@ sma_assemble_check_labels:
     /* Check for undefined labels: */
     {
         struct SMA_LabelSlot * undefinedSlot;
-        if (likely(SMA_LabelSlotsTrie_foreach_with_data(&lst, &SMA_LabelSlots_allSlotsFilled, &undefinedSlot)))
+        if (likely(SMA_LabelSlotsTrie_foreach_with_labelSlotPointerPointer(&lst, &SMA_LabelSlots_allSlotsFilled, &undefinedSlot)))
             goto sma_assemble_ok;
 
         assert(undefinedSlot);

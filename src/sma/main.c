@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../libsma/assemble.h"
+#include "../libsma/linker.h"
 #include "../libsma/tokens.h"
 #include "../libsma/tokenizer.h"
 
@@ -18,9 +19,9 @@ int main() {
         "push imm 0x255\n"
         "push reg 0x9\n"
         "push stack 0x8\n"
-        "halt 0x255\n"
+        "halt 0x255\n"/*
         "jmp imm :cae\n"
-        "jmp imm :cae2b\n"
+        "jmp imm :cae2b\n"*/
         "nop\n";
 
     /* Tokenize: */
@@ -33,7 +34,7 @@ int main() {
             fprintf(stderr, "Tokenization failed at (%lu,%lu)!\n", sl, sc);
             return EXIT_FAILURE;
         }
-        SMA_tokens_print(ts);
+        /* SMA_tokens_print(ts); */
     }
 
     /* Assemble the linking units: */
@@ -52,9 +53,15 @@ int main() {
     }
 
     /* Generate the Sharemind Executable */
-    /** \todo Generate the Sharemind Executable */
-
+    size_t outputLength;
+    char * output = SMA_link(0x0, &lus, &outputLength, 0);
     SMA_LinkingUnits_destroy_with(&lus, &SMA_LinkingUnit_destroy);
+    if (!output) {
+        fprintf(stderr, "Output failure!\n");
+        return EXIT_FAILURE;
+    }
+    fwrite(output, 1, outputLength, stdout);
+    free(output);
 
     return EXIT_SUCCESS;
 
