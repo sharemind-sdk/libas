@@ -22,6 +22,7 @@ struct SMA_LabelSlot {
     size_t linkingUnit;
     size_t section;
     size_t extraOffset;
+    int negativeOffset;
     union SVM_IBlock * cbdata;
     const struct SMA_Token * token; /* NULL if this slot is already filled */
 };
@@ -54,7 +55,12 @@ int SMA_LabelSlot_fill(struct SMA_LabelSlot * s, struct SMA_LabelLocation * l) {
     assert(s);
     assert(s->token);
     assert(l);
-    s->cbdata->sizet[0] = s->extraOffset + l->offset; /**< \todo check overflow? */
+    s->cbdata->sizet[0] = s->extraOffset;
+    if (s->negativeOffset) {
+        s->cbdata->sizet[0] -= l->offset; /**< \todo check overflow? */
+    } else {
+        s->cbdata->sizet[0] += l->offset; /**< \todo check overflow? */
+    }
     s->token = NULL;
     return 1;
 }
@@ -311,9 +317,16 @@ sma_assemble_newline:
                         goto sma_assemble_out_of_memory;
 
                     struct SMA_LabelLocation * loc = SMA_LabelLocations_find(&ll, label);
+                    int negative;
+                    uint64_t labelOffset = SMA_token_label_offset(ot, negative);
                     if (loc) {
                         free(label);
-                        instr->sizet[0] = loc->offset + SMA_token_label_offset(ot); /**< \todo check overflow? */
+                        instr->sizet[0] = loc->offset;
+                        if (negative) {
+                            instr->sizet[0] -= labelOffset; /**< \todo check overflow? */
+                        } else {
+                            instr->sizet[0] += labelOffset; /**< \todo check overflow? */
+                        }
                     } else {
                         int newValue;
                         struct SMA_LabelSlots * slots = SMA_LabelSlotsTrie_get_or_insert(&lst, label, &newValue);
@@ -330,7 +343,8 @@ sma_assemble_newline:
 
                         slot->linkingUnit = lu_index;
                         slot->section = section_index;
-                        slot->extraOffset = SMA_token_label_offset(ot); /**< \todo check overflow? */
+                        slot->extraOffset = labelOffset;
+                        slot->negativeOffset = negative;
                         slot->cbdata = instr;
                         slot->token = ot;
                     }

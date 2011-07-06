@@ -144,18 +144,26 @@ char * SMA_token_label_label_new(const struct SMA_Token *t) {
     return c;
 }
 
-uint64_t SMA_token_label_offset(const struct SMA_Token *t) {
+uint64_t SMA_token_label_offset(const struct SMA_Token *t, int * negative) {
     assert(t);
     assert(t->type == SMA_TOKEN_LABEL || t->type == SMA_TOKEN_LABEL_O);
     assert(t->text[0] == ':');
     if (t->type == SMA_TOKEN_LABEL) {
         assert(t->length >= 2u);
+        *negative = 0;
         return 0;
     } else {
         assert(t->length >= 6u);
         const char * h = t->text + 2;
-        while (*h != '+')
-            h++;
+        for (;; h++) {
+            if (*h == '+') {
+                *negative = 0;
+                break;
+            } else if (*h == '-') {
+                *negative = 1;
+                break;
+            }
+        }
         h += 3;
         return read_hex(h, t->length - (h - t->text));
     }

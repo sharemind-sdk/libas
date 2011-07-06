@@ -35,7 +35,7 @@ size_t SMA_token_string_length(const struct SMA_Token * t);
 char * SMA_token_string_value(const struct SMA_Token * t, size_t * length);
 
 char * SMA_token_label_label_new(const struct SMA_Token *t);
-uint64_t SMA_token_label_offset(const struct SMA_Token *t);
+uint64_t SMA_token_label_offset(const struct SMA_Token *t, int * negative);
 
 struct SMA_Tokens {
     size_t numTokens;
