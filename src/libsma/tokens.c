@@ -185,7 +185,7 @@ void SMA_tokens_print(const struct SMA_Tokens *ts) {
         else
             newLine = 0;
 
-        printf("%s", SMA_TokenType_toString(t->type) + 6);
+        printf("%s", SMA_TokenType_toString(t->type) + 10u);
         switch (t->type) {
             case SMA_TOKEN_NEWLINE:
                 putchar('\n');
