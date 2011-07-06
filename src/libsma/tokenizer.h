@@ -16,4 +16,4 @@ struct SMA_Tokens * SMA_tokenize(const void * program, size_t length, size_t * e
 } /* extern "C" { */
 #endif
 
-#endif
+#endif /* TOKENIZER_H */
