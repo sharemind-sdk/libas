@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include "../codeblock.h"
+#include "../static_assert.h"
 #include "linkingunits.h"
 
 
@@ -16,6 +17,7 @@ struct SME_Common_Header {
     uint64_t byte_order_verification __attribute__ ((packed));
     uint16_t file_format_version __attribute__ ((packed));
 };
+SVM_STATIC_ASSERT(sizeof(struct SME_Common_Header) == 32 + 8 + 2);
 
 static void SME_Common_Header_init(struct SME_Common_Header * h, uint16_t version) {
     static const char magic[32] = "Sharemind Executable";
@@ -30,8 +32,6 @@ char * SMA_link(unsigned version, struct SMA_LinkingUnits * lus, size_t * length
     if (version > 0u)
         return NULL;
 
-    assert(sizeof(struct SME_Common_Header) == 32 + 8 + 2);
-
     *length = sizeof(struct SME_Common_Header);
     return SMA_link_0x0(lus, length, activeLinkingUnit);
 }
@@ -44,18 +44,21 @@ struct SME_Header_0x0 {
     uint8_t active_linking_unit;
     uint8_t zeroPadding[4];
 };
+SVM_STATIC_ASSERT(sizeof(struct SME_Header_0x0) == 1u + 1u + 4u);
 
 struct SME_Unit_Header_0x0 {
     char type[32];
     uint8_t sections_minus_one;
     uint8_t zeroPadding[7];
 };
+SVM_STATIC_ASSERT(sizeof(struct SME_Unit_Header_0x0) == 32u + 1u + 7u);
 
 struct SME_Section_Header_0x0 {
     char type[32];
     uint32_t length __attribute__ ((packed));
     uint8_t zeroPadding[4];
 };
+SVM_STATIC_ASSERT(sizeof(struct SME_Section_Header_0x0) == 32u + 4u + 4u);
 
 
 static const size_t extraPadding[8] = { 0u, 7u, 6u, 5u, 4u, 3u, 2u, 1u };
@@ -139,9 +142,6 @@ static int writeLinkingUnit_0x0(struct SMA_LinkingUnit * lu, void ** pos) {
 }
 
 static char * SMA_link_0x0(struct SMA_LinkingUnits * lus, size_t * length, unsigned activeLinkingUnit) {
-    assert(sizeof(struct SME_Header_0x0) == 1u + 1u + 4u);
-    assert(sizeof(struct SME_Unit_Header_0x0) == 32u + 1u + 7u);
-    assert(sizeof(struct SME_Section_Header_0x0) == 32u + 4u + 4u);
     assert(lus->size > 0u);
 
     (*length) += sizeof(struct SME_Header_0x0) + (lus->size * sizeof(struct SME_Unit_Header_0x0));
