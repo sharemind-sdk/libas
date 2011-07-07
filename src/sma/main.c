@@ -94,7 +94,7 @@ int main(int argc, char * argv[]) {
         size_t sc = 0u;
         ts = SMA_tokenize(map, inFileStat.st_size, &sl, &sc);
         if (unlikely(!ts)) {
-            fprintf(stderr, "Error: Tokenization failed at (%lu,%lu)!\n", sl, sc);
+            fprintf(stderr, "Error: Tokenization failed at (%zu,%zu)!\n", sl, sc);
             goto main_fail_3;
         }
         /* SMA_tokens_print(ts); */
