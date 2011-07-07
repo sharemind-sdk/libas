@@ -87,6 +87,9 @@ int main(int argc, char * argv[]) {
         return EXIT_FAILURE;
     }
 
+    /* Advise the OS that we plan to read the file sequentially: */
+    (void) madvise(map, inFileStat.st_size, MADV_SEQUENTIAL);
+
     /* Tokenize: */
     struct SMA_Tokens * ts;
     {
