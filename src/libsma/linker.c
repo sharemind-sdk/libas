@@ -72,7 +72,7 @@ static int calculateLinkingUnitSize_0x0(struct SMA_LinkingUnit * lu, size_t * s)
     return 1;
 }
 
-static int writeSection_0x0(struct SMA_Section * s, void ** pos, enum Section_Type type) {
+static int writeSection_0x0(struct SMA_Section * s, void ** pos, enum SMA_Section_Type type) {
     assert(s->length > 0u && s->data != NULL);
 
     /* Write magic: */

@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-enum Section_Type {
+enum SMA_Section_Type {
     SMA_SECTION_TYPE_TEXT = 0,
     SMA_SECTION_TYPE_RODATA = 1,
     SMA_SECTION_TYPE_DATA = 2,
