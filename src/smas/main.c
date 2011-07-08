@@ -13,10 +13,10 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "../libsma/assemble.h"
-#include "../libsma/linker.h"
-#include "../libsma/tokens.h"
-#include "../libsma/tokenizer.h"
+#include "../libsmas/assemble.h"
+#include "../libsmas/linker.h"
+#include "../libsmas/tokens.h"
+#include "../libsmas/tokenizer.h"
 #include "../static_assert.h"
 
 
@@ -100,11 +100,11 @@ int main(int argc, char * argv[]) {
     (void) madvise(map, inFileStat.st_size, MADV_SEQUENTIAL);
 
     /* Tokenize: */
-    struct SMA_Tokens * ts;
+    struct SMAS_Tokens * ts;
     {
         size_t sl = 0u;
         size_t sc = 0u;
-        ts = SMA_tokenize(map, inFileStat.st_size, &sl, &sc);
+        ts = SMAS_tokenize(map, inFileStat.st_size, &sl, &sc);
         if (unlikely(!ts)) {
             fprintf(stderr, "Error: Tokenization failed at (%zu,%zu)!\n", sl, sc);
             goto main_fail_3;
@@ -113,15 +113,15 @@ int main(int argc, char * argv[]) {
     }
 
     /* Assemble the linking units: */
-    struct SMA_LinkingUnits lus;
+    struct SMAS_LinkingUnits lus;
     {
-        SMA_LinkingUnits_init(&lus);
-        enum SMA_Assemble_Error r = SMA_assemble(ts, &lus);
-        if (r != SMA_ASSEMBLE_OK) {
-            fprintf(stderr, "Error: Assembly failed with error %s!\n", SMA_Assemble_Error_toString(r));
+        SMAS_LinkingUnits_init(&lus);
+        enum SMAS_Assemble_Error r = SMAS_assemble(ts, &lus);
+        if (r != SMAS_ASSEMBLE_OK) {
+            fprintf(stderr, "Error: Assembly failed with error %s!\n", SMAS_Assemble_Error_toString(r));
             goto main_fail_4;
         }
-        SMA_tokens_free(ts);
+        SMAS_tokens_free(ts);
 
         if (munmap(map, inFileStat.st_size) != 0)
             fprintf(stderr, "Error: Failed to munmap input file!\n");
@@ -131,8 +131,8 @@ int main(int argc, char * argv[]) {
 
     /* Generate the Sharemind Executable: */
     size_t outputLength;
-    char * output = SMA_link(0x0, &lus, &outputLength, 0);
-    SMA_LinkingUnits_destroy_with(&lus, &SMA_LinkingUnit_destroy);
+    char * output = SMAS_link(0x0, &lus, &outputLength, 0);
+    SMAS_LinkingUnits_destroy_with(&lus, &SMAS_LinkingUnit_destroy);
     if (!output) {
         fprintf(stderr, "Error generating output!\n");
         goto main_fail_1;
@@ -170,8 +170,8 @@ main_fail_5:
 
 main_fail_4:
 
-    SMA_LinkingUnits_destroy_with(&lus, &SMA_LinkingUnit_destroy);
-    SMA_tokens_free(ts);
+    SMAS_LinkingUnits_destroy_with(&lus, &SMAS_LinkingUnit_destroy);
+    SMAS_tokens_free(ts);
 
 main_fail_3:
 

@@ -7,8 +7,8 @@
  * code is subject to the appropriate license agreement.
  */
 
-#ifndef LIBSMA_STDION_H
-#define LIBSMA_STDION_H
+#ifndef LIBSMAS_STDION_H
+#define LIBSMAS_STDION_H
 
 #include <stdio.h>
 
@@ -24,4 +24,4 @@ int nputs(const char * s, size_t len);
 } /* extern "C" { */
 #endif
 
-#endif /* LIBSMA_STDION_H */
+#endif /* LIBSMAS_STDION_H */

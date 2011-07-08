@@ -10,7 +10,7 @@
 include(../../vm.pri)
 
 TEMPLATE = lib
-TARGET = sma
+TARGET = smas
 DESTDIR = ../../lib/
 
 SOURCES += \

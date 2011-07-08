@@ -18,8 +18,8 @@
 
 /* COMMON */
 
-SVM_VECTOR_DEFINE_FOREACH_WITH(SMA_LinkingUnits,struct SMA_LinkingUnit,sizetPointer,size_t *,size_t * l,l)
-SVM_VECTOR_DEFINE_FOREACH_WITH(SMA_LinkingUnits,struct SMA_LinkingUnit,outputPointer,void **,void ** p,p)
+SVM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,struct SMAS_LinkingUnit,sizetPointer,size_t *,size_t * l,l)
+SVM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,struct SMAS_LinkingUnit,outputPointer,void **,void ** p,p)
 
 struct SME_Common_Header {
     char magic[32];
@@ -35,14 +35,14 @@ static void SME_Common_Header_init(struct SME_Common_Header * h, uint16_t versio
     h->file_format_version = version;
 }
 
-static char * SMA_link_0x0(struct SMA_LinkingUnits * lus, size_t * length, unsigned activeLinkingUnit);
+static char * SMAS_link_0x0(struct SMAS_LinkingUnits * lus, size_t * length, unsigned activeLinkingUnit);
 
-char * SMA_link(unsigned version, struct SMA_LinkingUnits * lus, size_t * length, unsigned activeLinkingUnit) {
+char * SMAS_link(unsigned version, struct SMAS_LinkingUnits * lus, size_t * length, unsigned activeLinkingUnit) {
     if (version > 0u)
         return NULL;
 
     *length = sizeof(struct SME_Common_Header);
-    return SMA_link_0x0(lus, length, activeLinkingUnit);
+    return SMAS_link_0x0(lus, length, activeLinkingUnit);
 }
 
 
@@ -72,10 +72,10 @@ SVM_STATIC_ASSERT(sizeof(struct SME_Section_Header_0x0) == 32u + 4u + 4u);
 
 static const size_t extraPadding[8] = { 0u, 7u, 6u, 5u, 4u, 3u, 2u, 1u };
 
-static int calculateLinkingUnitSize_0x0(struct SMA_LinkingUnit * lu, size_t * s) {
-    for (unsigned i = 0u; i < SMA_SECTION_TYPE_COUNT; i++)
+static int calculateLinkingUnitSize_0x0(struct SMAS_LinkingUnit * lu, size_t * s) {
+    for (unsigned i = 0u; i < SMAS_SECTION_TYPE_COUNT; i++)
         if (lu->sections[i].length > 0u && lu->sections[i].data != NULL) {
-            if (i == SMA_SECTION_TYPE_TEXT) {
+            if (i == SMAS_SECTION_TYPE_TEXT) {
                 *s += sizeof(struct SME_Section_Header_0x0) + lu->sections[i].length * sizeof(union SVM_IBlock);
             } else {
                 *s += sizeof(struct SME_Section_Header_0x0) + lu->sections[i].length + extraPadding[lu->sections[i].length % 8];
@@ -84,12 +84,12 @@ static int calculateLinkingUnitSize_0x0(struct SMA_LinkingUnit * lu, size_t * s)
     return 1;
 }
 
-static int writeSection_0x0(struct SMA_Section * s, void ** pos, enum SMA_Section_Type type) {
+static int writeSection_0x0(struct SMAS_Section * s, void ** pos, enum SMAS_Section_Type type) {
     assert(s->length > 0u && s->data != NULL);
 
     /* Write magic: */
-    assert(type < SMA_SECTION_TYPE_COUNT);
-    static const char magic[SMA_SECTION_TYPE_COUNT][32] = {
+    assert(type < SMAS_SECTION_TYPE_COUNT);
+    static const char magic[SMAS_SECTION_TYPE_COUNT][32] = {
         "TEXT", "RODATA", "DATA", "BSS", "BIND", "DEBUG"
     };
     __builtin_memcpy(*pos, magic[type], 32);
@@ -104,7 +104,7 @@ static int writeSection_0x0(struct SMA_Section * s, void ** pos, enum SMA_Sectio
     __builtin_bzero(*pos, 4);
     (*pos) += 4;
 
-    if (type == SMA_SECTION_TYPE_TEXT) {
+    if (type == SMAS_SECTION_TYPE_TEXT) {
         /* Write section data */
         __builtin_memcpy(*pos, s->data, l * 8); /** \todo check multiplication overflow? */
         (*pos) += l * 8;
@@ -121,7 +121,7 @@ static int writeSection_0x0(struct SMA_Section * s, void ** pos, enum SMA_Sectio
     return 1;
 }
 
-static int writeLinkingUnit_0x0(struct SMA_LinkingUnit * lu, void ** pos) {
+static int writeLinkingUnit_0x0(struct SMAS_LinkingUnit * lu, void ** pos) {
 
     /* Write magic: */
     static const char magic[32] = "Linking Unit";
@@ -130,7 +130,7 @@ static int writeLinkingUnit_0x0(struct SMA_LinkingUnit * lu, void ** pos) {
 
     /* Calculate and write number of sections: */
     uint8_t sections = 0u;
-    for (unsigned i = 0u; i < SMA_SECTION_TYPE_COUNT; i++)
+    for (unsigned i = 0u; i < SMAS_SECTION_TYPE_COUNT; i++)
         if (lu->sections[i].length > 0u && lu->sections[i].data != NULL)
             sections++;
     assert(sections > 0u);
@@ -143,18 +143,18 @@ static int writeLinkingUnit_0x0(struct SMA_LinkingUnit * lu, void ** pos) {
     (*pos) += 7;
 
     /* Write sections: */
-    for (unsigned i = 0u; i < SMA_SECTION_TYPE_COUNT; i++)
+    for (unsigned i = 0u; i < SMAS_SECTION_TYPE_COUNT; i++)
         if (lu->sections[i].length > 0u && lu->sections[i].data != NULL)
             writeSection_0x0(&lu->sections[i], pos, i);
 
     return 1;
 }
 
-static char * SMA_link_0x0(struct SMA_LinkingUnits * lus, size_t * length, unsigned activeLinkingUnit) {
+static char * SMAS_link_0x0(struct SMAS_LinkingUnits * lus, size_t * length, unsigned activeLinkingUnit) {
     assert(lus->size > 0u);
 
     (*length) += sizeof(struct SME_Header_0x0) + (lus->size * sizeof(struct SME_Unit_Header_0x0));
-    int r = SMA_LinkingUnits_foreach_with_sizetPointer(lus, &calculateLinkingUnitSize_0x0, length);
+    int r = SMAS_LinkingUnits_foreach_with_sizetPointer(lus, &calculateLinkingUnitSize_0x0, length);
     assert(r);
 
     void * data = malloc(*length);
@@ -166,7 +166,7 @@ static char * SMA_link_0x0(struct SMA_LinkingUnits * lus, size_t * length, unsig
     __builtin_bzero(((struct SME_Header_0x0 *) c)->zeroPadding, 4);
     c += sizeof(struct SME_Header_0x0);
 
-    r = SMA_LinkingUnits_foreach_with_outputPointer(lus, &writeLinkingUnit_0x0, &c);
+    r = SMAS_LinkingUnits_foreach_with_outputPointer(lus, &writeLinkingUnit_0x0, &c);
     assert(r);
     assert(c == (data + *length));
 

@@ -10,10 +10,10 @@
 include(../../vm.pri)
 
 TEMPLATE = app
-TARGET = sma
+TARGET = smas
 DESTDIR = ../../bin/
 
-LIBS += -L../../lib -lsma
+LIBS += -L../../lib -lsmas
 
 SOURCES += \
     main.c \

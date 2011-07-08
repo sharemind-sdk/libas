@@ -7,8 +7,8 @@
  * code is subject to the appropriate license agreement.
  */
 
-#ifndef LIBSMA_LINKER_H
-#define LIBSMA_LINKER_H
+#ifndef LIBSMAS_LINKER_H
+#define LIBSMAS_LINKER_H
 
 #include <stddef.h>
 
@@ -17,12 +17,12 @@
 extern "C" {
 #endif
 
-struct SMA_LinkingUnits;
+struct SMAS_LinkingUnits;
 
-char * SMA_link(unsigned version, struct SMA_LinkingUnits * lus, size_t * length, unsigned activeLinkingUnit);
+char * SMAS_link(unsigned version, struct SMAS_LinkingUnits * lus, size_t * length, unsigned activeLinkingUnit);
 
 #ifdef __cplusplus
 } /* extern "C" { */
 #endif
 
-#endif /* LIBSMA_LINKER_H */
+#endif /* LIBSMAS_LINKER_H */

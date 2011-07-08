@@ -7,8 +7,8 @@
  * code is subject to the appropriate license agreement.
  */
 
-#ifndef LIBSMA_TOKENIZER_H
-#define LIBSMA_TOKENIZER_H
+#ifndef LIBSMAS_TOKENIZER_H
+#define LIBSMAS_TOKENIZER_H
 
 #include <string.h>
 
@@ -17,12 +17,12 @@
 extern "C" {
 #endif
 
-struct SMA_Tokens;
+struct SMAS_Tokens;
 
-struct SMA_Tokens * SMA_tokenize(const void * program, size_t length, size_t * errorSl, size_t *errorSc);
+struct SMAS_Tokens * SMAS_tokenize(const void * program, size_t length, size_t * errorSl, size_t *errorSc);
 
 #ifdef __cplusplus
 } /* extern "C" { */
 #endif
 
-#endif /* LIBSMA_TOKENIZER_H */
+#endif /* LIBSMAS_TOKENIZER_H */
