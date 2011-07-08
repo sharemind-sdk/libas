@@ -13,8 +13,9 @@ TEMPLATE = lib
 TARGET = smas
 DESTDIR = ../../lib/
 
+LIBS += -Wl,-rpath-link=../../lib -L../../lib -lsmvmi
+
 SOURCES += \
-    ../vm/instr.c \
     assemble.c \
     linker.c \
     linkingunits.c \

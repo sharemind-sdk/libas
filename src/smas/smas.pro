@@ -13,7 +13,7 @@ TEMPLATE = app
 TARGET = smas
 DESTDIR = ../../bin/
 
-LIBS += -L../../lib -lsmas
+LIBS += -Wl,-rpath-link=../../lib -L../../lib -lsmas
 
 SOURCES += \
     main.c \

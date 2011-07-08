@@ -12,7 +12,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "../vm/instr.h"
+#include "../libsmvmi/instr.h"
 #include "../likely.h"
 #include "../trie.h"
 #include "tokens.h"
@@ -49,7 +49,7 @@ int SMAS_LabelSlot_filled(struct SMAS_LabelSlot * s, struct SMAS_LabelSlot ** d)
 
 SVM_VECTOR_DECLARE(SMAS_LabelSlots,struct SMAS_LabelSlot,)
 SVM_VECTOR_DEFINE(SMAS_LabelSlots,struct SMAS_LabelSlot,malloc,free,realloc)
-SVM_VECTOR_DECLARE_FOREACH_WITH(SMASLabelSlots,struct SMAS_LabelSlot,labelLocationPointer,struct SMAS_LabelLocation *,struct SMAS_LabelLocation * p)
+SVM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelLocationPointer,struct SMAS_LabelLocation *,struct SMAS_LabelLocation * p)
 SVM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelLocationPointer,struct SMAS_LabelLocation *,struct SMAS_LabelLocation * p,p)
 SVM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p)
 SVM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p,p)
@@ -321,7 +321,7 @@ smas_assemble_newline:
             name[l] = '\0';
 
             /* Detect and check instruction: */
-            const struct SVM_Instruction * i = SVM_Instruction_from_name(name);
+            const struct SMVMI_Instruction * i = SMVMI_Instruction_from_name(name);
             free(name);
             if (unlikely(!i))
                 goto smas_assemble_unknown_instruction;
