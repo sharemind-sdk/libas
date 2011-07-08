@@ -27,8 +27,8 @@ extern "C" {
     (SMAS_TOKEN_LABEL_O) \
     (SMAS_TOKEN_LABEL) \
     (SMAS_TOKEN_KEYWORD)
-SVM_ENUM_DEFINE(SMAS_TokenType, SMAS_ENUM_TokenType);
-SVM_ENUM_DECLARE_TOSTRING(SMAS_TokenType);
+SM_ENUM_DEFINE(SMAS_TokenType, SMAS_ENUM_TokenType);
+SM_ENUM_DECLARE_TOSTRING(SMAS_TokenType);
 
 struct SMAS_Token {
     enum SMAS_TokenType type;

@@ -30,8 +30,8 @@ struct SMAS_Tokens;
     ((SMAS_ASSEMBLE_INVALID_PARAMETER,)) \
     ((SMAS_ASSEMBLE_UNDEFINED_LABEL,)) \
     ((SMAS_ASSEMBLE_INVALID_LABEL,))
-SVM_ENUM_CUSTOM_DEFINE(SMAS_Assemble_Error, SMAS_ENUM_Assemble_Error);
-SVM_ENUM_DECLARE_TOSTRING(SMAS_Assemble_Error);
+SM_ENUM_CUSTOM_DEFINE(SMAS_Assemble_Error, SMAS_ENUM_Assemble_Error);
+SM_ENUM_DECLARE_TOSTRING(SMAS_Assemble_Error);
 
 
 enum SMAS_Assemble_Error SMAS_assemble(const struct SMAS_Tokens * ts,

@@ -32,7 +32,7 @@ struct SMAS_Section {
     size_t length;
     union {
         char * data;
-        union SVM_IBlock * cbdata;
+        union SM_CodeBlock * cbdata;
     };
 };
 
@@ -47,7 +47,7 @@ struct SMAS_LinkingUnit {
 void SMAS_LinkingUnit_init(struct SMAS_LinkingUnit * lu);
 void SMAS_LinkingUnit_destroy(struct SMAS_LinkingUnit * lu);
 
-SVM_VECTOR_DECLARE(SMAS_LinkingUnits,struct SMAS_LinkingUnit,)
+SM_VECTOR_DECLARE(SMAS_LinkingUnits,struct SMAS_LinkingUnit,)
 
 #ifdef __cplusplus
 } /* extern "C" { */

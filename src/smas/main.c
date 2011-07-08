@@ -20,7 +20,7 @@
 #include "../static_assert.h"
 
 
-SVM_STATIC_ASSERT(sizeof(off_t) <= sizeof(size_t));
+SM_STATIC_ASSERT(sizeof(off_t) <= sizeof(size_t));
 
 int main(int argc, char * argv[]) {
     const char * inName = NULL;

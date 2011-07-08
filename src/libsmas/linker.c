@@ -18,15 +18,15 @@
 
 /* COMMON */
 
-SVM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,struct SMAS_LinkingUnit,sizetPointer,size_t *,size_t * l,l)
-SVM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,struct SMAS_LinkingUnit,outputPointer,void **,void ** p,p)
+SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,struct SMAS_LinkingUnit,sizetPointer,size_t *,size_t * l,l)
+SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,struct SMAS_LinkingUnit,outputPointer,void **,void ** p,p)
 
 struct SME_Common_Header {
     char magic[32];
     uint64_t byte_order_verification __attribute__ ((packed));
     uint16_t file_format_version __attribute__ ((packed));
 };
-SVM_STATIC_ASSERT(sizeof(struct SME_Common_Header) == 32 + 8 + 2);
+SM_STATIC_ASSERT(sizeof(struct SME_Common_Header) == 32 + 8 + 2);
 
 static void SME_Common_Header_init(struct SME_Common_Header * h, uint16_t version) {
     static const char magic[32] = "Sharemind Executable";
@@ -53,21 +53,21 @@ struct SME_Header_0x0 {
     uint8_t active_linking_unit;
     uint8_t zeroPadding[4];
 };
-SVM_STATIC_ASSERT(sizeof(struct SME_Header_0x0) == 1u + 1u + 4u);
+SM_STATIC_ASSERT(sizeof(struct SME_Header_0x0) == 1u + 1u + 4u);
 
 struct SME_Unit_Header_0x0 {
     char type[32];
     uint8_t sections_minus_one;
     uint8_t zeroPadding[7];
 };
-SVM_STATIC_ASSERT(sizeof(struct SME_Unit_Header_0x0) == 32u + 1u + 7u);
+SM_STATIC_ASSERT(sizeof(struct SME_Unit_Header_0x0) == 32u + 1u + 7u);
 
 struct SME_Section_Header_0x0 {
     char type[32];
     uint32_t length __attribute__ ((packed));
     uint8_t zeroPadding[4];
 };
-SVM_STATIC_ASSERT(sizeof(struct SME_Section_Header_0x0) == 32u + 4u + 4u);
+SM_STATIC_ASSERT(sizeof(struct SME_Section_Header_0x0) == 32u + 4u + 4u);
 
 
 static const size_t extraPadding[8] = { 0u, 7u, 6u, 5u, 4u, 3u, 2u, 1u };
@@ -76,7 +76,7 @@ static int calculateLinkingUnitSize_0x0(struct SMAS_LinkingUnit * lu, size_t * s
     for (unsigned i = 0u; i < SMAS_SECTION_TYPE_COUNT; i++)
         if (lu->sections[i].length > 0u && lu->sections[i].data != NULL) {
             if (i == SMAS_SECTION_TYPE_TEXT) {
-                *s += sizeof(struct SME_Section_Header_0x0) + lu->sections[i].length * sizeof(union SVM_IBlock);
+                *s += sizeof(struct SME_Section_Header_0x0) + lu->sections[i].length * sizeof(union SM_CodeBlock);
             } else {
                 *s += sizeof(struct SME_Section_Header_0x0) + lu->sections[i].length + extraPadding[lu->sections[i].length % 8];
             }

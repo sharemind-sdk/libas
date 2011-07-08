@@ -17,7 +17,7 @@
 #include "stdion.h"
 
 
-SVM_ENUM_DEFINE_TOSTRING(SMAS_TokenType, SMAS_ENUM_TokenType);
+SM_ENUM_DEFINE_TOSTRING(SMAS_TokenType, SMAS_ENUM_TokenType);
 
 static uint64_t read_hex(const char * c, size_t l) {
     const char * e = c + l;
