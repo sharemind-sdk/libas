@@ -7,8 +7,8 @@
  * code is subject to the appropriate license agreement.
  */
 
-#ifndef TOKENS_H
-#define TOKENS_H
+#ifndef LIBSMA_TOKENS_H
+#define LIBSMA_TOKENS_H
 
 #include <stdint.h>
 #include <string.h>
@@ -69,4 +69,4 @@ void SMA_tokens_pop_back_newlines(struct SMA_Tokens * ts);
 } /* extern "C" { */
 #endif
 
-#endif /* TOKENS_H */
+#endif /* LIBSMA_TOKENS_H */

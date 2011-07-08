@@ -7,8 +7,8 @@
  * code is subject to the appropriate license agreement.
  */
 
-#ifndef LINKINGUNITS_H
-#define LINKINGUNITS_H
+#ifndef LIBSMA_LINKINGUNITS_H
+#define LIBSMA_LINKINGUNITS_H
 
 #include <stddef.h>
 #include "../codeblock.h"
@@ -53,4 +53,4 @@ SVM_VECTOR_DECLARE(SMA_LinkingUnits,struct SMA_LinkingUnit,)
 } /* extern "C" { */
 #endif
 
-#endif /* LINKINGUNITS_H */
+#endif /* LIBSMA_LINKINGUNITS_H */

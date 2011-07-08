@@ -7,8 +7,8 @@
  * code is subject to the appropriate license agreement.
  */
 
-#ifndef TOKENIZER_H
-#define TOKENIZER_H
+#ifndef LIBSMA_TOKENIZER_H
+#define LIBSMA_TOKENIZER_H
 
 #include <string.h>
 
@@ -25,4 +25,4 @@ struct SMA_Tokens * SMA_tokenize(const void * program, size_t length, size_t * e
 } /* extern "C" { */
 #endif
 
-#endif /* TOKENIZER_H */
+#endif /* LIBSMA_TOKENIZER_H */

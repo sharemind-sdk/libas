@@ -7,8 +7,8 @@
  * code is subject to the appropriate license agreement.
  */
 
-#ifndef ASSEMBLE_H
-#define ASSEMBLE_H
+#ifndef LIBSMA_ASSEMBLE_H
+#define LIBSMA_ASSEMBLE_H
 
 #include "../preprocessor.h"
 #include "linkingunits.h"
@@ -41,4 +41,4 @@ enum SMA_Assemble_Error SMA_assemble(const struct SMA_Tokens * ts,
 } /* extern "C" { */
 #endif
 
-#endif /* ASSEMBLE_H */
+#endif /* LIBSMA_ASSEMBLE_H */
