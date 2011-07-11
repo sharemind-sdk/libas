@@ -13,7 +13,7 @@ TEMPLATE = lib
 TARGET = smas
 DESTDIR = ../../lib/
 
-LIBS += -Wl,-rpath-link=../../lib -L../../lib -lsmvmi
+LIBS += -Wl,-rpath-link=../../lib -L../../lib -lsmvmi -lsme
 
 SOURCES += \
     assemble.c \

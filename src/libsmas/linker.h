@@ -11,6 +11,7 @@
 #define LIBSMAS_LINKER_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 
 #ifdef __cplusplus
@@ -19,7 +20,7 @@ extern "C" {
 
 struct SMAS_LinkingUnits;
 
-char * SMAS_link(unsigned version, struct SMAS_LinkingUnits * lus, size_t * length, unsigned activeLinkingUnit);
+char * SMAS_link(uint16_t version, struct SMAS_LinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit);
 
 #ifdef __cplusplus
 } /* extern "C" { */

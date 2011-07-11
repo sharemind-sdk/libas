@@ -12,21 +12,12 @@
 
 #include <stddef.h>
 #include "../codeblock.h"
+#include "../libsme/libsme.h"
 #include "../vector.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-enum SMAS_Section_Type {
-    SMAS_SECTION_TYPE_TEXT = 0,
-    SMAS_SECTION_TYPE_RODATA = 1,
-    SMAS_SECTION_TYPE_DATA = 2,
-    SMAS_SECTION_TYPE_BSS = 3,
-    SMAS_SECTION_TYPE_BIND = 4,
-    SMAS_SECTION_TYPE_DEBUG = 5,
-    SMAS_SECTION_TYPE_COUNT = 6
-};
 
 struct SMAS_Section {
     size_t length;
@@ -41,7 +32,7 @@ void SMAS_Section_destroy(struct SMAS_Section * s);
 
 
 struct SMAS_LinkingUnit {
-    struct SMAS_Section sections[SMAS_SECTION_TYPE_COUNT];
+    struct SMAS_Section sections[SME_SECTION_TYPE_COUNT];
 };
 
 void SMAS_LinkingUnit_init(struct SMAS_LinkingUnit * lu);

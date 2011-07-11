@@ -84,7 +84,7 @@ int SMAS_LabelSlot_fill(struct SMAS_LabelSlot * s, struct SMAS_LabelLocation * l
         if (s->section != l->section)
             return 0;
 
-        assert(s->section == SMAS_SECTION_TYPE_TEXT);
+        assert(s->section == SME_SECTION_TYPE_TEXT);
         assert(s->jmpOffset < l->offset); /* Because we're one-pass. */
 
         if (absTarget < s->jmpOffset) {
@@ -154,7 +154,7 @@ enum SMAS_Assemble_Error SMAS_assemble(const struct SMAS_Tokens * ts,
     struct SMAS_Token * e = &ts->array[ts->numTokens];
 
     size_t lu_index = 0u;
-    int section_index = SMAS_SECTION_TYPE_TEXT;
+    int section_index = SME_SECTION_TYPE_TEXT;
 
     /* for .data and .fill: */
     size_t multiplier;
@@ -221,7 +221,7 @@ smas_assemble_newline:
                         lu = SMAS_LinkingUnits_get_pointer(lus, v);
                     }
                     lu_index = v;
-                    section_index = SMAS_SECTION_TYPE_TEXT;
+                    section_index = SME_SECTION_TYPE_TEXT;
                 }
 
                 SMAS_ASSEMBLE_INC_DO_EOL(smas_assemble_check_labels,smas_assemble_unexpected_token);
@@ -231,28 +231,28 @@ smas_assemble_newline:
                     goto smas_assemble_invalid_parameter;
 
                 if (t->length == 4u && strncmp(t->text, "TEXT", t->length) == 0) {
-                    section_index = SMAS_SECTION_TYPE_TEXT;
+                    section_index = SME_SECTION_TYPE_TEXT;
                 } else if (t->length == 6u && strncmp(t->text, "RODATA", t->length) == 0) {
-                    section_index = SMAS_SECTION_TYPE_RODATA;
+                    section_index = SME_SECTION_TYPE_RODATA;
                 } else if (t->length == 4u && strncmp(t->text, "DATA", t->length) == 0) {
-                    section_index = SMAS_SECTION_TYPE_DATA;
+                    section_index = SME_SECTION_TYPE_DATA;
                 } else if (t->length == 3u && strncmp(t->text, "BSS", t->length) == 0) {
-                    section_index = SMAS_SECTION_TYPE_BSS;
+                    section_index = SME_SECTION_TYPE_BSS;
                 } else if (t->length == 4u && strncmp(t->text, "BIND", t->length) == 0) {
-                    section_index = SMAS_SECTION_TYPE_BIND;
+                    section_index = SME_SECTION_TYPE_BIND;
                 } else if (t->length == 5u && strncmp(t->text, "DEBUG", t->length) == 0) {
-                    section_index = SMAS_SECTION_TYPE_DEBUG;
+                    section_index = SME_SECTION_TYPE_DEBUG;
                 } else {
                     goto smas_assemble_invalid_parameter;
                 }
             } else if (t->length == 5u && strncmp(t->text, ".data", t->length) == 0) {
-                if (unlikely(section_index == SMAS_SECTION_TYPE_TEXT))
+                if (unlikely(section_index == SME_SECTION_TYPE_TEXT))
                     goto smas_assemble_unexpected_token;
 
                 multiplier = 1u;
                 goto smas_assemble_data_or_fill;
             } else if (t->length == 5u && strncmp(t->text, ".fill", t->length) == 0) {
-                if (unlikely(section_index == SMAS_SECTION_TYPE_TEXT || section_index == SMAS_SECTION_TYPE_BIND))
+                if (unlikely(section_index == SME_SECTION_TYPE_TEXT || section_index == SME_SECTION_TYPE_BIND))
                     goto smas_assemble_unexpected_token;
 
                 SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
@@ -271,7 +271,7 @@ smas_assemble_newline:
 
                 goto smas_assemble_data_or_fill;
             } else if (likely(t->length == 13u && strncmp(t->text, ".bind_syscall", t->length) == 0)) {
-                if (unlikely(section_index != SMAS_SECTION_TYPE_BIND))
+                if (unlikely(section_index != SME_SECTION_TYPE_BIND))
                     goto smas_assemble_unexpected_token;
 
                 fprintf(stderr, "TODO\n");
@@ -282,7 +282,7 @@ smas_assemble_newline:
             break;
         case SMAS_TOKEN_KEYWORD:
         {
-            if (unlikely(section_index != SMAS_SECTION_TYPE_TEXT))
+            if (unlikely(section_index != SME_SECTION_TYPE_TEXT))
                 goto smas_assemble_unexpected_token;
 
             size_t args = 0u;
@@ -393,7 +393,7 @@ smas_assemble_newline:
                             if (loc->linkingUnit != lu_index)
                                 goto smas_assemble_invalid_label;
 
-                            assert(section_index == SMAS_SECTION_TYPE_TEXT);
+                            assert(section_index == SME_SECTION_TYPE_TEXT);
                             if (loc->section != section_index)
                                 goto smas_assemble_invalid_label;
 
