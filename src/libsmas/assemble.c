@@ -33,7 +33,6 @@ struct SMAS_LabelSlot {
     size_t extraOffset;
     int negativeOffset;
     size_t jmpOffset;
-    size_t jmpArgs;
     union SM_CodeBlock ** cbdata;
     size_t cbdata_index;
     const struct SMAS_Token * token; /* NULL if this slot is already filled */
@@ -87,15 +86,8 @@ int SMAS_LabelSlot_fill(struct SMAS_LabelSlot * s, struct SMAS_LabelLocation * l
         assert(s->section == SME_SECTION_TYPE_TEXT);
         assert(s->jmpOffset < l->offset); /* Because we're one-pass. */
 
-        if (absTarget < s->jmpOffset) {
-            /** \todo Maybe check whether there's really an instruction there */
-            (*s->cbdata)[s->cbdata_index].int64[0] = absTarget - s->jmpOffset;  /**< \todo check underflow? */
-        } else if (absTarget > s->jmpOffset + 1 + s->jmpArgs) {
-            /** \todo Maybe check whether there's really an instruction there */
-            (*s->cbdata)[s->cbdata_index].int64[0] = absTarget - s->jmpOffset - s->jmpArgs - 2;
-        } else {
-            return 0;
-        }
+        /** \todo Maybe check whether there's really an instruction there */
+        (*s->cbdata)[s->cbdata_index].int64[0] = absTarget - s->jmpOffset;  /**< \todo check underflow? */
     }
     s->token = NULL;
     return 1;
@@ -397,15 +389,8 @@ smas_assemble_newline:
                             if (loc->section != section_index)
                                 goto smas_assemble_invalid_label;
 
-                            if (absTarget < jmpOffset) {
-                                /** \todo Maybe check whether there's really an instruction there */
-                                instr->int64[0] = absTarget - jmpOffset;  /**< \todo check underflow? */
-                            } else if (absTarget > jmpOffset + 1 + args) {
-                                /** \todo Maybe check whether there's really an instruction there */
-                                instr->int64[0] = absTarget - jmpOffset - args - 2;
-                            } else {
-                                goto smas_assemble_invalid_label;
-                            }
+                            /** \todo Maybe check whether there's really an instruction there */
+                            instr->int64[0] = absTarget - jmpOffset;  /**< \todo check underflow? */
                         } else {
                             instr->uint64[0] = absTarget;
                         }
@@ -429,7 +414,6 @@ smas_assemble_newline:
                         slot->negativeOffset = negative;
                         slot->negativeOffset += doJumpLabel * 2; /* Signal a relative jump label */
                         slot->jmpOffset = jmpOffset;
-                        slot->jmpArgs = args;
                         slot->cbdata = &lu->sections[section_index].cbdata;
                         slot->cbdata_index = instr - lu->sections[section_index].cbdata;
                         slot->token = ot;
