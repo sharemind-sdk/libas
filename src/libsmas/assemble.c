@@ -543,7 +543,9 @@ smas_assemble_unexpected_token:
     tmp = malloc(t->length + 1);
     strncpy(tmp, t->text, t->length);
     tmp[t->length] = '\0';
-    fprintf(stderr, "Unexpected %s(%s)\n", SMAS_TokenType_toString(t->type), tmp);
+    const char * tokenStr = SMAS_TokenType_toString(t->type);
+    assert(tokenStr);
+    fprintf(stderr, "Unexpected %s(%s)\n", tokenStr, tmp);
     free(tmp);
     returnStatus = SMAS_ASSEMBLE_UNEXPECTED_TOKEN;
     goto smas_assemble_free_and_return;

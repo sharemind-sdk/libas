@@ -118,7 +118,9 @@ int main(int argc, char * argv[]) {
         SMAS_LinkingUnits_init(&lus);
         enum SMAS_Assemble_Error r = SMAS_assemble(ts, &lus);
         if (r != SMAS_ASSEMBLE_OK) {
-            fprintf(stderr, "Error: Assembly failed with error %s!\n", SMAS_Assemble_Error_toString(r));
+            const char * smasErrorStr = SMAS_Assemble_Error_toString(r);
+            assert(smasErrorStr);
+            fprintf(stderr, "Error: Assembly failed with error %s!\n", smasErrorStr);
             goto main_fail_4;
         }
         SMAS_tokens_free(ts);

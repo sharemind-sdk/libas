@@ -202,7 +202,9 @@ void SMAS_tokens_print(const struct SMAS_Tokens *ts) {
         else
             newLine = 0;
 
-        printf("%s", SMAS_TokenType_toString(t->type) + 10u);
+        const char * tokenStr = SMAS_TokenType_toString(t->type);
+        assert(tokenStr);
+        printf("%s", tokenStr + 10u);
         switch (t->type) {
             case SMAS_TOKEN_NEWLINE:
                 putchar('\n');
