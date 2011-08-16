@@ -120,7 +120,8 @@ SM_ENUM_CUSTOM_DEFINE_TOSTRING(SMAS_Assemble_Error, SMAS_ENUM_Assemble_Error);
 
 enum SMAS_Assemble_Error SMAS_assemble(const struct SMAS_Tokens * ts,
                                        struct SMAS_LinkingUnits * lus,
-                                       const struct SMAS_Token ** errorToken)
+                                       const struct SMAS_Token ** errorToken,
+                                       char ** errorString)
 {
     assert(ts);
     assert(lus);
@@ -128,6 +129,7 @@ enum SMAS_Assemble_Error SMAS_assemble(const struct SMAS_Tokens * ts,
 
     int returnStatus;
     *errorToken = NULL;
+    *errorString = NULL;
 
     struct SMAS_LabelLocations ll;
     SMAS_LabelLocations_init(&ll);
@@ -316,13 +318,17 @@ smas_assemble_newline:
 
             /* Detect and check instruction: */
             const struct SMVMI_Instruction * i = SMVMI_Instruction_from_name(name);
-            free(name);
             if (unlikely(!i)) {
                 *errorToken = ot;
+                *errorString = name;
                 goto smas_assemble_unknown_instruction;
             }
-            if (unlikely(i->numargs != args))
-                goto smas_assemble_invalid_parameter_t;
+            if (unlikely(i->numargs != args)) {
+                *errorToken = ot;
+                *errorString = name;
+                goto smas_assemble_invalid_number_of_parameters;
+            }
+            free(name);
 
             /* Detect offset for jump instructions */
             size_t jmpOffset;
@@ -451,11 +457,8 @@ smas_assemble_check_labels:
             goto smas_assemble_ok;
 
         assert(undefinedSlot);
-        char * undefinedSlotName = SMAS_token_label_label_new(undefinedSlot->token);
-        fprintf(stderr, "Undefined label: %s\n", undefinedSlotName);
-        free(undefinedSlotName);
-
         *errorToken = undefinedSlot->token;
+        *errorString = SMAS_token_label_label_new(undefinedSlot->token);
         goto smas_assemble_undefined_label;
     }
 
@@ -551,13 +554,9 @@ smas_assemble_out_of_memory:
 
 smas_assemble_unexpected_token_t:
     *errorToken = t;
-    tmp = malloc(t->length + 1);
-    strncpy(tmp, t->text, t->length);
-    tmp[t->length] = '\0';
-    const char * tokenStr = SMAS_TokenType_toString(t->type);
-    assert(tokenStr);
-    fprintf(stderr, "Unexpected %s(%s)\n", tokenStr, tmp);
-    free(tmp);
+    *errorString = malloc(t->length + 1);
+    strncpy(*errorString, t->text, t->length);
+    *errorString[t->length] = '\0';
     returnStatus = SMAS_ASSEMBLE_UNEXPECTED_TOKEN;
     goto smas_assemble_free_and_return;
 
@@ -577,6 +576,10 @@ smas_assemble_unknown_directive_t:
 
 smas_assemble_unknown_instruction:
     returnStatus = SMAS_ASSEMBLE_UNKNOWN_INSTRUCTION;
+    goto smas_assemble_free_and_return;
+
+smas_assemble_invalid_number_of_parameters:
+    returnStatus = SMAS_ASSEMBLE_INVALID_NUMBER_OF_PARAMETERS;
     goto smas_assemble_free_and_return;
 
 smas_assemble_invalid_parameter_t:

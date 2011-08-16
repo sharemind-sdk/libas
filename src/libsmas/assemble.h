@@ -28,6 +28,7 @@ struct SMAS_Tokens;
     ((SMAS_ASSEMBLE_DUPLICATE_LABEL,)) \
     ((SMAS_ASSEMBLE_UNKNOWN_DIRECTIVE,)) \
     ((SMAS_ASSEMBLE_UNKNOWN_INSTRUCTION,)) \
+    ((SMAS_ASSEMBLE_INVALID_NUMBER_OF_PARAMETERS,)) \
     ((SMAS_ASSEMBLE_INVALID_PARAMETER,)) \
     ((SMAS_ASSEMBLE_UNDEFINED_LABEL,)) \
     ((SMAS_ASSEMBLE_INVALID_LABEL,))
@@ -37,7 +38,8 @@ SM_ENUM_DECLARE_TOSTRING(SMAS_Assemble_Error);
 
 enum SMAS_Assemble_Error SMAS_assemble(const struct SMAS_Tokens * ts,
                                        struct SMAS_LinkingUnits * lus,
-                                       const struct SMAS_Token ** errorToken);
+                                       const struct SMAS_Token ** errorToken,
+                                       char ** errorString);
 
 #ifdef __cplusplus
 } /* extern "C" { */

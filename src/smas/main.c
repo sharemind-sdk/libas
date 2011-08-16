@@ -117,19 +117,27 @@ int main(int argc, char * argv[]) {
     {
         SMAS_LinkingUnits_init(&lus);
         const struct SMAS_Token * errorToken;
-        enum SMAS_Assemble_Error r = SMAS_assemble(ts, &lus, &errorToken);
+        char * errorString;
+        enum SMAS_Assemble_Error r = SMAS_assemble(ts, &lus, &errorToken, &errorString);
         if (r != SMAS_ASSEMBLE_OK) {
             const char * smasErrorStr = SMAS_Assemble_Error_toString(r);
             assert(smasErrorStr);
-            if (errorToken == NULL) {
-                fprintf(stderr, "Error: Assembly failed: %s\n", smasErrorStr);
-            } else {
-                fprintf(stderr, "Error: Assembly failed at (%zu, %zu): %s\n",
-                        errorToken->start_line, errorToken->start_column,
-                        smasErrorStr);
-            }
+
+            fprintf(stderr, "Error: ");
+
+            if (errorToken)
+                fprintf(stderr, "(%zu, %zu, %s) ", errorToken->start_line, errorToken->start_column, SMAS_TokenType_toString(errorToken->type) + 11);
+
+            fprintf(stderr, "%s", smasErrorStr);
+            if (errorString)
+                fprintf(stderr, ": %s", errorString);
+            fprintf(stderr, "\n");
+
+            free(errorString);
             goto main_fail_4;
         }
+        assert(!errorToken);
+        assert(!errorString);
         SMAS_tokens_free(ts);
 
         if (munmap(map, inFileStat.st_size) != 0)
