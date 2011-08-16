@@ -116,11 +116,18 @@ int main(int argc, char * argv[]) {
     struct SMAS_LinkingUnits lus;
     {
         SMAS_LinkingUnits_init(&lus);
-        enum SMAS_Assemble_Error r = SMAS_assemble(ts, &lus);
+        const struct SMAS_Token * errorToken;
+        enum SMAS_Assemble_Error r = SMAS_assemble(ts, &lus, &errorToken);
         if (r != SMAS_ASSEMBLE_OK) {
             const char * smasErrorStr = SMAS_Assemble_Error_toString(r);
             assert(smasErrorStr);
-            fprintf(stderr, "Error: Assembly failed with error %s!\n", smasErrorStr);
+            if (errorToken == NULL) {
+                fprintf(stderr, "Error: Assembly failed: %s\n", smasErrorStr);
+            } else {
+                fprintf(stderr, "Error: Assembly failed at (%zu, %zu): %s\n",
+                        errorToken->start_line, errorToken->start_column,
+                        smasErrorStr);
+            }
             goto main_fail_4;
         }
         SMAS_tokens_free(ts);

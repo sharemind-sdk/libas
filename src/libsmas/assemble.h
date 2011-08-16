@@ -17,6 +17,7 @@
 extern "C" {
 #endif
 
+struct SMAS_Token;
 struct SMAS_Tokens;
 
 #define SMAS_ENUM_Assemble_Error \
@@ -35,7 +36,8 @@ SM_ENUM_DECLARE_TOSTRING(SMAS_Assemble_Error);
 
 
 enum SMAS_Assemble_Error SMAS_assemble(const struct SMAS_Tokens * ts,
-                                       struct SMAS_LinkingUnits * lus);
+                                       struct SMAS_LinkingUnits * lus,
+                                       const struct SMAS_Token ** errorToken);
 
 #ifdef __cplusplus
 } /* extern "C" { */
