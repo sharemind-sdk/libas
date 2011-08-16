@@ -22,3 +22,11 @@ SOURCES += \
     stdion.c \
     tokenizer.c \
     tokens.c
+
+OTHER_FILES += \
+    assemble.h \
+    linker.h \
+    linkingunits.h \
+    stdion.h \
+    tokenizer.h \
+    tokens.h
