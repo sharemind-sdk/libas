@@ -26,8 +26,8 @@ static uint64_t read_hex(const char * c, size_t l) {
         char base;
         switch (*c) {
             case '0' ... '9': base = '0'; break;
-            case 'a' ... 'f': base = 'a'; break;
-            case 'A' ... 'F': base = 'A'; break;
+            case 'a' ... 'f': base = 'a' - 10; break;
+            case 'A' ... 'F': base = 'A' - 10; break;
             default:
                 abort();
         }
