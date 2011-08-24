@@ -157,9 +157,6 @@ enum SMAS_Assemble_Error SMAS_assemble(const struct SMAS_Tokens * ts,
     unsigned type;
     static const size_t widths[9] = { 1u, 2u, 4u, 8u, 1u, 2u, 4u, 8u, 4u };
 
-    /* for error messages: */
-    char * tmp = NULL;
-
 smas_assemble_newline:
     switch (t->type) {
         case SMAS_TOKEN_NEWLINE:
