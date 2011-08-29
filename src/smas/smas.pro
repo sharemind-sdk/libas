@@ -13,7 +13,8 @@ TEMPLATE = app
 TARGET = smas
 DESTDIR = ../../bin/
 
-LIBS += -Wl,-rpath-link=../../lib -L../../lib -lsmas
+unix:!macx:LIBS += -Wl,-rpath-link=../../lib
+LIBS += -L../../lib -lsmas
 
 SOURCES += \
     main.c \
