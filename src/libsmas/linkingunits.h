@@ -38,7 +38,7 @@ struct SMAS_LinkingUnit {
 void SMAS_LinkingUnit_init(struct SMAS_LinkingUnit * lu);
 void SMAS_LinkingUnit_destroy(struct SMAS_LinkingUnit * lu);
 
-SM_VECTOR_DECLARE(SMAS_LinkingUnits,struct SMAS_LinkingUnit,)
+SM_VECTOR_DECLARE(SMAS_LinkingUnits,struct SMAS_LinkingUnit,,)
 
 #ifdef __cplusplus
 } /* extern "C" { */

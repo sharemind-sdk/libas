@@ -31,4 +31,4 @@ void SMAS_LinkingUnit_destroy(struct SMAS_LinkingUnit * lu) {
         SMAS_Section_destroy(&lu->sections[i]);
 }
 
-SM_VECTOR_DEFINE(SMAS_LinkingUnits,struct SMAS_LinkingUnit,malloc,free,realloc)
+SM_VECTOR_DEFINE(SMAS_LinkingUnits,struct SMAS_LinkingUnit,malloc,free,realloc,)

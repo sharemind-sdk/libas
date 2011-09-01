@@ -24,8 +24,8 @@ struct SMAS_LabelLocation {
     size_t offset;
 };
 
-SM_TRIE_DECLARE(SMAS_LabelLocations,struct SMAS_LabelLocation)
-SM_TRIE_DEFINE(SMAS_LabelLocations,struct SMAS_LabelLocation,malloc,free)
+SM_TRIE_DECLARE(SMAS_LabelLocations,struct SMAS_LabelLocation,)
+SM_TRIE_DEFINE(SMAS_LabelLocations,struct SMAS_LabelLocation,malloc,free,)
 
 struct SMAS_LabelSlot {
     size_t linkingUnit;
@@ -46,21 +46,21 @@ int SMAS_LabelSlot_filled(struct SMAS_LabelSlot * s, struct SMAS_LabelSlot ** d)
     return 0;
 }
 
-SM_VECTOR_DECLARE(SMAS_LabelSlots,struct SMAS_LabelSlot,)
-SM_VECTOR_DEFINE(SMAS_LabelSlots,struct SMAS_LabelSlot,malloc,free,realloc)
-SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelLocationPointer,struct SMAS_LabelLocation *,struct SMAS_LabelLocation * p)
-SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelLocationPointer,struct SMAS_LabelLocation *,struct SMAS_LabelLocation * p,p)
-SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p)
-SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p,p)
+SM_VECTOR_DECLARE(SMAS_LabelSlots,struct SMAS_LabelSlot,,)
+SM_VECTOR_DEFINE(SMAS_LabelSlots,struct SMAS_LabelSlot,malloc,free,realloc,)
+SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelLocationPointer,struct SMAS_LabelLocation *,struct SMAS_LabelLocation * p,)
+SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelLocationPointer,struct SMAS_LabelLocation *,struct SMAS_LabelLocation * p,p,)
+SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p,)
+SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p,p,)
 
 int SMAS_LabelSlots_allSlotsFilled(struct SMAS_LabelSlots * ss, struct SMAS_LabelSlot ** d) {
     return SMAS_LabelSlots_foreach_with_labelSlotPointerPointer(ss, &SMAS_LabelSlot_filled, d);
 }
 
-SM_TRIE_DECLARE(SMAS_LabelSlotsTrie,struct SMAS_LabelSlots)
-SM_TRIE_DEFINE(SMAS_LabelSlotsTrie,struct SMAS_LabelSlots,malloc,free)
-SM_TRIE_DECLARE_FOREACH_WITH(SMAS_LabelSlotsTrie,struct SMAS_LabelSlots,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p)
-SM_TRIE_DEFINE_FOREACH_WITH(SMAS_LabelSlotsTrie,struct SMAS_LabelSlots,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p,p)
+SM_TRIE_DECLARE(SMAS_LabelSlotsTrie,struct SMAS_LabelSlots,)
+SM_TRIE_DEFINE(SMAS_LabelSlotsTrie,struct SMAS_LabelSlots,malloc,free,)
+SM_TRIE_DECLARE_FOREACH_WITH(SMAS_LabelSlotsTrie,struct SMAS_LabelSlots,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p,)
+SM_TRIE_DEFINE_FOREACH_WITH(SMAS_LabelSlotsTrie,struct SMAS_LabelSlots,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p,p,)
 
 int SMAS_LabelSlot_fill(struct SMAS_LabelSlot * s, struct SMAS_LabelLocation * l) {
     assert(s);
