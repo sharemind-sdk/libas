@@ -12,3 +12,16 @@
 # SET(CMAKE_C_COMPILER "clang")
 # Take some care in using higher optimization levels than the following with clang:
 # SET(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -O0 -fstrict-aliasing -Wstrict-aliasing=1")
+
+# Enable out of memory debugging for the VM. This builds the vm binary to hook
+# calls to malloc, realloc and memalign. These hooks count the number of times
+# being called and fail if a counter is reached. The counters are initialized
+# from the values of the environment variables vm_oomd_malloc_hook_fail,
+# vm_oomd_realloc_hook_fail and vm_oomd_memalign_hook_fail at application start.
+# By default, the counters are disabled (-1). If the environment variables
+# vm_oomd_malloc_hook_fail_once, vm_oomd_realloc_hook_fail_once and
+# vm_oomd_memalign_hook_fail_once are set to non-zero, the respective malloc,
+# realloc and memalign calls will only fail once. The environment variables
+# vm_oomd_all_hook_fail and vm_oomd_all_hook_fail_once apply for all malloc
+# realloc and memalign calls.
+#SET(VM_OUT_OF_MEMORY_DEBUG 1)
