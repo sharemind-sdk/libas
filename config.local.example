@@ -24,4 +24,4 @@
 # realloc and memalign calls will only fail once. The environment variables
 # vm_oomd_all_hook_fail and vm_oomd_all_hook_fail_once apply for all malloc
 # realloc and memalign calls.
-#SET(VM_OUT_OF_MEMORY_DEBUG 1)
+#SET(VM_OUT_OF_MEMORY_DEBUG TRUE)
