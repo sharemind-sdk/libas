@@ -1,6 +1,10 @@
 #
 # Copy this file to config.local for inclusion by CMakeLists.txt.
 #
+# CMakeLists.txt first includes a config.local file in the current source
+# directory, if found. Only then CMakeLists.txt includes a config.local file in
+# the current build (binary) directory, if found.
+#
 
 # Uncomment the following line to enable tests being built:
 #ENABLE_TESTING()
