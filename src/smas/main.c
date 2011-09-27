@@ -96,8 +96,10 @@ int main(int argc, char * argv[]) {
         return EXIT_FAILURE;
     }
 
+#ifdef __USE_BSD
     /* Advise the OS that we plan to read the file sequentially: */
     (void) madvise(map, inFileStat.st_size, MADV_SEQUENTIAL);
+#endif
 
     /* Tokenize: */
     struct SMAS_Tokens * ts;
