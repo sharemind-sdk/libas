@@ -32,3 +32,11 @@
 # vm_oomd_all_hook_fail and vm_oomd_all_hook_fail_once apply for all malloc
 # realloc and memalign calls.
 #SET(VM_OUT_OF_MEMORY_DEBUG TRUE)
+
+# Whether a backtrace should be run in case VM_OUT_OF_MEMORY_DEBUG is enabled
+# and malloc fails. A backtrace is printed when malloc is supposed to fail in
+# case the VM_OUT_OF_MEMORY hooks kick in, and when the system malloc returns
+# a NULL pointer. Note however, that in some cases this might result in a
+# stack overflow, e.g. incase binding to backtrace() is lazy and the dynamic
+# linker needs to allocate memory which is not available.
+SET(VM_OUT_OF_MEMORY_DEBUG_FAIL_BACKTRACE TRUE)
