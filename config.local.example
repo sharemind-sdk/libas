@@ -9,6 +9,9 @@
 # Uncomment the following line to enable tests being built:
 #ENABLE_TESTING()
 
+# Enable fast building of the project at the expense of runtime performance.
+#SET(VM_FAST_BUILD TRUE)
+
 # Override CFLAGS:
 #SET(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -O2 -fstrict-aliasing -Wstrict-aliasing=1")
 
