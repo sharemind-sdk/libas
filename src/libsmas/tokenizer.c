@@ -93,6 +93,7 @@ tokenize_begin2:
         case '.':
             TOKENIZE_INC_CHECK_EOF(tokenize_error);
             goto tokenize_directive;
+        case '+':
         case '-':
             TOKENIZE_INC_CHECK_EOF(tokenize_error);
             if (*c != '0')
@@ -150,16 +151,15 @@ tokenize_hex2:
     TOKENIZE_INC_CHECK_EOF(tokenize_ok);
     switch (*c) {
         case '0' ... '9': case 'a' ... 'f': case 'A' ... 'F':
-            if (lastToken->text[0] == '-') {
+            if (lastToken->text[0] == '-' || lastToken->text[0] == '+') {
                 if (lastToken->length > 18u)
                     goto tokenize_error;
-                if (lastToken->length == 18u)
-                    switch (lastToken->text[3]) {
-                        case '8': case '9': case 'a' ... 'f': case 'A' ... 'F':
-                            goto tokenize_error;
-                        default:
-                            break;
-                    }
+                if (lastToken->length == 18u) {
+                    if (lastToken->text[0] == '-' && SMAS_read_hex(lastToken->text + 3, 18u) > ((uint64_t) -(INT64_MIN + 1)) + 1u)
+                        goto tokenize_error;
+                    if (lastToken->text[0] == '+' && SMAS_read_hex(lastToken->text + 3, 18u) > (uint64_t) INT64_MAX)
+                        goto tokenize_error;
+                }
             } else {
                 if (lastToken->length >= 18u)
                     goto tokenize_error;

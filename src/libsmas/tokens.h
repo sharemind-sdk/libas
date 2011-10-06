@@ -19,6 +19,8 @@
 extern "C" {
 #endif
 
+uint64_t SMAS_read_hex(const char * c, size_t l);
+
 #define SMAS_ENUM_TokenType \
     (SMAS_TOKEN_NEWLINE) \
     (SMAS_TOKEN_DIRECTIVE) \

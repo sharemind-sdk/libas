@@ -19,7 +19,7 @@
 
 SM_ENUM_DEFINE_TOSTRING(SMAS_TokenType, SMAS_ENUM_TokenType);
 
-static uint64_t read_hex(const char * c, size_t l) {
+uint64_t SMAS_read_hex(const char * c, size_t l) {
     const char * e = c + l;
     uint64_t v = 0u;
     do {
@@ -40,25 +40,18 @@ uint64_t SMAS_token_hex_value(const struct SMAS_Token * t) {
     assert(t);
     assert(t->type == SMAS_TOKEN_HEX);
     assert(t->length > 0u);
-    size_t i;
-    if (t->text[0] == '-') {
-        assert(t->length >= 4u);
-        assert(t->length <= 19u);
-        assert(t->text[1] == '0');
-        assert(t->text[2] == 'x');
-        assert(t->length != 19u
-               || t->text[3] == '0' || t->text[3] == '1' || t->text[3] == '2' || t->text[3] == '3'
-               || t->text[3] == '4' || t->text[3] == '5' || t->text[3] == '6' || t->text[3] == '7');
-        i = 3;
-    } else {
-        assert(t->length >= 3u);
-        assert(t->length <= 18u);
-        assert(t->text[0] == '0');
-        assert(t->text[1] == 'x');
-        i = 2;
-    }
 
-    uint64_t v = read_hex(t->text + i, t->length - i);
+    size_t i = 0u;
+    if (t->text[0] == '-' || t->text[0] == '+')
+        i++;
+
+    assert(t->length >= 3u + i);
+    assert(t->length <= 18u + i);
+    assert(t->text[i] == '0');
+    assert(t->text[i + 1] == 'x');
+    i += 2u;
+
+    uint64_t v = SMAS_read_hex(t->text + i, t->length - i);
 
     if (t->text[0] != '-')
         return v;
@@ -174,7 +167,7 @@ uint64_t SMAS_token_label_offset(const struct SMAS_Token *t, int * negative) {
             }
         }
         h += 3;
-        return read_hex(h, t->length - (h - t->text));
+        return SMAS_read_hex(h, t->length - (h - t->text));
     }
 }
 
