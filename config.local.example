@@ -40,3 +40,7 @@
 # stack overflow, e.g. incase binding to backtrace() is lazy and the dynamic
 # linker needs to allocate memory which is not available.
 SET(VM_OUT_OF_MEMORY_DEBUG_FAIL_BACKTRACE TRUE)
+
+# Whether the VM should be built to use software floating-point operations
+# instead of (somewhat) platform-specific floating-point hardware.
+SET(VM_SOFT_FLOAT TRUE)
