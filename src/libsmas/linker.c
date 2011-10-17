@@ -19,17 +19,19 @@
 
 /* COMMON */
 
+SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LinkingUnits,struct SMAS_LinkingUnit,sizetPointer,size_t *,size_t * l,)
 SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,struct SMAS_LinkingUnit,sizetPointer,size_t *,size_t * l,l,)
+SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LinkingUnits,struct SMAS_LinkingUnit,outputPointer,void **,void ** p,)
 SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,struct SMAS_LinkingUnit,outputPointer,void **,void ** p,p,)
 
-static int SMAS_link_0x0(void ** data, struct SMAS_LinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit);
+static int SMAS_link_0x0(struct SME_Common_Header ** data, struct SMAS_LinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit);
 
 char * SMAS_link(uint16_t version, struct SMAS_LinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit) {
     if (version > 0u)
         return NULL;
 
     *length = sizeof(struct SME_Common_Header);
-    void * data = malloc(sizeof(struct SME_Common_Header));
+    struct SME_Common_Header * data = (struct SME_Common_Header *) malloc(sizeof(struct SME_Common_Header));
     if (!data)
         return NULL;
     SME_Common_Header_init(data, version);
@@ -109,7 +111,7 @@ static int writeLinkingUnit_0x0(struct SMAS_LinkingUnit * lu, void ** pos) {
     return 1;
 }
 
-static int SMAS_link_0x0(void ** data, struct SMAS_LinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit) {
+static int SMAS_link_0x0(struct SME_Common_Header ** data, struct SMAS_LinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit) {
     assert(lus->size > 0u);
 
     size_t oldLength = *length;
@@ -118,7 +120,7 @@ static int SMAS_link_0x0(void ** data, struct SMAS_LinkingUnits * lus, size_t * 
     (*length) += sizeof(struct SME_Header_0x0) + (lus->size * sizeof(struct SME_Unit_Header_0x0));
     int r = SMAS_LinkingUnits_foreach_with_sizetPointer(lus, &calculateLinkingUnitSize_0x0, length);
     assert(r);
-    void * newData = realloc(*data, *length);
+    struct SME_Common_Header * newData = (struct SME_Common_Header *) realloc((void *) *data, *length);
     if (!newData)
         return 0;
     *data = newData;
