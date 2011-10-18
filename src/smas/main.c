@@ -106,7 +106,7 @@ int main(int argc, char * argv[]) {
     {
         size_t sl = 0u;
         size_t sc = 0u;
-        ts = SMAS_tokenize(map, inFileStat.st_size, &sl, &sc);
+        ts = SMAS_tokenize((const char *) map, inFileStat.st_size, &sl, &sc);
         if (unlikely(!ts)) {
             fprintf(stderr, "Error: Tokenization failed at (%zu,%zu)!\n", sl, sc);
             goto main_fail_3;
@@ -150,7 +150,7 @@ int main(int argc, char * argv[]) {
 
     /* Generate the Sharemind Executable: */
     size_t outputLength;
-    char * output = SMAS_link(0x0, &lus, &outputLength, 0);
+    uint8_t * output = SMAS_link(0x0, &lus, &outputLength, 0);
     SMAS_LinkingUnits_destroy_with(&lus, &SMAS_LinkingUnit_destroy);
     if (!output) {
         fprintf(stderr, "Error generating output!\n");
