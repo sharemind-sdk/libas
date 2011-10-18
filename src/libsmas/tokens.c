@@ -84,7 +84,7 @@ char * SMAS_token_string_value(const struct SMAS_Token * t, size_t * length) {
     if (length)
         *length = l;
 
-    char * s = malloc(sizeof(char) * (l + 1));
+    char * s = (char *) malloc(sizeof(char) * (l + 1));
     if (unlikely(!s))
         return NULL;
 
@@ -136,7 +136,7 @@ char * SMAS_token_label_label_new(const struct SMAS_Token *t) {
         assert(t->text[l + 2] == 'x');
     }
 
-    char * c = malloc(l);
+    char * c = (char *) malloc(l);
     if (!c)
         return NULL;
 
@@ -172,7 +172,7 @@ uint64_t SMAS_token_label_offset(const struct SMAS_Token *t, int * negative) {
 }
 
 struct SMAS_Tokens * SMAS_tokens_new(void) {
-    struct SMAS_Tokens * ts = malloc(sizeof(struct SMAS_Tokens));
+    struct SMAS_Tokens * ts = (struct SMAS_Tokens *) malloc(sizeof(struct SMAS_Tokens));
     if (unlikely(!ts))
         return NULL;
     ts->numTokens = 0u;
@@ -227,7 +227,7 @@ struct SMAS_Token * SMAS_tokens_append(struct SMAS_Tokens * ts,
                                        size_t start_column)
 {
     assert(ts);
-    struct SMAS_Token * nts = realloc(ts->array, sizeof(struct SMAS_Token) * (ts->numTokens + 1));
+    struct SMAS_Token * nts = (struct SMAS_Token *) realloc(ts->array, sizeof(struct SMAS_Token) * (ts->numTokens + 1));
     if (unlikely(!nts))
         return NULL;
     ts->array = nts;
@@ -248,7 +248,7 @@ void SMAS_tokens_pop_back_newlines(struct SMAS_Tokens * ts) {
         return;
 
     ts->numTokens--;
-    struct SMAS_Token * nts = realloc(ts->array, sizeof(struct SMAS_Token) * ts->numTokens);
+    struct SMAS_Token * nts = (struct SMAS_Token *) realloc(ts->array, sizeof(struct SMAS_Token) * ts->numTokens);
     if (likely(nts))
         ts->array = nts;
 }
