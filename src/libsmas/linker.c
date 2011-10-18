@@ -21,12 +21,12 @@
 
 SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LinkingUnits,struct SMAS_LinkingUnit,sizetPointer,size_t *,size_t * l,)
 SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,struct SMAS_LinkingUnit,sizetPointer,size_t *,size_t * l,l,)
-SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LinkingUnits,struct SMAS_LinkingUnit,outputPointer,void **,void ** p,)
-SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,struct SMAS_LinkingUnit,outputPointer,void **,void ** p,p,)
+SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LinkingUnits,struct SMAS_LinkingUnit,outputPointer,uint8_t **,uint8_t ** p,)
+SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,struct SMAS_LinkingUnit,outputPointer,uint8_t **,uint8_t ** p,p,)
 
 static int SMAS_link_0x0(struct SME_Common_Header ** data, struct SMAS_LinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit);
 
-char * SMAS_link(uint16_t version, struct SMAS_LinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit) {
+uint8_t * SMAS_link(uint16_t version, struct SMAS_LinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit) {
     if (version > 0u)
         return NULL;
 
@@ -37,7 +37,7 @@ char * SMAS_link(uint16_t version, struct SMAS_LinkingUnits * lus, size_t * leng
     SME_Common_Header_init(data, version);
 
     if (SMAS_link_0x0(&data, lus, length, activeLinkingUnit)) {
-        return data;
+        return (uint8_t *) data;
     } else {
         free(data);
         *length = 0u;
@@ -60,7 +60,7 @@ static int calculateLinkingUnitSize_0x0(struct SMAS_LinkingUnit * lu, size_t * s
     return 1;
 }
 
-static int writeSection_0x0(struct SMAS_Section * s, void ** pos, enum SME_Section_Type type) {
+static int writeSection_0x0(struct SMAS_Section * s, uint8_t ** pos, enum SME_Section_Type type) {
     assert(s->length > 0u && s->data != NULL);
 
     /* Check for unsupported output format. */
@@ -68,13 +68,17 @@ static int writeSection_0x0(struct SMAS_Section * s, void ** pos, enum SME_Secti
         return 0;
 
     /* Write header: */
-    uint32_t l = s->length; /** \todo check cast overflow? */
+    assert(s->length <= UINT32_MAX / 8); /** \todo Enforce this */
+    if (s->length > UINT32_MAX / 8)
+        return 0;
+    uint32_t l = (uint32_t) s->length;
+
     SME_Section_Header_0x0_init((struct SME_Section_Header_0x0 *) *pos, type, l);
     (*pos) += sizeof(struct SME_Section_Header_0x0);
 
     if (type == SME_SECTION_TYPE_TEXT) {
         /* Write section data */
-        __builtin_memcpy(*pos, s->data, l * 8); /** \todo check multiplication overflow? */
+        __builtin_memcpy(*pos, s->data, l * 8);
         (*pos) += l * 8;
     } else {
         /* Write section data */
@@ -89,7 +93,7 @@ static int writeSection_0x0(struct SMAS_Section * s, void ** pos, enum SME_Secti
     return 1;
 }
 
-static int writeLinkingUnit_0x0(struct SMAS_LinkingUnit * lu, void ** pos) {
+static int writeLinkingUnit_0x0(struct SMAS_LinkingUnit * lu, uint8_t ** pos) {
     /* Calculate number of sections: */
     uint8_t sections = 0u;
     for (unsigned i = 0u; i < SME_SECTION_TYPE_COUNT_0x0; i++)
@@ -125,8 +129,12 @@ static int SMAS_link_0x0(struct SME_Common_Header ** data, struct SMAS_LinkingUn
         return 0;
     *data = newData;
 
-    void * writePtr = newData + oldLength;
-    SME_Header_0x0_init((struct SME_Header_0x0 *) writePtr, lus->size - 1, activeLinkingUnit);
+    uint8_t * writePtr = ((uint8_t *) newData) + oldLength;
+    assert(lus->size - 1 <= UINT8_MAX); /** \todo Enforce this */
+    if (lus->size - 1 > UINT8_MAX)
+        return 0;
+
+    SME_Header_0x0_init((struct SME_Header_0x0 *) writePtr, (uint8_t) (lus->size - 1), activeLinkingUnit);
     writePtr += sizeof(struct SME_Header_0x0);
 
     r = SMAS_LinkingUnits_foreach_with_outputPointer(lus, &writeLinkingUnit_0x0, &writePtr);
