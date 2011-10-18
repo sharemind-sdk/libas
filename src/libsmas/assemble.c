@@ -38,7 +38,7 @@ struct SMAS_LabelSlot {
     const struct SMAS_Token * token; /* NULL if this slot is already filled */
 };
 
-int SMAS_LabelSlot_filled(struct SMAS_LabelSlot * s, struct SMAS_LabelSlot ** d) {
+static int SMAS_LabelSlot_filled(struct SMAS_LabelSlot * s, struct SMAS_LabelSlot ** d) {
     assert(s);
     if (s->token == NULL)
         return 1;
@@ -53,7 +53,7 @@ SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelLocatio
 SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p,)
 SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p,p,)
 
-int SMAS_LabelSlots_allSlotsFilled(struct SMAS_LabelSlots * ss, struct SMAS_LabelSlot ** d) {
+static int SMAS_LabelSlots_allSlotsFilled(struct SMAS_LabelSlots * ss, struct SMAS_LabelSlot ** d) {
     return SMAS_LabelSlots_foreach_with_labelSlotPointerPointer(ss, &SMAS_LabelSlot_filled, d);
 }
 
@@ -62,7 +62,7 @@ SM_TRIE_DEFINE(SMAS_LabelSlotsTrie,struct SMAS_LabelSlots,malloc,free,)
 SM_TRIE_DECLARE_FOREACH_WITH(SMAS_LabelSlotsTrie,struct SMAS_LabelSlots,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p,)
 SM_TRIE_DEFINE_FOREACH_WITH(SMAS_LabelSlotsTrie,struct SMAS_LabelSlots,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p,p,)
 
-int SMAS_LabelSlot_fill(struct SMAS_LabelSlot * s, struct SMAS_LabelLocation * l) {
+static int SMAS_LabelSlot_fill(struct SMAS_LabelSlot * s, struct SMAS_LabelLocation * l) {
     assert(s);
     assert(s->token);
     assert(l);
@@ -280,7 +280,7 @@ smas_assemble_newline:
 
             size_t args = 0u;
             size_t l = t->length;
-            char * name = malloc(sizeof(char) * (l + 1u));
+            char * name = (char *) malloc(sizeof(char) * (l + 1u));
             if (unlikely(!name))
                 goto smas_assemble_out_of_memory;
             strncpy(name, t->text, l);
@@ -345,7 +345,7 @@ smas_assemble_newline:
             }
 
             /* Allocate whole instruction: */
-            char * newData = realloc(lu->sections[section_index].data, sizeof(union SM_CodeBlock) * (lu->sections[section_index].length + args + 1));
+            char * newData = (char *) realloc((void *) lu->sections[section_index].data, sizeof(union SM_CodeBlock) * (lu->sections[section_index].length + args + 1));
             if (unlikely(!newData))
                 goto smas_assemble_out_of_memory;
             lu->sections[section_index].data = newData;
@@ -551,7 +551,7 @@ smas_assemble_out_of_memory:
 
 smas_assemble_unexpected_token_t:
     *errorToken = t;
-    *errorString = malloc(t->length + 1);
+    *errorString = (char *) malloc(t->length + 1);
     strncpy(*errorString, t->text, t->length);
     *errorString[t->length] = '\0';
     returnStatus = SMAS_ASSEMBLE_UNEXPECTED_TOKEN;
