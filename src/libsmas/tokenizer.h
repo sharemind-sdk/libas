@@ -19,7 +19,7 @@ extern "C" {
 
 struct SMAS_Tokens;
 
-struct SMAS_Tokens * SMAS_tokenize(const void * program, size_t length, size_t * errorSl, size_t *errorSc);
+struct SMAS_Tokens * SMAS_tokenize(const char * program, size_t length, size_t * errorSl, size_t *errorSc);
 
 #ifdef __cplusplus
 } /* extern "C" { */

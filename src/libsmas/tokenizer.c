@@ -32,7 +32,7 @@
             goto tokenize_error_oom; \
     }
 
-struct SMAS_Tokens * SMAS_tokenize(const void * program, size_t length,
+struct SMAS_Tokens * SMAS_tokenize(const char * program, size_t length,
                                    size_t * errorSl, size_t *errorSc)
 {
     assert(program);
@@ -112,6 +112,8 @@ tokenize_begin2:
             goto tokenize_label;
         case 'a' ... 'z': case 'A' ... 'Z': case '_':
             goto tokenize_keyword;
+        default:
+            abort();
     }
     goto tokenize_error;
 
@@ -186,7 +188,8 @@ tokenize_string:
         }
     } while (likely(*c != '"'));
     NEWTOKEN(lastToken, SMAS_TOKEN_STRING, t, sl, sc);
-    lastToken->length = c - t + 1u;
+    assert(t < c);
+    lastToken->length = (size_t) (c - t + 1u);
     TOKENIZE_INC_CHECK_EOF(tokenize_ok);
     goto tokenize_begin2;
 
