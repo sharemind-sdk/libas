@@ -171,7 +171,7 @@ uint64_t SMAS_token_label_offset(const struct SMAS_Token *t, int * negative) {
     }
 }
 
-struct SMAS_Tokens * SMAS_tokens_new() {
+struct SMAS_Tokens * SMAS_tokens_new(void) {
     struct SMAS_Tokens * ts = malloc(sizeof(struct SMAS_Tokens));
     if (unlikely(!ts))
         return NULL;

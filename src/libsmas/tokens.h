@@ -53,7 +53,7 @@ struct SMAS_Tokens {
     struct SMAS_Token * array;
 };
 
-struct SMAS_Tokens * SMAS_tokens_new();
+struct SMAS_Tokens * SMAS_tokens_new(void);
 
 void SMAS_tokens_free(struct SMAS_Tokens * ts);
 
