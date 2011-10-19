@@ -31,7 +31,7 @@ uint64_t SMAS_read_hex(const char * c, size_t l) {
             default:
                 abort();
         }
-        v = (v * 16) + (*c - base);
+        v = (v * 16u) + (uint64_t) (*c - base);
     } while (++c < e);
     return v;
 }
@@ -53,11 +53,18 @@ uint64_t SMAS_token_hex_value(const struct SMAS_Token * t) {
 
     uint64_t v = SMAS_read_hex(t->text + i, t->length - i);
 
-    if (t->text[0] != '-')
+    union { int64_t s; uint64_t u; } x;
+    if (t->text[0] == '-') {
+        assert(v <= ((uint64_t) (INT64_MIN + 1)) + 1u);
+        x.s = (int64_t) -v;
+        return x.u;
+    } else if (t->text[0] == '+') {
+        assert(v <= (uint64_t) INT64_MAX);
+        x.s = (int64_t) v;
+        return x.u;
+    } else {
         return v;
-
-    union { int64_t s; uint64_t u; } x = { .s = -v };
-    return x.u;
+    }
 }
 
 size_t SMAS_token_string_length(const struct SMAS_Token * t) {
@@ -153,7 +160,7 @@ uint64_t SMAS_token_label_offset(const struct SMAS_Token *t, int * negative) {
     if (t->type == SMAS_TOKEN_LABEL) {
         assert(t->length >= 2u);
         *negative = 0;
-        return 0;
+        return 0u;
     } else {
         assert(t->length >= 6u);
         const char * h = t->text + 2;
@@ -167,7 +174,7 @@ uint64_t SMAS_token_label_offset(const struct SMAS_Token *t, int * negative) {
             }
         }
         h += 3;
-        return SMAS_read_hex(h, t->length - (h - t->text));
+        return SMAS_read_hex(h, t->length - (size_t) (h - t->text));
     }
 }
 
