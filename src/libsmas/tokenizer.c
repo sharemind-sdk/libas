@@ -49,6 +49,7 @@ struct SMAS_Tokens * SMAS_tokenize(const char * program, size_t length,
     struct SMAS_Token * lastToken = NULL;
 
     size_t hexmin = 0u;
+    size_t hexstart = 0u;
 
     if (unlikely(c == e))
         goto tokenize_ok;
@@ -147,19 +148,20 @@ tokenize_hex:
     NEWTOKEN(lastToken, SMAS_TOKEN_HEX, c - 2 - hexmin, sl, sc);
     lastToken->length = 3u + hexmin;
     hexmin = 0u;
+    hexstart = 0u;
 
 tokenize_hex2:
 
     TOKENIZE_INC_CHECK_EOF(tokenize_ok);
     switch (*c) {
         case '0' ... '9': case 'a' ... 'f': case 'A' ... 'F':
-            if (lastToken->text[0] == '-' || lastToken->text[0] == '+') {
+            if (lastToken->text[hexstart] == '-' || lastToken->text[hexstart] == '+') {
                 if (lastToken->length > 18u)
                     goto tokenize_error;
                 if (lastToken->length == 18u) {
-                    if (lastToken->text[0] == '-' && SMAS_read_hex(lastToken->text + 3, 18u) > ((uint64_t) -(INT64_MIN + 1)) + 1u)
+                    if (lastToken->text[hexstart] == '-' && SMAS_read_hex(lastToken->text + 3, 18u) > ((uint64_t) -(INT64_MIN + 1)) + 1u)
                         goto tokenize_error;
-                    if (lastToken->text[0] == '+' && SMAS_read_hex(lastToken->text + 3, 18u) > (uint64_t) INT64_MAX)
+                    if (lastToken->text[hexstart] == '+' && SMAS_read_hex(lastToken->text + 3, 18u) > (uint64_t) INT64_MAX)
                         goto tokenize_error;
                 }
             } else {
@@ -227,6 +229,7 @@ tokenize_label2:
             lastToken->length += 2u;
             break;
         case '+': case '-':
+            hexstart = lastToken->length - 1u;
             goto tokenize_label3;
         default:
             goto tokenize_error;
