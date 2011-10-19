@@ -31,7 +31,7 @@ struct SMAS_LabelSlot {
     size_t linkingUnit;
     int section;
     size_t extraOffset;
-    int negativeOffset;
+    int doJumpLabel;
     size_t jmpOffset;
     union SM_CodeBlock ** cbdata;
     size_t cbdata_index;
@@ -68,13 +68,9 @@ static int SMAS_LabelSlot_fill(struct SMAS_LabelSlot * s, struct SMAS_LabelLocat
     assert(l);
 
     size_t absTarget = l->offset;
-    if (s->negativeOffset % 2) {
-        absTarget -= s->extraOffset; /**< \todo check overflow/underflow? */
-    } else {
-        absTarget += s->extraOffset; /**< \todo check overflow/underflow? */
-    }
+    absTarget += s->extraOffset; /**< \todo check overflow/underflow? */
 
-    if (s->negativeOffset < 2) { /* Normal absolute label */
+    if (!s->doJumpLabel) { /* Normal absolute label */
         (*s->cbdata)[s->cbdata_index].uint64[0] = absTarget;
     } else { /* Relative jump label */
         if (s->linkingUnit != l->linkingUnit)
@@ -374,17 +370,12 @@ smas_assemble_newline:
                         goto smas_assemble_out_of_memory;
 
                     struct SMAS_LabelLocation * loc = SMAS_LabelLocations_find(&ll, label);
-                    int negative;
-                    uint64_t labelOffset = SMAS_token_label_offset(ot, &negative);
+                    int64_t labelOffset = SMAS_token_label_offset(ot);
                     if (loc) {
                         free(label);
 
                         size_t absTarget = loc->offset;
-                        if (negative) {
-                            absTarget -= labelOffset; /**< \todo check overflow/underflow? */
-                        } else {
-                            absTarget += labelOffset; /**< \todo check overflow/underflow? */
-                        }
+                        absTarget += labelOffset; /**< \todo check overflow/underflow? */
 
                         if (doJumpLabel) {
                             assert(jmpOffset >= loc->offset); /* Because we're one-pass. */
@@ -422,8 +413,7 @@ smas_assemble_newline:
                         slot->linkingUnit = lu_index;
                         slot->section = section_index;
                         slot->extraOffset = labelOffset;
-                        slot->negativeOffset = negative;
-                        slot->negativeOffset += doJumpLabel * 2; /* Signal a relative jump label */
+                        slot->doJumpLabel = doJumpLabel; /* Signal a relative jump label */
                         slot->jmpOffset = jmpOffset;
                         slot->cbdata = &lu->sections[section_index].cbdata;
                         slot->cbdata_index = instr - lu->sections[section_index].cbdata;

@@ -153,28 +153,28 @@ char * SMAS_token_label_label_new(const struct SMAS_Token *t) {
     return c;
 }
 
-uint64_t SMAS_token_label_offset(const struct SMAS_Token *t, int * negative) {
+int64_t SMAS_token_label_offset(const struct SMAS_Token *t) {
     assert(t);
     assert(t->type == SMAS_TOKEN_LABEL || t->type == SMAS_TOKEN_LABEL_O);
     assert(t->text[0] == ':');
     if (t->type == SMAS_TOKEN_LABEL) {
         assert(t->length >= 2u);
-        *negative = 0;
         return 0u;
+    }
+    assert(t->length >= 6u);
+    const char * h = t->text + 2;
+    while (*h != '+' || *h != '-')
+        h++;
+    int neg = (*h == '-');
+    h += 3;
+    uint64_t v = SMAS_read_hex(h, t->length - (size_t) (h - t->text));
+
+    if (neg) {
+        assert(v <= ((uint64_t) (INT64_MIN + 1)) + 1u);
+        return (int64_t) -v;
     } else {
-        assert(t->length >= 6u);
-        const char * h = t->text + 2;
-        for (;; h++) {
-            if (*h == '+') {
-                *negative = 0;
-                break;
-            } else if (*h == '-') {
-                *negative = 1;
-                break;
-            }
-        }
-        h += 3;
-        return SMAS_read_hex(h, t->length - (size_t) (h - t->text));
+        assert(v <= (uint64_t) INT64_MAX);
+        return (int64_t) v;
     }
 }
 

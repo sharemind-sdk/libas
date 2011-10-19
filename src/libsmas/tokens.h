@@ -46,7 +46,7 @@ size_t SMAS_token_string_length(const struct SMAS_Token * t);
 char * SMAS_token_string_value(const struct SMAS_Token * t, size_t * length);
 
 char * SMAS_token_label_label_new(const struct SMAS_Token *t);
-uint64_t SMAS_token_label_offset(const struct SMAS_Token *t, int * negative);
+int64_t SMAS_token_label_offset(const struct SMAS_Token *t);
 
 struct SMAS_Tokens {
     size_t numTokens;
