@@ -89,7 +89,14 @@ int main(int argc, char * argv[]) {
     }
 
     /* Memory map input file: */
-    void * map = mmap(0, inFileStat.st_size, PROT_READ, MAP_SHARED, inFileD, 0);
+    assert(inFileStat.st_size >= 0); /* off_t is some signed integer type. */
+    if (((unsigned) inFileStat.st_size) > SIZE_MAX) { /** \bug comparison between signed and unsigned!? */
+        fprintf(stderr, "Error: Input file \"%s\" too large!\n", inName);
+        goto main_fail_2;
+    }
+    size_t fileSize = (size_t) inFileStat.st_size;
+
+    void * map = mmap(0, fileSize, PROT_READ, MAP_SHARED, inFileD, 0);
     if (map == MAP_FAILED) {
         fprintf(stderr, "Error: Failed to mmap the file \"%s\"!\n", inName);
         goto main_fail_2;
@@ -98,7 +105,7 @@ int main(int argc, char * argv[]) {
 
 #ifdef __USE_BSD
     /* Advise the OS that we plan to read the file sequentially: */
-    (void) madvise(map, inFileStat.st_size, MADV_SEQUENTIAL);
+    (void) madvise(map, fileSize, MADV_SEQUENTIAL);
 #endif
 
     /* Tokenize: */
@@ -106,7 +113,7 @@ int main(int argc, char * argv[]) {
     {
         size_t sl = 0u;
         size_t sc = 0u;
-        ts = SMAS_tokenize((const char *) map, inFileStat.st_size, &sl, &sc);
+        ts = SMAS_tokenize((const char *) map, fileSize, &sl, &sc);
         if (unlikely(!ts)) {
             fprintf(stderr, "Error: Tokenization failed at (%zu,%zu)!\n", sl, sc);
             goto main_fail_3;
@@ -142,7 +149,7 @@ int main(int argc, char * argv[]) {
         assert(!errorString);
         SMAS_tokens_free(ts);
 
-        if (munmap(map, inFileStat.st_size) != 0)
+        if (munmap(map, fileSize) != 0)
             fprintf(stderr, "Error: Failed to munmap input file!\n");
         if (close(inFileD))
             fprintf(stderr, "Error: Failed to close input file!\n");
@@ -194,7 +201,7 @@ main_fail_4:
 
 main_fail_3:
 
-    if (munmap(map, inFileStat.st_size) != 0)
+    if (munmap(map, fileSize) != 0)
         fprintf(stderr, "Error: Failed to munmap input file!\n");
 
 main_fail_2:
