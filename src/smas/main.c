@@ -90,7 +90,7 @@ int main(int argc, char * argv[]) {
 
     /* Memory map input file: */
     assert(inFileStat.st_size >= 0); /* off_t is some signed integer type. */
-    if (((unsigned) inFileStat.st_size) > SIZE_MAX) { /** \bug comparison between signed and unsigned!? */
+    if (((uintmax_t) inFileStat.st_size) > SIZE_MAX) {
         fprintf(stderr, "Error: Input file \"%s\" too large!\n", inName);
         goto main_fail_2;
     }
