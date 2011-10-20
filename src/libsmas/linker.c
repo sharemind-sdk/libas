@@ -141,7 +141,7 @@ static int SMAS_link_0x0(struct SME_Common_Header ** data, struct SMAS_LinkingUn
     if (!r)
         return 0;
 
-    assert(writePtr == (*data + *length));
+    assert(writePtr == ((uint8_t *) *data) + (*length));
 
     return 1;
 }
