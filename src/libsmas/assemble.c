@@ -30,7 +30,7 @@ SM_TRIE_DEFINE(SMAS_LabelLocations,struct SMAS_LabelLocation,malloc,free,)
 struct SMAS_LabelSlot {
     size_t linkingUnit;
     int section;
-    size_t extraOffset;
+    int64_t extraOffset;
     int doJumpLabel;
     size_t jmpOffset;
     union SM_CodeBlock ** cbdata;
@@ -149,9 +149,9 @@ enum SMAS_Assemble_Error SMAS_assemble(const struct SMAS_Tokens * ts,
     int section_index = SME_SECTION_TYPE_TEXT;
 
     /* for .data and .fill: */
-    size_t multiplier;
-    unsigned type;
-    static const size_t widths[9] = { 1u, 2u, 4u, 8u, 1u, 2u, 4u, 8u, 4u };
+    uint64_t multiplier;
+    uint_fast8_t type;
+    static const size_t widths[8] = { 1u, 2u, 4u, 8u, 1u, 2u, 4u, 8u };
 
 smas_assemble_newline:
     switch (t->type) {
@@ -192,11 +192,11 @@ smas_assemble_newline:
         case SMAS_TOKEN_DIRECTIVE:
             if (t->length == 13u && strncmp(t->text, ".linking_unit", t->length) == 0) {
                 SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
-                if (unlikely(t->type != SMAS_TOKEN_HEX))
+                if (unlikely(t->type != SMAS_TOKEN_UHEX))
                     goto smas_assemble_invalid_parameter_t;
 
-                uint64_t v = SMAS_token_hex_value(t);
-                if (unlikely(v >= 256))
+                const uint64_t v = SMAS_token_uhex_value(t);
+                if (unlikely(v >= 256u))
                     goto smas_assemble_invalid_parameter_t;
 
                 if (likely(v != lu_index)) {
@@ -246,17 +246,12 @@ smas_assemble_newline:
 
                 SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
 
-                if (unlikely(t->type != SMAS_TOKEN_HEX))
+                if (unlikely(t->type != SMAS_TOKEN_UHEX))
                     goto smas_assemble_invalid_parameter_t;
 
-                if (unlikely(t->text[0] == '-'))
+                multiplier = SMAS_token_uhex_value(t);
+                if (unlikely(multiplier >= 65536u))
                     goto smas_assemble_invalid_parameter_t;
-
-                uint64_t m = SMAS_token_hex_value(t);
-                if (unlikely(m >= 65536))
-                    goto smas_assemble_invalid_parameter_t;
-
-                multiplier = m;
 
                 goto smas_assemble_data_or_fill;
             } else if (likely(t->length == 13u && strncmp(t->text, ".bind_syscall", t->length) == 0)) {
@@ -301,7 +296,7 @@ smas_assemble_newline:
                     name[l] = '_';
                     strncpy(name + l + 1u, t->text, t->length);
                     l = newSize;
-                } else if (likely(t->type == SMAS_TOKEN_HEX || t->type == SMAS_TOKEN_LABEL || t->type == SMAS_TOKEN_LABEL_O)) {
+                } else if (likely(t->type == SMAS_TOKEN_UHEX || t->type == SMAS_TOKEN_HEX || t->type == SMAS_TOKEN_LABEL || t->type == SMAS_TOKEN_LABEL_O)) {
                     args++;
                 } else {
                     goto smas_assemble_invalid_parameter_t;
@@ -355,14 +350,14 @@ smas_assemble_newline:
             for (;;) {
                 if (++ot == t)
                     break;
-                if (ot->type == SMAS_TOKEN_HEX) {
+                if (ot->type == SMAS_TOKEN_UHEX) {
                     doJumpLabel = 0; /* Past first argument */
                     instr++;
-                    if (unlikely(ot->text[0] == '-')) {
-                        instr->int64[0] = -SMAS_token_hex_value(ot);
-                    } else {
-                        instr->uint64[0] = SMAS_token_hex_value(ot);
-                    }
+                    instr->uint64[0] = SMAS_token_uhex_value(ot);
+                } else if (ot->type == SMAS_TOKEN_HEX) {
+                    doJumpLabel = 0; /* Past first argument */
+                    instr++;
+                    instr->int64[0] = SMAS_token_hex_value(ot);
                 } else if (likely(ot->type == SMAS_TOKEN_LABEL || ot->type == SMAS_TOKEN_LABEL_O)) {
                     instr++;
                     char * label = SMAS_token_label_label_new(ot);
@@ -421,6 +416,7 @@ smas_assemble_newline:
                     }
                     doJumpLabel = 0; /* Past first argument */
                 } else {
+                    /* Skip keywords, because they're already included in the instruction code. */
                     assert(ot->type == SMAS_TOKEN_KEYWORD);
                 }
             }
@@ -472,8 +468,6 @@ smas_assemble_data_or_fill:
         type = 6u;
     } else if (t->length == 5u && strncmp(t->text, "int64", t->length) == 0) {
         type = 7u;
-    } else if (likely(t->length == 7u && strncmp(t->text, "float32", t->length) == 0)) {
-        type = 8u;
     } else {
         goto smas_assemble_invalid_parameter_t;
     }
@@ -482,53 +476,85 @@ smas_assemble_data_or_fill:
 
 smas_assemble_data_opt_param:
 
-    if (unlikely(t->type != SMAS_TOKEN_HEX))
+    if (t->type == SMAS_TOKEN_UHEX) {
+        const uint64_t v = SMAS_token_uhex_value(t);
+        switch (type) {
+            case 0u: /* uint8 */
+                if (v > UINT8_MAX)
+                    goto smas_assemble_invalid_parameter_t;
+                break;
+            case 1u: /* uint16 */
+                if (v > UINT16_MAX)
+                    goto smas_assemble_invalid_parameter_t;
+                break;
+            case 2u: /* uint32 */
+                if (v > UINT32_MAX)
+                    goto smas_assemble_invalid_parameter_t;
+                break;
+            case 3u: /* uint64; All should be fine here. */
+                break;
+            case 4u: /* int8 */
+                if (v > INT8_MAX)
+                    goto smas_assemble_invalid_parameter_t;
+                break;
+            case 5u: /* int16 */
+                if (v > INT16_MAX)
+                    goto smas_assemble_invalid_parameter_t;
+                break;
+            case 6u: /* int32 */
+                if (v > INT32_MAX)
+                    goto smas_assemble_invalid_parameter_t;
+                break;
+            case 7u: /* int64 */
+                if (v > INT64_MAX)
+                    goto smas_assemble_invalid_parameter_t;
+                break;
+            default:
+                abort();
+        }
+    } else if (t->type == SMAS_TOKEN_HEX) {
+        const int64_t v = SMAS_token_hex_value(t);
+        switch (type) {
+            case 0u: /* uint8 */
+                if (v > UINT8_MAX || v < 0)
+                    goto smas_assemble_invalid_parameter_t;
+                break;
+            case 1u: /* uint16 */
+                if (v > UINT16_MAX || v < 0)
+                    goto smas_assemble_invalid_parameter_t;
+                break;
+            case 2u: /* uint32 */
+                if (v > UINT32_MAX || v < 0)
+                    goto smas_assemble_invalid_parameter_t;
+                break;
+            case 3u: /* uint64 */
+                if (v < 0)
+                    goto smas_assemble_invalid_parameter_t;
+                break;
+            case 4u: /* int8 */
+                if (v < INT8_MIN || v > INT8_MAX)
+                    goto smas_assemble_invalid_parameter_t;
+                break;
+            case 5u: /* int16 */
+                if (v < INT16_MIN || v > INT16_MAX)
+                    goto smas_assemble_invalid_parameter_t;
+                break;
+            case 6u: /* int32 */
+                if (v < INT32_MIN || v > INT32_MAX)
+                    goto smas_assemble_invalid_parameter_t;
+                break;
+            case 7u: /* int64; All should be fine here. */
+                break;
+            default:
+                abort();
+        }
+    } else {
         goto smas_assemble_invalid_parameter_t;
-
-    int neg = (t->text[0] == '-');
-    uint64_t v = SMAS_token_hex_value(t);
-    switch (type) {
-        case 0u: /* uint8 */
-            if (neg || v > 255u)
-                goto smas_assemble_invalid_parameter_t;
-            break;
-        case 1u: /* uint16 */
-            if (neg || v > 65535u)
-                goto smas_assemble_invalid_parameter_t;
-            break;
-        case 2u: /* uint32 */
-            if (neg || v > 16777216u)
-                goto smas_assemble_invalid_parameter_t;
-            break;
-        case 3u: /* uint64 */
-            if (neg)
-                goto smas_assemble_invalid_parameter_t;
-            break;
-        case 4u: /* int8 */
-            if ((neg && v > 128u) || (!neg && v > 127u))
-                goto smas_assemble_invalid_parameter_t;
-            break;
-        case 5u: /* int16 */
-            if ((neg && v > 32768u) || (!neg && v > 32767u))
-                goto smas_assemble_invalid_parameter_t;
-            break;
-        case 6u: /* int32 */
-            if ((neg && v > 2147483648u) || (!neg && v > 2147483647u))
-                goto smas_assemble_invalid_parameter_t;
-            break;
-        case 7u: /* int64 */
-            /* All tokenized values should be OK. */
-            break;
-        case 8u: /* float32 */
-            if (neg || v > 16777216u)
-                goto smas_assemble_invalid_parameter_t;
-            break;
-        default:
-            abort();
     }
 
     SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
     lu->sections[section_index].length += (multiplier * widths[type]);
+    /** \todo Actually write the values. */
     goto smas_assemble_newline;
 
 smas_assemble_ok:

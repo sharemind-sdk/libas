@@ -36,35 +36,36 @@ uint64_t SMAS_read_hex(const char * c, size_t l) {
     return v;
 }
 
-uint64_t SMAS_token_hex_value(const struct SMAS_Token * t) {
+int64_t SMAS_token_hex_value(const struct SMAS_Token * t) {
     assert(t);
     assert(t->type == SMAS_TOKEN_HEX);
-    assert(t->length > 0u);
+    assert(t->length >= 4u);
+    assert(t->length <= 19u);
+    assert(t->text[0u] == '-' || t->text[0u] == '+');
+    assert(t->text[1u] == '0');
+    assert(t->text[2u] == 'x');
 
-    size_t i = 0u;
-    if (t->text[0] == '-' || t->text[0] == '+')
-        i++;
+    uint64_t v = SMAS_read_hex(t->text + 3u, t->length - 3u);
 
-    assert(t->length >= 3u + i);
-    assert(t->length <= 18u + i);
-    assert(t->text[i] == '0');
-    assert(t->text[i + 1] == 'x');
-    i += 2u;
-
-    uint64_t v = SMAS_read_hex(t->text + i, t->length - i);
-
-    union { int64_t s; uint64_t u; } x;
     if (t->text[0] == '-') {
         assert(v <= ((uint64_t) (INT64_MIN + 1)) + 1u);
-        x.s = (int64_t) -v;
-        return x.u;
-    } else if (t->text[0] == '+') {
-        assert(v <= (uint64_t) INT64_MAX);
-        x.s = (int64_t) v;
-        return x.u;
+        return (int64_t) -v;
     } else {
-        return v;
+        assert(t->text[0] == '+');
+        assert(v <= (uint64_t) INT64_MAX);
+        return (int64_t) v;
     }
+}
+
+uint64_t SMAS_token_uhex_value(const struct SMAS_Token * t) {
+    assert(t);
+    assert(t->type == SMAS_TOKEN_UHEX);
+    assert(t->length >= 3u);
+    assert(t->length <= 18u);
+    assert(t->text[0u] == '0');
+    assert(t->text[1u] == 'x');
+
+    return SMAS_read_hex(t->text + 2u, t->length - 2u);
 }
 
 size_t SMAS_token_string_length(const struct SMAS_Token * t) {

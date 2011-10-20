@@ -145,7 +145,7 @@ tokenize_hex:
         default:
             goto tokenize_error;
     }
-    NEWTOKEN(lastToken, SMAS_TOKEN_HEX, c - 2 - hexmin, sl, sc);
+    NEWTOKEN(lastToken, hexmin ? SMAS_TOKEN_HEX : SMAS_TOKEN_UHEX, c - 2 - hexmin, sl, sc);
     lastToken->length = 3u + hexmin;
     hexmin = 0u;
     hexstart = 0u;

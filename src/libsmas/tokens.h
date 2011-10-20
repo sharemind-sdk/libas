@@ -25,6 +25,7 @@ uint64_t SMAS_read_hex(const char * c, size_t l);
     (SMAS_TOKEN_NEWLINE) \
     (SMAS_TOKEN_DIRECTIVE) \
     (SMAS_TOKEN_HEX) \
+    (SMAS_TOKEN_UHEX) \
     (SMAS_TOKEN_STRING) \
     (SMAS_TOKEN_LABEL_O) \
     (SMAS_TOKEN_LABEL) \
@@ -40,7 +41,8 @@ struct SMAS_Token {
     size_t length;
 };
 
-uint64_t SMAS_token_hex_value(const struct SMAS_Token * t);
+int64_t SMAS_token_hex_value(const struct SMAS_Token * t);
+uint64_t SMAS_token_uhex_value(const struct SMAS_Token * t);
 
 size_t SMAS_token_string_length(const struct SMAS_Token * t);
 char * SMAS_token_string_value(const struct SMAS_Token * t, size_t * length);
