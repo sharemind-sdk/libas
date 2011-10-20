@@ -30,7 +30,7 @@ uint8_t * SMAS_link(uint16_t version, struct SMAS_LinkingUnits * lus, size_t * l
     if (version > 0u)
         return NULL;
 
-    *length = sizeof(struct SME_Common_Header);
+    (*length) = sizeof(struct SME_Common_Header);
     struct SME_Common_Header * data = (struct SME_Common_Header *) malloc(sizeof(struct SME_Common_Header));
     if (!data)
         return NULL;
@@ -40,7 +40,7 @@ uint8_t * SMAS_link(uint16_t version, struct SMAS_LinkingUnits * lus, size_t * l
         return (uint8_t *) data;
     } else {
         free(data);
-        *length = 0u;
+        (*length) = 0u;
         return NULL;
     }
 }
@@ -127,7 +127,7 @@ static int SMAS_link_0x0(struct SME_Common_Header ** data, struct SMAS_LinkingUn
     struct SME_Common_Header * newData = (struct SME_Common_Header *) realloc((void *) *data, *length);
     if (!newData)
         return 0;
-    *data = newData;
+    (*data) = newData;
 
     uint8_t * writePtr = ((uint8_t *) newData) + oldLength;
     assert(lus->size - 1 <= UINT8_MAX); /** \todo Enforce this */

@@ -196,7 +196,7 @@ smas_assemble_newline:
                     goto smas_assemble_invalid_parameter_t;
 
                 const uint64_t v = SMAS_token_uhex_value(t);
-                if (unlikely(v >= 256u))
+                if (unlikely(v > UINT8_MAX))
                     goto smas_assemble_invalid_parameter_t;
 
                 if (likely(v != lu_index)) {
