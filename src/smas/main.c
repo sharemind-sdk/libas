@@ -25,9 +25,18 @@ SM_STATIC_ASSERT(sizeof(off_t) <= sizeof(size_t));
 int main(int argc, char * argv[]) {
     const char * inName = NULL;
     const char * outName = NULL;
+    char activeOpt = '\0';
+    int inFileD;
+    struct stat inFileStat;
+    size_t fileSize;
+    void * map;
+    struct SMAS_Tokens * ts;
+    struct SMAS_LinkingUnits lus;
+    size_t outputLength;
+    uint8_t * output;
+    FILE * outFile;
 
     /* Parse arguments */
-    char activeOpt = '\0';
     for (int i = 1; i < argc; i++) {
         switch (activeOpt) {
             case 'o':
@@ -75,14 +84,13 @@ int main(int argc, char * argv[]) {
     }
 
     /* Open input file: */
-    int inFileD = open(inName, O_RDONLY);
+    inFileD = open(inName, O_RDONLY);
     if (inFileD == -1) {
         fprintf(stderr, "Error opening file \"%s\" for reading!\n", inName);
         goto main_fail_1;
     }
 
     /* Determine input file size: */
-    struct stat inFileStat;
     if (fstat(inFileD, &inFileStat) != 0) {
         fprintf(stderr, "Error: Failed to fstat input file \"%s\"!\n", inName);
         goto main_fail_2;
@@ -94,9 +102,9 @@ int main(int argc, char * argv[]) {
         fprintf(stderr, "Error: Input file \"%s\" too large!\n", inName);
         goto main_fail_2;
     }
-    size_t fileSize = (size_t) inFileStat.st_size;
+    fileSize = (size_t) inFileStat.st_size;
 
-    void * map = mmap(0, fileSize, PROT_READ, MAP_SHARED, inFileD, 0);
+    map = mmap(0, fileSize, PROT_READ, MAP_SHARED, inFileD, 0);
     if (map == MAP_FAILED) {
         fprintf(stderr, "Error: Failed to mmap the file \"%s\"!\n", inName);
         goto main_fail_2;
@@ -109,7 +117,6 @@ int main(int argc, char * argv[]) {
 #endif
 
     /* Tokenize: */
-    struct SMAS_Tokens * ts;
     {
         size_t sl = 0u;
         size_t sc = 0u;
@@ -122,7 +129,6 @@ int main(int argc, char * argv[]) {
     }
 
     /* Assemble the linking units: */
-    struct SMAS_LinkingUnits lus;
     {
         SMAS_LinkingUnits_init(&lus);
         const struct SMAS_Token * errorToken;
@@ -156,8 +162,7 @@ int main(int argc, char * argv[]) {
     } /* Active resources: lus */
 
     /* Generate the Sharemind Executable: */
-    size_t outputLength;
-    uint8_t * output = SMAS_link(0x0, &lus, &outputLength, 0);
+    output = SMAS_link(0x0, &lus, &outputLength, 0);
     SMAS_LinkingUnits_destroy_with(&lus, &SMAS_LinkingUnit_destroy);
     if (!output) {
         fprintf(stderr, "Error generating output!\n");
@@ -165,7 +170,7 @@ int main(int argc, char * argv[]) {
     }
 
     /* Open output file: */
-    FILE * outFile = fopen(outName, "w");
+    outFile = fopen(outName, "w");
     if (outFile == NULL) {
         fprintf(stderr, "Error opening output file \"%s\" for writing!\n", outName);
         goto main_fail_5;
