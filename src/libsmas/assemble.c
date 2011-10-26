@@ -18,6 +18,47 @@
 #include "tokens.h"
 
 
+static inline int SMAS_Assemble_assign_add_sizet_int64(size_t * lhs, const int64_t rhs) {
+    if (rhs > 0) {
+        if (((uint64_t) rhs) > SIZE_MAX - (*lhs))
+            return 0;
+        (*lhs) += (uint64_t) rhs;
+    } else if (rhs < 0) {
+        if (rhs == INT64_MIN) {
+            if ((*lhs) <= (uint64_t) INT64_MAX)
+                return 0;
+            (*lhs)--;
+            (*lhs) -= (uint64_t) INT64_MAX;
+        } else {
+            if ((*lhs) < (uint64_t) -rhs)
+              return 0;
+            (*lhs) -= (uint64_t) -rhs;
+        }
+    }
+    return 1;
+}
+
+static inline int SMAS_Assemble_substract_sizet_sizet_to_int64(int64_t *dest, const size_t lhs, const size_t rhs) {
+    if (lhs >= rhs) {
+        size_t r = lhs - rhs;
+        if (r > INT64_MAX)
+            return 0;
+        (*dest) = (int64_t) r;
+    } else {
+        size_t mr = rhs - lhs;
+        assert(mr > 0);
+        if (mr - 1 > (uint64_t) INT64_MAX) {
+            return 0;
+        } else if (mr - 1 == (uint64_t) INT64_MAX) {
+            (*dest) = INT64_MIN;
+        } else {
+            (*dest) = -((int64_t) mr);
+        }
+    }
+    return 1;
+}
+
+
 struct SMAS_LabelLocation {
     size_t linkingUnit;
     int section;
@@ -68,25 +109,29 @@ static int SMAS_LabelSlot_fill(struct SMAS_LabelSlot * s, struct SMAS_LabelLocat
     assert(l);
 
     size_t absTarget = l->offset;
-    absTarget += s->extraOffset; /**< \todo check overflow/underflow? */
+    if (!SMAS_Assemble_assign_add_sizet_int64(&absTarget, s->extraOffset))
+        goto SMAS_LabelSlot_fill_error;
 
     if (!s->doJumpLabel) { /* Normal absolute label */
         (*s->cbdata)[s->cbdata_index].uint64[0] = absTarget;
     } else { /* Relative jump label */
-        if (s->linkingUnit != l->linkingUnit)
-            return 0;
-
-        if (s->section != l->section)
-            return 0;
+        if (s->linkingUnit != l->linkingUnit || s->section != l->section)
+            goto SMAS_LabelSlot_fill_error;
 
         assert(s->section == SME_SECTION_TYPE_TEXT);
         assert(s->jmpOffset < l->offset); /* Because we're one-pass. */
 
+        if (!SMAS_Assemble_substract_sizet_sizet_to_int64(&(*s->cbdata)[s->cbdata_index].int64[0], absTarget, s->jmpOffset))
+            goto SMAS_LabelSlot_fill_error;
+
         /** \todo Maybe check whether there's really an instruction there */
-        (*s->cbdata)[s->cbdata_index].int64[0] = absTarget - s->jmpOffset;  /**< \todo check underflow? */
     }
     s->token = NULL;
     return 1;
+
+SMAS_LabelSlot_fill_error:
+    /** \todo Provide better diagnostics */
+    return 0;
 }
 
 SM_ENUM_CUSTOM_DEFINE_TOSTRING(SMAS_Assemble_Error, SMAS_ENUM_Assemble_Error);
@@ -364,31 +409,42 @@ smas_assemble_newline:
                     if (unlikely(!label))
                         goto smas_assemble_out_of_memory;
 
+                    /* Check whether label is defined: */
                     struct SMAS_LabelLocation * loc = SMAS_LabelLocations_find(&ll, label);
-                    int64_t labelOffset = SMAS_token_label_offset(ot);
                     if (loc) {
                         free(label);
 
-                        size_t absTarget = loc->offset;
-                        absTarget += labelOffset; /**< \todo check overflow/underflow? */
-
+                        /* Is this a jump instruction location? */
                         if (doJumpLabel) {
                             assert(jmpOffset >= loc->offset); /* Because we're one-pass. */
 
+                            /* Check whether the label is defined in the same linking unit: */
                             if (loc->linkingUnit != lu_index) {
                                 *errorToken = ot;
                                 goto smas_assemble_invalid_label;
                             }
 
+                            /* Verify that the label is defined in a TEXT section: */
                             assert(section_index == SME_SECTION_TYPE_TEXT);
-                            if (loc->section != section_index) {
+                            if (loc->section != SME_SECTION_TYPE_TEXT) {
                                 *errorToken = ot;
                                 goto smas_assemble_invalid_label;
                             }
 
+                            size_t absTarget = loc->offset;
+                            if (!SMAS_Assemble_assign_add_sizet_int64(&absTarget, SMAS_token_label_offset(ot))
+                                || !SMAS_Assemble_substract_sizet_sizet_to_int64(&instr->int64[0], absTarget, jmpOffset))
+                            {
+                                *errorToken = ot;
+                                goto smas_assemble_invalid_label_offset;
+                            }
                             /** \todo Maybe check whether there's really an instruction there */
-                            instr->int64[0] = absTarget - jmpOffset;  /**< \todo check underflow? */
                         } else {
+                            size_t absTarget = loc->offset;
+                            if (!SMAS_Assemble_assign_add_sizet_int64(&absTarget, SMAS_token_label_offset(ot))) {
+                                *errorToken = ot;
+                                goto smas_assemble_invalid_label_offset;
+                            }
                             instr->uint64[0] = absTarget;
                         }
                     } else {
@@ -407,11 +463,13 @@ smas_assemble_newline:
 
                         slot->linkingUnit = lu_index;
                         slot->section = section_index;
-                        slot->extraOffset = labelOffset;
+                        slot->extraOffset = SMAS_token_label_offset(ot);
                         slot->doJumpLabel = doJumpLabel; /* Signal a relative jump label */
                         slot->jmpOffset = jmpOffset;
                         slot->cbdata = &lu->sections[section_index].cbdata;
-                        slot->cbdata_index = instr - lu->sections[section_index].cbdata;
+                        assert(instr > lu->sections[section_index].cbdata);
+                        assert(((uintmax_t) (instr - lu->sections[section_index].cbdata)) <= SIZE_MAX);
+                        slot->cbdata_index = (size_t) (instr - lu->sections[section_index].cbdata);
                         slot->token = ot;
                     }
                     doJumpLabel = 0; /* Past first argument */
@@ -608,6 +666,10 @@ smas_assemble_invalid_label_t:
     *errorToken = t;
 smas_assemble_invalid_label:
     returnStatus = SMAS_ASSEMBLE_INVALID_LABEL;
+    goto smas_assemble_free_and_return;
+
+smas_assemble_invalid_label_offset:
+    returnStatus = SMAS_ASSEMBLE_INVALID_LABEL_OFFSET;
     goto smas_assemble_free_and_return;
 
 smas_assemble_free_and_return:
