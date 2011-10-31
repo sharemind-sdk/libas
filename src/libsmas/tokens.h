@@ -33,41 +33,41 @@ uint64_t SMAS_read_hex(const char * c, size_t l);
 SM_ENUM_DEFINE(SMAS_TokenType, SMAS_ENUM_TokenType);
 SM_ENUM_DECLARE_TOSTRING(SMAS_TokenType);
 
-struct SMAS_Token {
-    enum SMAS_TokenType type;
+typedef struct {
+    SMAS_TokenType type;
     const char * text;
     size_t start_line;
     size_t start_column;
     size_t length;
-};
+} SMAS_Token;
 
-int64_t SMAS_token_hex_value(const struct SMAS_Token * t);
-uint64_t SMAS_token_uhex_value(const struct SMAS_Token * t);
+int64_t SMAS_token_hex_value(const SMAS_Token * t);
+uint64_t SMAS_token_uhex_value(const SMAS_Token * t);
 
-size_t SMAS_token_string_length(const struct SMAS_Token * t);
-char * SMAS_token_string_value(const struct SMAS_Token * t, size_t * length);
+size_t SMAS_token_string_length(const SMAS_Token * t);
+char * SMAS_token_string_value(const SMAS_Token * t, size_t * length);
 
-char * SMAS_token_label_label_new(const struct SMAS_Token *t);
-int64_t SMAS_token_label_offset(const struct SMAS_Token *t);
+char * SMAS_token_label_label_new(const SMAS_Token *t);
+int64_t SMAS_token_label_offset(const SMAS_Token *t);
 
-struct SMAS_Tokens {
+typedef struct {
     size_t numTokens;
-    struct SMAS_Token * array;
-};
+    SMAS_Token * array;
+} SMAS_Tokens;
 
-struct SMAS_Tokens * SMAS_tokens_new(void);
+SMAS_Tokens * SMAS_tokens_new(void);
 
-void SMAS_tokens_free(struct SMAS_Tokens * ts);
+void SMAS_tokens_free(SMAS_Tokens * ts);
 
-void SMAS_tokens_print(const struct SMAS_Tokens *ts);
+void SMAS_tokens_print(const SMAS_Tokens *ts);
 
-struct SMAS_Token * SMAS_tokens_append(struct SMAS_Tokens * ts,
-                                       enum SMAS_TokenType type,
-                                       const char * start,
-                                       size_t start_line,
-                                       size_t start_column);
+SMAS_Token * SMAS_tokens_append(SMAS_Tokens * ts,
+                                SMAS_TokenType type,
+                                const char * start,
+                                size_t start_line,
+                                size_t start_column);
 
-void SMAS_tokens_pop_back_newlines(struct SMAS_Tokens * ts);
+void SMAS_tokens_pop_back_newlines(SMAS_Tokens * ts);
 
 #ifdef __cplusplus
 } /* extern "C" { */

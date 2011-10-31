@@ -12,7 +12,6 @@
 #include <assert.h>
 #include <stdlib.h>
 #include "../likely.h"
-#include "tokens.h"
 
 
 #define TOKENIZE_INC_CHECK_EOF(eof) \
@@ -32,8 +31,8 @@
             goto tokenize_error_oom; \
     }
 
-struct SMAS_Tokens * SMAS_tokenize(const char * program, size_t length,
-                                   size_t * errorSl, size_t *errorSc)
+SMAS_Tokens * SMAS_tokenize(const char * program, size_t length,
+                            size_t * errorSl, size_t *errorSc)
 {
     assert(program);
     const char * c = program;
@@ -42,11 +41,11 @@ struct SMAS_Tokens * SMAS_tokenize(const char * program, size_t length,
 
     size_t sl = 1u, sc = 1u;
 
-    struct SMAS_Tokens * ts = SMAS_tokens_new();
+    SMAS_Tokens * ts = SMAS_tokens_new();
     if (unlikely(!ts))
         return NULL;
     ts->numTokens = 0u;
-    struct SMAS_Token * lastToken = NULL;
+    SMAS_Token * lastToken = NULL;
 
     size_t hexmin = 0u;
     size_t hexstart = 0u;

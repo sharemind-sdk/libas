@@ -12,15 +12,14 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "linkingunits.h"
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct SMAS_LinkingUnits;
-
-uint8_t * SMAS_link(uint16_t version, struct SMAS_LinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit);
+uint8_t * SMAS_link(uint16_t version, SMAS_LinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit);
 
 #ifdef __cplusplus
 } /* extern "C" { */

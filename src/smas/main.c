@@ -15,7 +15,6 @@
 #include <unistd.h>
 #include "../libsmas/assemble.h"
 #include "../libsmas/linker.h"
-#include "../libsmas/tokens.h"
 #include "../libsmas/tokenizer.h"
 #include "../static_assert.h"
 
@@ -30,8 +29,8 @@ int main(int argc, char * argv[]) {
     struct stat inFileStat;
     size_t fileSize;
     void * map;
-    struct SMAS_Tokens * ts;
-    struct SMAS_LinkingUnits lus;
+    SMAS_Tokens * ts;
+    SMAS_LinkingUnits lus;
     size_t outputLength;
     uint8_t * output;
     FILE * outFile;
@@ -131,9 +130,9 @@ int main(int argc, char * argv[]) {
     /* Assemble the linking units: */
     {
         SMAS_LinkingUnits_init(&lus);
-        const struct SMAS_Token * errorToken;
+        const SMAS_Token * errorToken;
         char * errorString;
-        enum SMAS_Assemble_Error r = SMAS_assemble(ts, &lus, &errorToken, &errorString);
+        SMAS_Assemble_Error r = SMAS_assemble(ts, &lus, &errorToken, &errorString);
         if (r != SMAS_ASSEMBLE_OK) {
             const char * smasErrorStr = SMAS_Assemble_Error_toString(r);
             assert(smasErrorStr);

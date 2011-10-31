@@ -15,7 +15,6 @@
 #include "../libsmvmi/instr.h"
 #include "../likely.h"
 #include "../trie.h"
-#include "tokens.h"
 
 
 static inline int SMAS_Assemble_assign_add_sizet_int64(size_t * lhs, const int64_t rhs) {
@@ -59,27 +58,27 @@ static inline int SMAS_Assemble_substract_sizet_sizet_to_int64(int64_t *dest, co
 }
 
 
-struct SMAS_LabelLocation {
+typedef struct {
     size_t linkingUnit;
     int section;
     size_t offset;
-};
+} SMAS_LabelLocation;
 
-SM_TRIE_DECLARE(SMAS_LabelLocations,struct SMAS_LabelLocation,)
-SM_TRIE_DEFINE(SMAS_LabelLocations,struct SMAS_LabelLocation,malloc,free,)
+SM_TRIE_DECLARE(SMAS_LabelLocations,SMAS_LabelLocation,)
+SM_TRIE_DEFINE(SMAS_LabelLocations,SMAS_LabelLocation,malloc,free,)
 
-struct SMAS_LabelSlot {
+typedef struct {
     size_t linkingUnit;
     int section;
     int64_t extraOffset;
     int doJumpLabel;
     size_t jmpOffset;
-    union SM_CodeBlock ** cbdata;
+    SMVM_CodeBlock ** cbdata;
     size_t cbdata_index;
-    const struct SMAS_Token * token; /* NULL if this slot is already filled */
-};
+    const SMAS_Token * token; /* NULL if this slot is already filled */
+} SMAS_LabelSlot;
 
-static int SMAS_LabelSlot_filled(struct SMAS_LabelSlot * s, struct SMAS_LabelSlot ** d) {
+static int SMAS_LabelSlot_filled(SMAS_LabelSlot * s, SMAS_LabelSlot ** d) {
     assert(s);
     if (s->token == NULL)
         return 1;
@@ -87,23 +86,23 @@ static int SMAS_LabelSlot_filled(struct SMAS_LabelSlot * s, struct SMAS_LabelSlo
     return 0;
 }
 
-SM_VECTOR_DECLARE(SMAS_LabelSlots,struct SMAS_LabelSlot,,)
-SM_VECTOR_DEFINE(SMAS_LabelSlots,struct SMAS_LabelSlot,malloc,free,realloc,)
-SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelLocationPointer,struct SMAS_LabelLocation *,struct SMAS_LabelLocation * p,)
-SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelLocationPointer,struct SMAS_LabelLocation *,struct SMAS_LabelLocation * p,p,)
-SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p,)
-SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,struct SMAS_LabelSlot,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p,p,)
+SM_VECTOR_DECLARE(SMAS_LabelSlots,SMAS_LabelSlot,,)
+SM_VECTOR_DEFINE(SMAS_LabelSlots,SMAS_LabelSlot,malloc,free,realloc,)
+SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelLocationPointer,SMAS_LabelLocation *,SMAS_LabelLocation * p,)
+SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelLocationPointer,SMAS_LabelLocation *,SMAS_LabelLocation * p,p,)
+SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelSlotPointerPointer,SMAS_LabelSlot **,SMAS_LabelSlot ** p,)
+SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelSlotPointerPointer,SMAS_LabelSlot **,SMAS_LabelSlot ** p,p,)
 
-static int SMAS_LabelSlots_allSlotsFilled(struct SMAS_LabelSlots * ss, struct SMAS_LabelSlot ** d) {
+static int SMAS_LabelSlots_allSlotsFilled(SMAS_LabelSlots * ss, SMAS_LabelSlot ** d) {
     return SMAS_LabelSlots_foreach_with_labelSlotPointerPointer(ss, &SMAS_LabelSlot_filled, d);
 }
 
-SM_TRIE_DECLARE(SMAS_LabelSlotsTrie,struct SMAS_LabelSlots,)
-SM_TRIE_DEFINE(SMAS_LabelSlotsTrie,struct SMAS_LabelSlots,malloc,free,)
-SM_TRIE_DECLARE_FOREACH_WITH(SMAS_LabelSlotsTrie,struct SMAS_LabelSlots,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p,)
-SM_TRIE_DEFINE_FOREACH_WITH(SMAS_LabelSlotsTrie,struct SMAS_LabelSlots,labelSlotPointerPointer,struct SMAS_LabelSlot **,struct SMAS_LabelSlot ** p,p,)
+SM_TRIE_DECLARE(SMAS_LabelSlotsTrie,SMAS_LabelSlots,)
+SM_TRIE_DEFINE(SMAS_LabelSlotsTrie,SMAS_LabelSlots,malloc,free,)
+SM_TRIE_DECLARE_FOREACH_WITH(SMAS_LabelSlotsTrie,SMAS_LabelSlots,labelSlotPointerPointer,SMAS_LabelSlot **,SMAS_LabelSlot ** p,)
+SM_TRIE_DEFINE_FOREACH_WITH(SMAS_LabelSlotsTrie,SMAS_LabelSlots,labelSlotPointerPointer,SMAS_LabelSlot **,SMAS_LabelSlot ** p,p,)
 
-static int SMAS_LabelSlot_fill(struct SMAS_LabelSlot * s, struct SMAS_LabelLocation * l) {
+static int SMAS_LabelSlot_fill(SMAS_LabelSlot * s, SMAS_LabelLocation * l) {
     assert(s);
     assert(s->token);
     assert(l);
@@ -159,10 +158,10 @@ SM_ENUM_CUSTOM_DEFINE_TOSTRING(SMAS_Assemble_Error, SMAS_ENUM_Assemble_Error);
         SMAS_ASSEMBLE_DO_EOL(eof,noexpect); \
     } else (void) 0
 
-enum SMAS_Assemble_Error SMAS_assemble(const struct SMAS_Tokens * ts,
-                                       struct SMAS_LinkingUnits * lus,
-                                       const struct SMAS_Token ** errorToken,
-                                       char ** errorString)
+SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
+                                  SMAS_LinkingUnits * lus,
+                                  const SMAS_Token ** errorToken,
+                                  char ** errorString)
 {
     assert(ts);
     assert(lus);
@@ -172,13 +171,13 @@ enum SMAS_Assemble_Error SMAS_assemble(const struct SMAS_Tokens * ts,
     *errorToken = NULL;
     *errorString = NULL;
 
-    struct SMAS_LabelLocations ll;
+    SMAS_LabelLocations ll;
     SMAS_LabelLocations_init(&ll);
 
-    struct SMAS_LabelSlotsTrie lst;
+    SMAS_LabelSlotsTrie lst;
     SMAS_LabelSlotsTrie_init(&lst);
 
-    struct SMAS_LinkingUnit * lu = SMAS_LinkingUnits_push(lus);
+    SMAS_LinkingUnit * lu = SMAS_LinkingUnits_push(lus);
     if (unlikely(!lu))
         goto smas_assemble_out_of_memory;
 
@@ -187,8 +186,8 @@ enum SMAS_Assemble_Error SMAS_assemble(const struct SMAS_Tokens * ts,
     if (unlikely(ts->numTokens <= 0))
         goto smas_assemble_ok;
 
-    struct SMAS_Token * t = &ts->array[0u];
-    struct SMAS_Token * e = &ts->array[ts->numTokens];
+    SMAS_Token * t = &ts->array[0u];
+    SMAS_Token * e = &ts->array[ts->numTokens];
 
     size_t lu_index = 0u;
     int section_index = SME_SECTION_TYPE_TEXT;
@@ -209,7 +208,7 @@ smas_assemble_newline:
                 goto smas_assemble_out_of_memory;
 
             int newValue;
-            struct SMAS_LabelLocation * l = SMAS_LabelLocations_get_or_insert(&ll, label, &newValue);
+            SMAS_LabelLocation * l = SMAS_LabelLocations_get_or_insert(&ll, label, &newValue);
             if (unlikely(!l)) {
                 free(label);
                 goto smas_assemble_out_of_memory;
@@ -226,7 +225,7 @@ smas_assemble_newline:
             l->offset = lu->sections[section_index].length;
 
             /* Fill pending label slots: */
-            struct SMAS_LabelSlots * slots = SMAS_LabelSlotsTrie_find(&lst, label);
+            SMAS_LabelSlots * slots = SMAS_LabelSlotsTrie_find(&lst, label);
             free(label);
             if (slots) {
                 if (!SMAS_LabelSlots_foreach_with_labelLocationPointer(slots, &SMAS_LabelSlot_fill, l))
@@ -321,7 +320,7 @@ smas_assemble_newline:
                 goto smas_assemble_out_of_memory;
             strncpy(name, t->text, l);
 
-            const struct SMAS_Token * ot = t;
+            const SMAS_Token * ot = t;
             /* Collect instruction name and count arguments: */
             for (;;) {
                 if (SMAS_ASSEMBLE_INC_EOF_TEST)
@@ -350,7 +349,7 @@ smas_assemble_newline:
             name[l] = '\0';
 
             /* Detect and check instruction: */
-            const struct SMVMI_Instruction * i = SMVMI_Instruction_from_name(name);
+            const SMVMI_Instruction * i = SMVMI_Instruction_from_name(name);
             if (unlikely(!i)) {
                 *errorToken = ot;
                 *errorString = name;
@@ -381,11 +380,11 @@ smas_assemble_newline:
             }
 
             /* Allocate whole instruction: */
-            char * newData = (char *) realloc((void *) lu->sections[section_index].data, sizeof(union SM_CodeBlock) * (lu->sections[section_index].length + args + 1));
+            char * newData = (char *) realloc((void *) lu->sections[section_index].data, sizeof(SMVM_CodeBlock) * (lu->sections[section_index].length + args + 1));
             if (unlikely(!newData))
                 goto smas_assemble_out_of_memory;
             lu->sections[section_index].data = newData;
-            union SM_CodeBlock * instr = &lu->sections[section_index].cbdata[lu->sections[section_index].length];
+            SMVM_CodeBlock * instr = &lu->sections[section_index].cbdata[lu->sections[section_index].length];
             lu->sections[section_index].length += args + 1;
 
             /* Write instruction code */
@@ -410,7 +409,7 @@ smas_assemble_newline:
                         goto smas_assemble_out_of_memory;
 
                     /* Check whether label is defined: */
-                    struct SMAS_LabelLocation * loc = SMAS_LabelLocations_find(&ll, label);
+                    SMAS_LabelLocation * loc = SMAS_LabelLocations_find(&ll, label);
                     if (loc) {
                         free(label);
 
@@ -449,7 +448,7 @@ smas_assemble_newline:
                         }
                     } else {
                         int newValue;
-                        struct SMAS_LabelSlots * slots = SMAS_LabelSlotsTrie_get_or_insert(&lst, label, &newValue);
+                        SMAS_LabelSlots * slots = SMAS_LabelSlotsTrie_get_or_insert(&lst, label, &newValue);
                         free(label);
                         if (unlikely(!slots))
                             goto smas_assemble_out_of_memory;
@@ -457,7 +456,7 @@ smas_assemble_newline:
                         if (newValue)
                             SMAS_LabelSlots_init(slots);
 
-                        struct SMAS_LabelSlot * slot = SMAS_LabelSlots_push(slots);
+                        SMAS_LabelSlot * slot = SMAS_LabelSlots_push(slots);
                         if (unlikely(!slot))
                             goto smas_assemble_out_of_memory;
 
@@ -493,7 +492,7 @@ smas_assemble_check_labels:
 
     /* Check for undefined labels: */
     {
-        struct SMAS_LabelSlot * undefinedSlot;
+        SMAS_LabelSlot * undefinedSlot;
         if (likely(SMAS_LabelSlotsTrie_foreach_with_labelSlotPointerPointer(&lst, &SMAS_LabelSlots_allSlotsFilled, &undefinedSlot)))
             goto smas_assemble_ok;
 

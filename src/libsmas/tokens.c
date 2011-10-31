@@ -36,7 +36,7 @@ uint64_t SMAS_read_hex(const char * c, size_t l) {
     return v;
 }
 
-int64_t SMAS_token_hex_value(const struct SMAS_Token * t) {
+int64_t SMAS_token_hex_value(const SMAS_Token * t) {
     assert(t);
     assert(t->type == SMAS_TOKEN_HEX);
     assert(t->length >= 4u);
@@ -57,7 +57,7 @@ int64_t SMAS_token_hex_value(const struct SMAS_Token * t) {
     }
 }
 
-uint64_t SMAS_token_uhex_value(const struct SMAS_Token * t) {
+uint64_t SMAS_token_uhex_value(const SMAS_Token * t) {
     assert(t);
     assert(t->type == SMAS_TOKEN_UHEX);
     assert(t->length >= 3u);
@@ -68,7 +68,7 @@ uint64_t SMAS_token_uhex_value(const struct SMAS_Token * t) {
     return SMAS_read_hex(t->text + 2u, t->length - 2u);
 }
 
-size_t SMAS_token_string_length(const struct SMAS_Token * t) {
+size_t SMAS_token_string_length(const SMAS_Token * t) {
     assert(t);
     assert(t->type == SMAS_TOKEN_STRING);
     assert(t->length >= 2u);
@@ -84,7 +84,7 @@ size_t SMAS_token_string_length(const struct SMAS_Token * t) {
     return l;
 }
 
-char * SMAS_token_string_value(const struct SMAS_Token * t, size_t * length) {
+char * SMAS_token_string_value(const SMAS_Token * t, size_t * length) {
     assert(t);
     assert(t->type == SMAS_TOKEN_STRING);
     assert(t->length >= 2u);
@@ -130,7 +130,7 @@ char * SMAS_token_string_value(const struct SMAS_Token * t, size_t * length) {
     return s;
 }
 
-char * SMAS_token_label_label_new(const struct SMAS_Token *t) {
+char * SMAS_token_label_label_new(const SMAS_Token *t) {
     assert(t);
     assert(t->type == SMAS_TOKEN_LABEL || t->type == SMAS_TOKEN_LABEL_O);
     size_t l;
@@ -154,7 +154,7 @@ char * SMAS_token_label_label_new(const struct SMAS_Token *t) {
     return c;
 }
 
-int64_t SMAS_token_label_offset(const struct SMAS_Token *t) {
+int64_t SMAS_token_label_offset(const SMAS_Token *t) {
     assert(t);
     assert(t->type == SMAS_TOKEN_LABEL || t->type == SMAS_TOKEN_LABEL_O);
     assert(t->text[0] == ':');
@@ -179,8 +179,8 @@ int64_t SMAS_token_label_offset(const struct SMAS_Token *t) {
     }
 }
 
-struct SMAS_Tokens * SMAS_tokens_new(void) {
-    struct SMAS_Tokens * ts = (struct SMAS_Tokens *) malloc(sizeof(struct SMAS_Tokens));
+SMAS_Tokens * SMAS_tokens_new(void) {
+    SMAS_Tokens * ts = (SMAS_Tokens *) malloc(sizeof(SMAS_Tokens));
     if (unlikely(!ts))
         return NULL;
     ts->numTokens = 0u;
@@ -188,16 +188,16 @@ struct SMAS_Tokens * SMAS_tokens_new(void) {
     return ts;
 }
 
-void SMAS_tokens_free(struct SMAS_Tokens * ts) {
+void SMAS_tokens_free(SMAS_Tokens * ts) {
     free(ts->array);
     free(ts);
 }
 
-void SMAS_tokens_print(const struct SMAS_Tokens *ts) {
+void SMAS_tokens_print(const SMAS_Tokens *ts) {
     assert(ts);
     int newLine = 1;
     for (size_t i = 0; i < ts->numTokens; i++) {
-        struct SMAS_Token * t = &ts->array[i];
+        SMAS_Token * t = &ts->array[i];
         if (!newLine)
             putchar(' ');
         else
@@ -228,19 +228,19 @@ void SMAS_tokens_print(const struct SMAS_Tokens *ts) {
     printf("\n");
 }
 
-struct SMAS_Token * SMAS_tokens_append(struct SMAS_Tokens * ts,
-                                       enum SMAS_TokenType type,
-                                       const char * start,
-                                       size_t start_line,
-                                       size_t start_column)
+SMAS_Token * SMAS_tokens_append(SMAS_Tokens * ts,
+                                SMAS_TokenType type,
+                                const char * start,
+                                size_t start_line,
+                                size_t start_column)
 {
     assert(ts);
-    struct SMAS_Token * nts = (struct SMAS_Token *) realloc(ts->array, sizeof(struct SMAS_Token) * (ts->numTokens + 1));
+    SMAS_Token * nts = (SMAS_Token *) realloc(ts->array, sizeof(SMAS_Token) * (ts->numTokens + 1));
     if (unlikely(!nts))
         return NULL;
     ts->array = nts;
 
-    struct SMAS_Token * nt = &nts[ts->numTokens];
+    SMAS_Token * nt = &nts[ts->numTokens];
     ts->numTokens++;
     nt->type = type;
     nt->text = start;
@@ -249,14 +249,14 @@ struct SMAS_Token * SMAS_tokens_append(struct SMAS_Tokens * ts,
     return nt;
 }
 
-void SMAS_tokens_pop_back_newlines(struct SMAS_Tokens * ts) {
+void SMAS_tokens_pop_back_newlines(SMAS_Tokens * ts) {
     assert(ts);
 
     if (ts->array[ts->numTokens - 1].type != SMAS_TOKEN_NEWLINE)
         return;
 
     ts->numTokens--;
-    struct SMAS_Token * nts = (struct SMAS_Token *) realloc(ts->array, sizeof(struct SMAS_Token) * ts->numTokens);
+    SMAS_Token * nts = (SMAS_Token *) realloc(ts->array, sizeof(SMAS_Token) * ts->numTokens);
     if (likely(nts))
         ts->array = nts;
 }

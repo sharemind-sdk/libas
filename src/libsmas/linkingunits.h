@@ -19,26 +19,26 @@
 extern "C" {
 #endif
 
-struct SMAS_Section {
+typedef struct {
     size_t length;
     union {
         char * data;
-        union SM_CodeBlock * cbdata;
+        SMVM_CodeBlock * cbdata;
     };
-};
+} SMAS_Section;
 
-void SMAS_Section_init(struct SMAS_Section * s);
-void SMAS_Section_destroy(struct SMAS_Section * s);
+void SMAS_Section_init(SMAS_Section * s);
+void SMAS_Section_destroy(SMAS_Section * s);
 
 
-struct SMAS_LinkingUnit {
-    struct SMAS_Section sections[SME_SECTION_TYPE_COUNT];
-};
+typedef struct {
+    SMAS_Section sections[SME_SECTION_TYPE_COUNT];
+} SMAS_LinkingUnit;
 
-void SMAS_LinkingUnit_init(struct SMAS_LinkingUnit * lu);
-void SMAS_LinkingUnit_destroy(struct SMAS_LinkingUnit * lu);
+void SMAS_LinkingUnit_init(SMAS_LinkingUnit * lu);
+void SMAS_LinkingUnit_destroy(SMAS_LinkingUnit * lu);
 
-SM_VECTOR_DECLARE(SMAS_LinkingUnits,struct SMAS_LinkingUnit,,)
+SM_VECTOR_DECLARE(SMAS_LinkingUnits,SMAS_LinkingUnit,,)
 
 #ifdef __cplusplus
 } /* extern "C" { */

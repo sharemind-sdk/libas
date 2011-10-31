@@ -12,13 +12,11 @@
 
 #include "../preprocessor.h"
 #include "linkingunits.h"
+#include "tokens.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-struct SMAS_Token;
-struct SMAS_Tokens;
 
 #define SMAS_ENUM_Assemble_Error \
     ((SMAS_ASSEMBLE_OK, = 0)) \
@@ -37,10 +35,10 @@ SM_ENUM_CUSTOM_DEFINE(SMAS_Assemble_Error, SMAS_ENUM_Assemble_Error);
 SM_ENUM_DECLARE_TOSTRING(SMAS_Assemble_Error);
 
 
-enum SMAS_Assemble_Error SMAS_assemble(const struct SMAS_Tokens * ts,
-                                       struct SMAS_LinkingUnits * lus,
-                                       const struct SMAS_Token ** errorToken,
-                                       char ** errorString);
+SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
+                                  SMAS_LinkingUnits * lus,
+                                  const SMAS_Token ** errorToken,
+                                  char ** errorString);
 
 #ifdef __cplusplus
 } /* extern "C" { */

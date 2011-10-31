@@ -11,15 +11,14 @@
 #define LIBSMAS_TOKENIZER_H
 
 #include <string.h>
+#include "tokens.h"
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct SMAS_Tokens;
-
-struct SMAS_Tokens * SMAS_tokenize(const char * program, size_t length, size_t * errorSl, size_t *errorSc);
+SMAS_Tokens * SMAS_tokenize(const char * program, size_t length, size_t * errorSl, size_t *errorSc);
 
 #ifdef __cplusplus
 } /* extern "C" { */
