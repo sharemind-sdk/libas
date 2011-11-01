@@ -167,7 +167,7 @@ SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
     assert(lus);
     assert(lus->size == 0u);
 
-    int returnStatus;
+    SMAS_Assemble_Error returnStatus;
     *errorToken = NULL;
     *errorString = NULL;
 

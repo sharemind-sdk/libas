@@ -106,9 +106,9 @@ static int writeLinkingUnit_0x0(SMAS_LinkingUnit * lu, uint8_t ** pos) {
     (*pos) += sizeof(SME_Unit_Header_0x0);
 
     /* Write sections: */
-    for (unsigned i = 0u; i < SME_SECTION_TYPE_COUNT_0x0; i++)
+    for (int i = 0; i < SME_SECTION_TYPE_COUNT_0x0; i++)
         if (lu->sections[i].length > 0u && lu->sections[i].data != NULL)
-            if (!writeSection_0x0(&lu->sections[i], pos, i))
+            if (!writeSection_0x0(&lu->sections[i], pos, (SME_Section_Type) i))
                 return 0;
 
     return 1;
