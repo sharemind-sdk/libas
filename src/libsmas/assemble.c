@@ -163,11 +163,22 @@ SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
                                   const SMAS_Token ** errorToken,
                                   char ** errorString)
 {
+    SMAS_Assemble_Error returnStatus;
+    SMAS_Token * t;
+    SMAS_Token * e;
+    SMAS_LinkingUnit * lu;
+    size_t lu_index = 0u;
+    int section_index = SME_SECTION_TYPE_TEXT;
+
+    /* for .data and .fill: */
+    uint64_t multiplier;
+    uint_fast8_t type;
+    static const size_t widths[8] = { 1u, 2u, 4u, 8u, 1u, 2u, 4u, 8u };
+
     assert(ts);
     assert(lus);
     assert(lus->size == 0u);
 
-    SMAS_Assemble_Error returnStatus;
     *errorToken = NULL;
     *errorString = NULL;
 
@@ -177,7 +188,7 @@ SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
     SMAS_LabelSlotsTrie lst;
     SMAS_LabelSlotsTrie_init(&lst);
 
-    SMAS_LinkingUnit * lu = SMAS_LinkingUnits_push(lus);
+    lu = SMAS_LinkingUnits_push(lus);
     if (unlikely(!lu))
         goto smas_assemble_out_of_memory;
 
@@ -186,16 +197,8 @@ SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
     if (unlikely(ts->numTokens <= 0))
         goto smas_assemble_ok;
 
-    SMAS_Token * t = &ts->array[0u];
-    SMAS_Token * e = &ts->array[ts->numTokens];
-
-    size_t lu_index = 0u;
-    int section_index = SME_SECTION_TYPE_TEXT;
-
-    /* for .data and .fill: */
-    uint64_t multiplier;
-    uint_fast8_t type;
-    static const size_t widths[8] = { 1u, 2u, 4u, 8u, 1u, 2u, 4u, 8u };
+    t = &ts->array[0u];
+    e = &ts->array[ts->numTokens];
 
 smas_assemble_newline:
     switch (t->type) {
