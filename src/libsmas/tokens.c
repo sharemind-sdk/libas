@@ -164,7 +164,7 @@ int64_t SMAS_token_label_offset(const SMAS_Token *t) {
     }
     assert(t->length >= 6u);
     const char * h = t->text + 2;
-    while (*h != '+' || *h != '-')
+    while (*h != '+' && *h != '-')
         h++;
     int neg = (*h == '-');
     h += 3;
