@@ -88,9 +88,9 @@ static int SMAS_LabelSlot_filled(SMAS_LabelSlot * s, SMAS_LabelSlot ** d) {
 
 SM_VECTOR_DECLARE(SMAS_LabelSlots,SMAS_LabelSlot,,)
 SM_VECTOR_DEFINE(SMAS_LabelSlots,SMAS_LabelSlot,malloc,free,realloc,)
-SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelLocationPointer,SMAS_LabelLocation *,SMAS_LabelLocation * p,)
+SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelLocationPointer,SMAS_LabelLocation *,)
 SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelLocationPointer,SMAS_LabelLocation *,SMAS_LabelLocation * p,p,)
-SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelSlotPointerPointer,SMAS_LabelSlot **,SMAS_LabelSlot ** p,)
+SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelSlotPointerPointer,SMAS_LabelSlot **,)
 SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelSlotPointerPointer,SMAS_LabelSlot **,SMAS_LabelSlot ** p,p,)
 
 static int SMAS_LabelSlots_allSlotsFilled(SMAS_LabelSlots * ss, SMAS_LabelSlot ** d) {

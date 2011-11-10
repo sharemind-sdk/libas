@@ -18,9 +18,9 @@
 
 /* COMMON */
 
-SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LinkingUnits,SMAS_LinkingUnit,sizetPointer,size_t *,size_t * l,)
+SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LinkingUnits,SMAS_LinkingUnit,sizetPointer,size_t *,)
 SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,SMAS_LinkingUnit,sizetPointer,size_t *,size_t * l,l,)
-SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LinkingUnits,SMAS_LinkingUnit,outputPointer,uint8_t **,uint8_t ** p,)
+SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LinkingUnits,SMAS_LinkingUnit,outputPointer,uint8_t **,)
 SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,SMAS_LinkingUnit,outputPointer,uint8_t **,uint8_t ** p,p,)
 
 static int SMAS_link_0x0(SME_Common_Header ** data, SMAS_LinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit);
