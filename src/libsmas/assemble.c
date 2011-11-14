@@ -387,7 +387,7 @@ smas_assemble_newline:
                 *errorString = name;
                 goto smas_assemble_unknown_instruction;
             }
-            if (unlikely(i->numargs != args)) {
+            if (unlikely(i->numArgs != args)) {
                 *errorToken = ot;
                 *errorString = name;
                 goto smas_assemble_invalid_number_of_parameters;
