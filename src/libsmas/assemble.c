@@ -73,7 +73,7 @@ typedef struct {
     int64_t extraOffset;
     int doJumpLabel;
     size_t jmpOffset;
-    SMVM_CodeBlock ** cbdata;
+    void ** data;
     size_t cbdata_index;
     const SMAS_Token * token; /* NULL if this slot is already filled */
 } SMAS_LabelSlot;
@@ -112,7 +112,7 @@ static int SMAS_LabelSlot_fill(SMAS_LabelSlot * s, SMAS_LabelLocation * l) {
         goto SMAS_LabelSlot_fill_error;
 
     if (!s->doJumpLabel) { /* Normal absolute label */
-        (*s->cbdata)[s->cbdata_index].uint64[0] = absTarget;
+        ((SMVM_CodeBlock *) *s->data)[s->cbdata_index].uint64[0] = absTarget;
     } else { /* Relative jump label */
         if (s->linkingUnit != l->linkingUnit || s->section != l->section)
             goto SMAS_LabelSlot_fill_error;
@@ -120,7 +120,7 @@ static int SMAS_LabelSlot_fill(SMAS_LabelSlot * s, SMAS_LabelLocation * l) {
         assert(s->section == SME_SECTION_TYPE_TEXT);
         assert(s->jmpOffset < l->offset); /* Because we're one-pass. */
 
-        if (!SMAS_Assemble_substract_sizet_sizet_to_int64(&(*s->cbdata)[s->cbdata_index].int64[0], absTarget, s->jmpOffset))
+        if (!SMAS_Assemble_substract_sizet_sizet_to_int64(&((SMVM_CodeBlock *) *s->data)[s->cbdata_index].int64[0], absTarget, s->jmpOffset))
             goto SMAS_LabelSlot_fill_error;
 
         /** \todo Maybe check whether there's really an instruction there */
@@ -169,6 +169,7 @@ SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
     SMAS_LinkingUnit * lu;
     size_t lu_index = 0u;
     int section_index = SME_SECTION_TYPE_TEXT;
+    size_t numBindings = 0u;
 
     /* for .data and .fill: */
     uint64_t multiplier;
@@ -225,7 +226,11 @@ smas_assemble_newline:
 
             l->linkingUnit = lu_index;
             l->section = section_index;
-            l->offset = lu->sections[section_index].length;
+            if (section_index != SME_SECTION_TYPE_BIND) {
+                l->offset = lu->sections[section_index].length;
+            } else {
+                l->offset = numBindings;
+            }
 
             /* Fill pending label slots: */
             SMAS_LabelSlots * slots = SMAS_LabelSlotsTrie_find(&lst, label);
@@ -305,8 +310,32 @@ smas_assemble_newline:
                 if (unlikely(section_index != SME_SECTION_TYPE_BIND))
                     goto smas_assemble_unexpected_token_t;
 
-                fprintf(stderr, "TODO\n");
-                goto smas_assemble_unknown_directive_t;
+                SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
+
+                if (unlikely(t->type != SMAS_TOKEN_STRING))
+                    goto smas_assemble_invalid_parameter_t;
+
+                size_t syscallSigLen;
+                char * syscallSig = SMAS_token_string_value(t, &syscallSigLen);
+                if (!syscallSig)
+                    goto smas_assemble_out_of_memory;
+
+                const size_t oldLen = lu->sections[SME_SECTION_TYPE_BIND].length;
+                const size_t newLen = oldLen + syscallSigLen + 1;
+                void * newData = realloc(lu->sections[SME_SECTION_TYPE_BIND].data, newLen);
+                if (unlikely(!newData)) {
+                    free(syscallSig);
+                    goto smas_assemble_out_of_memory;
+                }
+                lu->sections[SME_SECTION_TYPE_BIND].data = newData;
+                lu->sections[SME_SECTION_TYPE_BIND].length = newLen;
+
+                memcpy(((uint8_t *) lu->sections[SME_SECTION_TYPE_BIND].data) + oldLen,
+                       syscallSig, syscallSigLen + 1);
+
+                numBindings++;
+
+                free(syscallSig);
             } else {
                 goto smas_assemble_unknown_directive_t;
             }
@@ -387,7 +416,8 @@ smas_assemble_newline:
             if (unlikely(!newData))
                 goto smas_assemble_out_of_memory;
             lu->sections[section_index].data = newData;
-            SMVM_CodeBlock * instr = &lu->sections[section_index].cbdata[lu->sections[section_index].length];
+            SMVM_CodeBlock * cbdata = (SMVM_CodeBlock *) lu->sections[section_index].data;
+            SMVM_CodeBlock * instr = &cbdata[lu->sections[section_index].length];
             lu->sections[section_index].length += args + 1;
 
             /* Write instruction code */
@@ -468,10 +498,10 @@ smas_assemble_newline:
                         slot->extraOffset = SMAS_token_label_offset(ot);
                         slot->doJumpLabel = doJumpLabel; /* Signal a relative jump label */
                         slot->jmpOffset = jmpOffset;
-                        slot->cbdata = &lu->sections[section_index].cbdata;
-                        assert(instr > lu->sections[section_index].cbdata);
-                        assert(((uintmax_t) (instr - lu->sections[section_index].cbdata)) <= SIZE_MAX);
-                        slot->cbdata_index = (size_t) (instr - lu->sections[section_index].cbdata);
+                        slot->data = &lu->sections[section_index].data;
+                        assert(instr > (SMVM_CodeBlock *) lu->sections[section_index].data);
+                        assert(((uintmax_t) (instr - (SMVM_CodeBlock *) lu->sections[section_index].data)) <= SIZE_MAX);
+                        slot->cbdata_index = (size_t) (instr - (SMVM_CodeBlock *) lu->sections[section_index].data);
                         slot->token = ot;
                     }
                     doJumpLabel = 0; /* Past first argument */

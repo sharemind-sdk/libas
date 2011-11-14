@@ -21,10 +21,7 @@ extern "C" {
 
 typedef struct {
     size_t length;
-    union {
-        char * data;
-        SMVM_CodeBlock * cbdata;
-    };
+    void * data;
 } SMAS_Section;
 
 void SMAS_Section_init(SMAS_Section * s);
