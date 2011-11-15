@@ -49,11 +49,14 @@ static const size_t extraPadding[8] = { 0u, 7u, 6u, 5u, 4u, 3u, 2u, 1u };
 
 static int calculateLinkingUnitSize_0x0(SMAS_LinkingUnit * lu, size_t * s) {
     for (unsigned i = 0u; i < SME_SECTION_TYPE_COUNT_0x0; i++)
-        if (lu->sections[i].length > 0u && lu->sections[i].data != NULL) {
-            if (i == SME_SECTION_TYPE_TEXT) {
-                *s += sizeof(SME_Section_Header_0x0) + lu->sections[i].length * sizeof(SMVM_CodeBlock);
-            } else {
-                *s += sizeof(SME_Section_Header_0x0) + lu->sections[i].length + extraPadding[lu->sections[i].length % 8];
+        if (lu->sections[i].length > 0u && (lu->sections[i].data != NULL || i == SME_SECTION_TYPE_BSS)) {
+            *s += sizeof(SME_Section_Header_0x0);
+            if (i != SME_SECTION_TYPE_BSS) {
+                if (i == SME_SECTION_TYPE_TEXT) {
+                    *s += lu->sections[i].length * sizeof(SMVM_CodeBlock);
+                } else {
+                    *s += lu->sections[i].length + extraPadding[lu->sections[i].length % 8];
+                }
             }
         }
     return 1;
@@ -79,7 +82,7 @@ static int writeSection_0x0(SMAS_Section * s, uint8_t ** pos, SME_Section_Type t
         /* Write section data */
         __builtin_memcpy(*pos, s->data, l * 8);
         (*pos) += l * 8;
-    } else {
+    } else if (type != SME_SECTION_TYPE_BSS) {
         /* Write section data */
         __builtin_memcpy(*pos, s->data, l);
         (*pos) += l;
@@ -96,7 +99,7 @@ static int writeLinkingUnit_0x0(SMAS_LinkingUnit * lu, uint8_t ** pos) {
     /* Calculate number of sections: */
     uint8_t sections = 0u;
     for (unsigned i = 0u; i < SME_SECTION_TYPE_COUNT_0x0; i++)
-        if (lu->sections[i].length > 0u && lu->sections[i].data != NULL)
+        if (lu->sections[i].length > 0u && (lu->sections[i].data != NULL || i == SME_SECTION_TYPE_BSS))
             sections++;
     assert(sections > 0u);
     sections--;
@@ -107,7 +110,7 @@ static int writeLinkingUnit_0x0(SMAS_LinkingUnit * lu, uint8_t ** pos) {
 
     /* Write sections: */
     for (int i = 0; i < SME_SECTION_TYPE_COUNT_0x0; i++)
-        if (lu->sections[i].length > 0u && lu->sections[i].data != NULL)
+        if (lu->sections[i].length > 0u && (lu->sections[i].data != NULL || i == SME_SECTION_TYPE_BSS))
             if (!writeSection_0x0(&lu->sections[i], pos, (SME_Section_Type) i))
                 return 0;
 

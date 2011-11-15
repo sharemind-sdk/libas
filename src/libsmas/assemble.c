@@ -149,7 +149,6 @@ SM_ENUM_CUSTOM_DEFINE_TOSTRING(SMAS_Assemble_Error, SMAS_ENUM_Assemble_Error);
             goto eof; \
         if (unlikely(t->type != SMAS_TOKEN_NEWLINE)) \
             goto noexpect; \
-        goto smas_assemble_newline; \
     } else (void) 0
 
 #define SMAS_ASSEMBLE_INC_DO_EOL(eof,noexpect) \
@@ -170,6 +169,7 @@ SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
     size_t lu_index = 0u;
     int section_index = SME_SECTION_TYPE_TEXT;
     size_t numBindings = 0u;
+    void * dataToWrite = NULL;
 
     /* for .data and .fill: */
     uint64_t multiplier;
@@ -242,7 +242,7 @@ smas_assemble_newline:
             break;
         }
         case SMAS_TOKEN_DIRECTIVE:
-            if (t->length == 13u && strncmp(t->text, ".linking_unit", t->length) == 0) {
+            if (t->length == 13u && strncmp(t->text, ".linking_unit", 13u) == 0) {
                 SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
                 if (unlikely(t->type != SMAS_TOKEN_UHEX))
                     goto smas_assemble_invalid_parameter_t;
@@ -258,41 +258,40 @@ smas_assemble_newline:
                         lu = SMAS_LinkingUnits_push(lus);
                         if (unlikely(!lu))
                             goto smas_assemble_out_of_memory;
+                        SMAS_LinkingUnit_init(lu);
                     } else {
                         lu = SMAS_LinkingUnits_get_pointer(lus, v);
                     }
                     lu_index = v;
                     section_index = SME_SECTION_TYPE_TEXT;
                 }
-
-                SMAS_ASSEMBLE_INC_DO_EOL(smas_assemble_check_labels,smas_assemble_unexpected_token_t);
-            } else if (t->length == 8u && strncmp(t->text, ".section", t->length) == 0) {
+            } else if (t->length == 8u && strncmp(t->text, ".section", 8u) == 0) {
                 SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
                 if (unlikely(t->type != SMAS_TOKEN_KEYWORD))
                     goto smas_assemble_invalid_parameter_t;
 
-                if (t->length == 4u && strncmp(t->text, "TEXT", t->length) == 0) {
+                if (t->length == 4u && strncmp(t->text, "TEXT", 4u) == 0) {
                     section_index = SME_SECTION_TYPE_TEXT;
-                } else if (t->length == 6u && strncmp(t->text, "RODATA", t->length) == 0) {
+                } else if (t->length == 6u && strncmp(t->text, "RODATA", 6u) == 0) {
                     section_index = SME_SECTION_TYPE_RODATA;
-                } else if (t->length == 4u && strncmp(t->text, "DATA", t->length) == 0) {
+                } else if (t->length == 4u && strncmp(t->text, "DATA", 4u) == 0) {
                     section_index = SME_SECTION_TYPE_DATA;
-                } else if (t->length == 3u && strncmp(t->text, "BSS", t->length) == 0) {
+                } else if (t->length == 3u && strncmp(t->text, "BSS", 3u) == 0) {
                     section_index = SME_SECTION_TYPE_BSS;
-                } else if (t->length == 4u && strncmp(t->text, "BIND", t->length) == 0) {
+                } else if (t->length == 4u && strncmp(t->text, "BIND", 4u) == 0) {
                     section_index = SME_SECTION_TYPE_BIND;
-                } else if (t->length == 5u && strncmp(t->text, "DEBUG", t->length) == 0) {
+                } else if (t->length == 5u && strncmp(t->text, "DEBUG", 5u) == 0) {
                     section_index = SME_SECTION_TYPE_DEBUG;
                 } else {
                     goto smas_assemble_invalid_parameter_t;
                 }
-            } else if (t->length == 5u && strncmp(t->text, ".data", t->length) == 0) {
+            } else if (t->length == 5u && strncmp(t->text, ".data", 5u) == 0) {
                 if (unlikely(section_index == SME_SECTION_TYPE_TEXT))
                     goto smas_assemble_unexpected_token_t;
 
                 multiplier = 1u;
                 goto smas_assemble_data_or_fill;
-            } else if (t->length == 5u && strncmp(t->text, ".fill", t->length) == 0) {
+            } else if (t->length == 5u && strncmp(t->text, ".fill", 5u) == 0) {
                 if (unlikely(section_index == SME_SECTION_TYPE_TEXT || section_index == SME_SECTION_TYPE_BIND))
                     goto smas_assemble_unexpected_token_t;
 
@@ -306,7 +305,7 @@ smas_assemble_newline:
                     goto smas_assemble_invalid_parameter_t;
 
                 goto smas_assemble_data_or_fill;
-            } else if (likely(t->length == 13u && strncmp(t->text, ".bind_syscall", t->length) == 0)) {
+            } else if (likely(t->length == 13u && strncmp(t->text, ".bind_syscall", 13u) == 0)) {
                 if (unlikely(section_index != SME_SECTION_TYPE_BIND))
                     goto smas_assemble_unexpected_token_t;
 
@@ -339,7 +338,9 @@ smas_assemble_newline:
             } else {
                 goto smas_assemble_unknown_directive_t;
             }
-            break;
+
+            SMAS_ASSEMBLE_INC_DO_EOL(smas_assemble_check_labels,smas_assemble_unexpected_token_t);
+            goto smas_assemble_newline;
         case SMAS_TOKEN_KEYWORD:
         {
             if (unlikely(section_index != SME_SECTION_TYPE_TEXT))
@@ -512,7 +513,7 @@ smas_assemble_newline:
             }
 
             SMAS_ASSEMBLE_DO_EOL(smas_assemble_check_labels,smas_assemble_unexpected_token_t);
-            abort();
+            goto smas_assemble_newline;
         }
         default:
             goto smas_assemble_unexpected_token_t;
@@ -562,10 +563,12 @@ smas_assemble_data_or_fill:
         goto smas_assemble_invalid_parameter_t;
     }
 
-    SMAS_ASSEMBLE_INC_DO_EOL(smas_assemble_ok,smas_assemble_data_opt_param);
+    SMAS_ASSEMBLE_INC_DO_EOL(smas_assemble_data_write,smas_assemble_data_opt_param);
+    goto smas_assemble_data_write;
 
 smas_assemble_data_opt_param:
 
+    assert(!dataToWrite);
     if (t->type == SMAS_TOKEN_UHEX) {
         const uint64_t v = SMAS_token_uhex_value(t);
         switch (type) {
@@ -602,6 +605,10 @@ smas_assemble_data_opt_param:
             default:
                 abort();
         }
+        dataToWrite = malloc(widths[type]);
+        if (!dataToWrite)
+            goto smas_assemble_out_of_memory;
+        memcpy(dataToWrite, &v, widths[type]);
     } else if (t->type == SMAS_TOKEN_HEX) {
         const int64_t v = SMAS_token_hex_value(t);
         switch (type) {
@@ -638,13 +645,46 @@ smas_assemble_data_opt_param:
             default:
                 abort();
         }
+        dataToWrite = malloc(widths[type]);
+        if (!dataToWrite)
+            goto smas_assemble_out_of_memory;
+        memcpy(dataToWrite, &v, widths[type]);
     } else {
         goto smas_assemble_invalid_parameter_t;
     }
+    assert(dataToWrite);
 
-    SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
-    lu->sections[section_index].length += (multiplier * widths[type]);
-    /** \todo Actually write the values. */
+    SMAS_ASSEMBLE_INC_DO_EOL(smas_assemble_data_write,smas_assemble_unexpected_token_t);
+
+smas_assemble_data_write:
+
+    assert(section_index != SME_SECTION_TYPE_TEXT);
+    if (section_index == SME_SECTION_TYPE_BSS) {
+        lu->sections[SME_SECTION_TYPE_BSS].length += (multiplier * widths[type]);
+    } else {
+        const size_t oldLen = lu->sections[section_index].length;
+        const size_t newLen = oldLen + (multiplier * widths[type]);
+        void * newData = realloc(lu->sections[section_index].data, newLen);
+        if (unlikely(!newData)) {
+            free(dataToWrite);
+            goto smas_assemble_out_of_memory;
+        }
+        lu->sections[section_index].data = newData;
+        lu->sections[section_index].length = newLen;
+
+        /* Actually write the values. */
+        if (dataToWrite) {
+            newData = ((uint8_t *) newData) + oldLen;
+            for (;;) {
+                memcpy(newData, dataToWrite, widths[type]);
+                if (!--multiplier)
+                    break;
+                newData = ((uint8_t *) newData) + widths[type];
+            };
+        }
+    }
+
+    free(dataToWrite);
     goto smas_assemble_newline;
 
 smas_assemble_ok:
