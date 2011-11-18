@@ -7,8 +7,8 @@
  * code is subject to the appropriate license agreement.
  */
 
-#ifndef LIBSMAS_TOKENIZER_H
-#define LIBSMAS_TOKENIZER_H
+#ifndef SHAREMIND_LIBSMAS_TOKENIZER_H
+#define SHAREMIND_LIBSMAS_TOKENIZER_H
 
 #include <string.h>
 #include "tokens.h"
@@ -24,4 +24,4 @@ SMAS_Tokens * SMAS_tokenize(const char * program, size_t length, size_t * errorS
 } /* extern "C" { */
 #endif
 
-#endif /* LIBSMAS_TOKENIZER_H */
+#endif /* SHAREMIND_LIBSMAS_TOKENIZER_H */

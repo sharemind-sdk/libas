@@ -7,8 +7,8 @@
  * code is subject to the appropriate license agreement.
  */
 
-#ifndef LIBSMAS_LINKINGUNITS_H
-#define LIBSMAS_LINKINGUNITS_H
+#ifndef SHAREMIND_LIBSMAS_LINKINGUNITS_H
+#define SHAREMIND_LIBSMAS_LINKINGUNITS_H
 
 #include <stddef.h>
 #include "../codeblock.h"
@@ -41,4 +41,4 @@ SM_VECTOR_DECLARE(SMAS_LinkingUnits,SMAS_LinkingUnit,,)
 } /* extern "C" { */
 #endif
 
-#endif /* LIBSMAS_LINKINGUNITS_H */
+#endif /* SHAREMIND_LIBSMAS_LINKINGUNITS_H */

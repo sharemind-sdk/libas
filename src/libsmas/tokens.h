@@ -7,8 +7,8 @@
  * code is subject to the appropriate license agreement.
  */
 
-#ifndef LIBSMAS_TOKENS_H
-#define LIBSMAS_TOKENS_H
+#ifndef SHAREMIND_LIBSMAS_TOKENS_H
+#define SHAREMIND_LIBSMAS_TOKENS_H
 
 #include <stdint.h>
 #include <string.h>
@@ -73,4 +73,4 @@ void SMAS_tokens_pop_back_newlines(SMAS_Tokens * ts);
 } /* extern "C" { */
 #endif
 
-#endif /* LIBSMAS_TOKENS_H */
+#endif /* SHAREMIND_LIBSMAS_TOKENS_H */

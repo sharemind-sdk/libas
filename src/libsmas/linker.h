@@ -7,8 +7,8 @@
  * code is subject to the appropriate license agreement.
  */
 
-#ifndef LIBSMAS_LINKER_H
-#define LIBSMAS_LINKER_H
+#ifndef SHAREMIND_LIBSMAS_LINKER_H
+#define SHAREMIND_LIBSMAS_LINKER_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -25,4 +25,4 @@ uint8_t * SMAS_link(uint16_t version, SMAS_LinkingUnits * lus, size_t * length, 
 } /* extern "C" { */
 #endif
 
-#endif /* LIBSMAS_LINKER_H */
+#endif /* SHAREMIND_LIBSMAS_LINKER_H */

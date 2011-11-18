@@ -7,8 +7,8 @@
  * code is subject to the appropriate license agreement.
  */
 
-#ifndef LIBSMAS_ASSEMBLE_H
-#define LIBSMAS_ASSEMBLE_H
+#ifndef SHAREMIND_LIBSMAS_ASSEMBLE_H
+#define SHAREMIND_LIBSMAS_ASSEMBLE_H
 
 #include "../preprocessor.h"
 #include "linkingunits.h"
@@ -44,4 +44,4 @@ SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
 } /* extern "C" { */
 #endif
 
-#endif /* LIBSMAS_ASSEMBLE_H */
+#endif /* SHAREMIND_LIBSMAS_ASSEMBLE_H */
