@@ -63,7 +63,7 @@ static int calculateLinkingUnitSize_0x0(SMAS_LinkingUnit * lu, size_t * s) {
 }
 
 static int writeSection_0x0(SMAS_Section * s, uint8_t ** pos, SME_Section_Type type) {
-    assert(s->length > 0u && s->data != NULL);
+    assert(s->length > 0u && (s->data != NULL || type == SME_SECTION_TYPE_BSS));
 
     /* Check for unsupported output format. */
     if (type >= SME_SECTION_TYPE_COUNT_0x0)
