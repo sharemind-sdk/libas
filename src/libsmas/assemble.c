@@ -685,6 +685,7 @@ smas_assemble_data_write:
     }
 
     free(dataToWrite);
+    dataToWrite = NULL;
     goto smas_assemble_newline;
 
 smas_assemble_ok:
