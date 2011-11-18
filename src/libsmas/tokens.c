@@ -20,6 +20,8 @@
 SM_ENUM_DEFINE_TOSTRING(SMAS_TokenType, SMAS_ENUM_TokenType);
 
 uint64_t SMAS_read_hex(const char * c, size_t l) {
+    assert(c);
+
     const char * e = c + l;
     uint64_t v = 0u;
     do {
@@ -130,7 +132,7 @@ char * SMAS_token_string_value(const SMAS_Token * t, size_t * length) {
     return s;
 }
 
-char * SMAS_token_label_label_new(const SMAS_Token *t) {
+char * SMAS_token_label_label_new(const SMAS_Token * t) {
     assert(t);
     assert(t->type == SMAS_TOKEN_LABEL || t->type == SMAS_TOKEN_LABEL_O);
     size_t l;
@@ -154,7 +156,7 @@ char * SMAS_token_label_label_new(const SMAS_Token *t) {
     return c;
 }
 
-int64_t SMAS_token_label_offset(const SMAS_Token *t) {
+int64_t SMAS_token_label_offset(const SMAS_Token * t) {
     assert(t);
     assert(t->type == SMAS_TOKEN_LABEL || t->type == SMAS_TOKEN_LABEL_O);
     assert(t->text[0] == ':');
@@ -189,12 +191,15 @@ SMAS_Tokens * SMAS_tokens_new(void) {
 }
 
 void SMAS_tokens_free(SMAS_Tokens * ts) {
+    assert(ts);
+
     free(ts->array);
     free(ts);
 }
 
-void SMAS_tokens_print(const SMAS_Tokens *ts) {
+void SMAS_tokens_print(const SMAS_Tokens * ts) {
     assert(ts);
+
     int newLine = 1;
     for (size_t i = 0; i < ts->numTokens; i++) {
         SMAS_Token * t = &ts->array[i];

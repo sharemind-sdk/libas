@@ -180,8 +180,10 @@ SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
     assert(lus);
     assert(lus->size == 0u);
 
-    *errorToken = NULL;
-    *errorString = NULL;
+    if (errorToken)
+        *errorToken = NULL;
+    if (errorString)
+        *errorString = NULL;
 
     SMAS_LabelLocations ll;
     SMAS_LabelLocations_init(&ll);
@@ -384,13 +386,17 @@ smas_assemble_newline:
             /* Detect and check instruction: */
             const SMVMI_Instruction * i = SMVMI_Instruction_from_name(name);
             if (unlikely(!i)) {
-                *errorToken = ot;
-                *errorString = name;
+                if (errorToken)
+                    *errorToken = ot;
+                if (errorString)
+                    *errorString = name;
                 goto smas_assemble_unknown_instruction;
             }
             if (unlikely(i->numArgs != args)) {
-                *errorToken = ot;
-                *errorString = name;
+                if (errorToken)
+                    *errorToken = ot;
+                if (errorString)
+                    *errorString = name;
                 goto smas_assemble_invalid_number_of_parameters;
             }
             free(name);
@@ -453,14 +459,16 @@ smas_assemble_newline:
 
                             /* Check whether the label is defined in the same linking unit: */
                             if (loc->linkingUnit != lu_index) {
-                                *errorToken = ot;
+                                if (errorToken)
+                                    *errorToken = ot;
                                 goto smas_assemble_invalid_label;
                             }
 
                             /* Verify that the label is defined in a TEXT section: */
                             assert(section_index == SME_SECTION_TYPE_TEXT);
                             if (loc->section != SME_SECTION_TYPE_TEXT) {
-                                *errorToken = ot;
+                                if (errorToken)
+                                    *errorToken = ot;
                                 goto smas_assemble_invalid_label;
                             }
 
@@ -468,14 +476,16 @@ smas_assemble_newline:
                             if (!SMAS_Assemble_assign_add_sizet_int64(&absTarget, SMAS_token_label_offset(ot))
                                 || !SMAS_Assemble_substract_sizet_sizet_to_int64(&instr->int64[0], absTarget, jmpOffset))
                             {
-                                *errorToken = ot;
+                                if (errorToken)
+                                    *errorToken = ot;
                                 goto smas_assemble_invalid_label_offset;
                             }
                             /** \todo Maybe check whether there's really an instruction there */
                         } else {
                             size_t absTarget = loc->offset;
                             if (!SMAS_Assemble_assign_add_sizet_int64(&absTarget, SMAS_token_label_offset(ot))) {
-                                *errorToken = ot;
+                                if (errorToken)
+                                    *errorToken = ot;
                                 goto smas_assemble_invalid_label_offset;
                             }
                             instr->uint64[0] = absTarget;
@@ -531,8 +541,8 @@ smas_assemble_check_labels:
             goto smas_assemble_ok;
 
         assert(undefinedSlot);
-        *errorToken = undefinedSlot->token;
-        *errorString = SMAS_token_label_label_new(undefinedSlot->token);
+        if (errorToken)
+            *errorToken = undefinedSlot->token;
         goto smas_assemble_undefined_label;
     }
 
@@ -697,10 +707,13 @@ smas_assemble_out_of_memory:
     goto smas_assemble_free_and_return;
 
 smas_assemble_unexpected_token_t:
-    *errorToken = t;
-    *errorString = (char *) malloc(t->length + 1);
-    strncpy(*errorString, t->text, t->length);
-    *errorString[t->length] = '\0';
+    if (errorToken)
+        *errorToken = t;
+    if (errorString) {
+        *errorString = (char *) malloc(t->length + 1);
+        strncpy(*errorString, t->text, t->length);
+        *errorString[t->length] = '\0';
+    }
     returnStatus = SMAS_ASSEMBLE_UNEXPECTED_TOKEN;
     goto smas_assemble_free_and_return;
 
@@ -709,12 +722,14 @@ smas_assemble_unexpected_eof:
     goto smas_assemble_free_and_return;
 
 smas_assemble_duplicate_label_t:
-    *errorToken = t;
+    if (errorToken)
+        *errorToken = t;
     returnStatus = SMAS_ASSEMBLE_DUPLICATE_LABEL;
     goto smas_assemble_free_and_return;
 
 smas_assemble_unknown_directive_t:
-    *errorToken = t;
+    if (errorToken)
+        *errorToken = t;
     returnStatus = SMAS_ASSEMBLE_UNKNOWN_DIRECTIVE;
     goto smas_assemble_free_and_return;
 
@@ -727,7 +742,8 @@ smas_assemble_invalid_number_of_parameters:
     goto smas_assemble_free_and_return;
 
 smas_assemble_invalid_parameter_t:
-    *errorToken = t;
+    if (errorToken)
+        *errorToken = t;
     returnStatus = SMAS_ASSEMBLE_INVALID_PARAMETER;
     goto smas_assemble_free_and_return;
 
@@ -736,7 +752,8 @@ smas_assemble_undefined_label:
     goto smas_assemble_free_and_return;
 
 smas_assemble_invalid_label_t:
-    *errorToken = t;
+    if (errorToken)
+        *errorToken = t;
 smas_assemble_invalid_label:
     returnStatus = SMAS_ASSEMBLE_INVALID_LABEL;
     goto smas_assemble_free_and_return;

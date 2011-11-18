@@ -19,23 +19,25 @@
 extern "C" {
 #endif
 
+
 typedef struct {
     size_t length;
     void * data;
 } SMAS_Section;
 
-void SMAS_Section_init(SMAS_Section * s);
-void SMAS_Section_destroy(SMAS_Section * s);
+void SMAS_Section_init(SMAS_Section * s) __attribute__ ((nonnull(1)));
+void SMAS_Section_destroy(SMAS_Section * s) __attribute__ ((nonnull(1)));
 
 
 typedef struct {
     SMAS_Section sections[SME_SECTION_TYPE_COUNT];
 } SMAS_LinkingUnit;
 
-void SMAS_LinkingUnit_init(SMAS_LinkingUnit * lu);
-void SMAS_LinkingUnit_destroy(SMAS_LinkingUnit * lu);
+void SMAS_LinkingUnit_init(SMAS_LinkingUnit * lu) __attribute__ ((nonnull(1)));
+void SMAS_LinkingUnit_destroy(SMAS_LinkingUnit * lu) __attribute__ ((nonnull(1)));
 
 SM_VECTOR_DECLARE(SMAS_LinkingUnits,SMAS_LinkingUnit,,)
+
 
 #ifdef __cplusplus
 } /* extern "C" { */

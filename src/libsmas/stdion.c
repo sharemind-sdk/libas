@@ -9,8 +9,13 @@
 
 #include "stdion.h"
 
+#include <assert.h>
+
 
 int fnputs(const char * s, size_t len, FILE * stream) {
+    assert(s);
+    assert(stream);
+
     int r = 0;
     for (; len; s++, len--) {
         r = fputc(*s, stream);
@@ -21,6 +26,8 @@ int fnputs(const char * s, size_t len, FILE * stream) {
 }
 
 int nputs(const char * s, size_t len) {
+    assert(s);
+
     int r = 0;
     for (; len; s++, len--) {
         r = putchar(*s);

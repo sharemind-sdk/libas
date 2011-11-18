@@ -35,6 +35,7 @@ SMAS_Tokens * SMAS_tokenize(const char * program, size_t length,
                             size_t * errorSl, size_t *errorSc)
 {
     assert(program);
+
     const char * c = program;
     const char * t;
     const char * const e = c + length;

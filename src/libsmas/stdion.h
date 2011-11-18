@@ -12,13 +12,16 @@
 
 #include <stdio.h>
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int fnputs(const char * s, size_t len, FILE * stream);
 
-int nputs(const char * s, size_t len);
+int fnputs(const char * s, size_t len, FILE * stream) __attribute__ ((nonnull(1, 3)));
+
+int nputs(const char * s, size_t len) __attribute__ ((nonnull(1)));
+
 
 #ifdef __cplusplus
 } /* extern "C" { */

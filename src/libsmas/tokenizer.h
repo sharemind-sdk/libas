@@ -18,7 +18,11 @@
 extern "C" {
 #endif
 
-SMAS_Tokens * SMAS_tokenize(const char * program, size_t length, size_t * errorSl, size_t *errorSc);
+SMAS_Tokens * SMAS_tokenize(const char * program,
+                            size_t length,
+                            size_t * errorSl,
+                            size_t *errorSc)
+    __attribute__ ((nonnull(1), warn_unused_result));
 
 #ifdef __cplusplus
 } /* extern "C" { */

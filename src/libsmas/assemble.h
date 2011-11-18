@@ -38,7 +38,8 @@ SM_ENUM_DECLARE_TOSTRING(SMAS_Assemble_Error);
 SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
                                   SMAS_LinkingUnits * lus,
                                   const SMAS_Token ** errorToken,
-                                  char ** errorString);
+                                  char ** errorString)
+    __attribute__ ((nonnull(1, 2), warn_unused_result));
 
 #ifdef __cplusplus
 } /* extern "C" { */

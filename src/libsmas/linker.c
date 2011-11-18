@@ -26,6 +26,9 @@ SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,SMAS_LinkingUnit,outputPointer,u
 static int SMAS_link_0x0(SME_Common_Header ** data, SMAS_LinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit);
 
 uint8_t * SMAS_link(uint16_t version, SMAS_LinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit) {
+    assert(lus);
+    assert(length);
+
     if (version > 0u)
         return NULL;
 

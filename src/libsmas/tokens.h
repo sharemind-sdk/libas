@@ -19,7 +19,8 @@
 extern "C" {
 #endif
 
-uint64_t SMAS_read_hex(const char * c, size_t l);
+
+uint64_t SMAS_read_hex(const char * c, size_t l) __attribute__ ((nonnull(1)));
 
 #define SMAS_ENUM_TokenType \
     (SMAS_TOKEN_NEWLINE) \
@@ -41,33 +42,35 @@ typedef struct {
     size_t length;
 } SMAS_Token;
 
-int64_t SMAS_token_hex_value(const SMAS_Token * t);
-uint64_t SMAS_token_uhex_value(const SMAS_Token * t);
+int64_t SMAS_token_hex_value(const SMAS_Token * t) __attribute__ ((nonnull(1)));
+uint64_t SMAS_token_uhex_value(const SMAS_Token * t) __attribute__ ((nonnull(1)));
 
-size_t SMAS_token_string_length(const SMAS_Token * t);
-char * SMAS_token_string_value(const SMAS_Token * t, size_t * length);
+size_t SMAS_token_string_length(const SMAS_Token * t) __attribute__ ((nonnull(1)));
+char * SMAS_token_string_value(const SMAS_Token * t, size_t * length) __attribute__ ((nonnull(1)));
 
-char * SMAS_token_label_label_new(const SMAS_Token *t);
-int64_t SMAS_token_label_offset(const SMAS_Token *t);
+char * SMAS_token_label_label_new(const SMAS_Token * t) __attribute__ ((nonnull(1), warn_unused_result));
+int64_t SMAS_token_label_offset(const SMAS_Token * t) __attribute__ ((nonnull(1)));
 
 typedef struct {
     size_t numTokens;
     SMAS_Token * array;
 } SMAS_Tokens;
 
-SMAS_Tokens * SMAS_tokens_new(void);
+SMAS_Tokens * SMAS_tokens_new(void) __attribute__ ((warn_unused_result));
 
-void SMAS_tokens_free(SMAS_Tokens * ts);
+void SMAS_tokens_free(SMAS_Tokens * ts) __attribute__ ((nonnull(1)));
 
-void SMAS_tokens_print(const SMAS_Tokens *ts);
+void SMAS_tokens_print(const SMAS_Tokens * ts) __attribute__ ((nonnull(1)));
 
 SMAS_Token * SMAS_tokens_append(SMAS_Tokens * ts,
                                 SMAS_TokenType type,
                                 const char * start,
                                 size_t start_line,
-                                size_t start_column);
+                                size_t start_column)
+    __attribute__ ((nonnull(1, 3)));
 
-void SMAS_tokens_pop_back_newlines(SMAS_Tokens * ts);
+void SMAS_tokens_pop_back_newlines(SMAS_Tokens * ts) __attribute__ ((nonnull(1)));
+
 
 #ifdef __cplusplus
 } /* extern "C" { */

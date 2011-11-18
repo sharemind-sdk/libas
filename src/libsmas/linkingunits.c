@@ -13,20 +13,28 @@
 
 
 void SMAS_Section_init(SMAS_Section * s) {
+    assert(s);
+
     s->length = 0u;
     s->data = NULL;
 }
 
 void SMAS_Section_destroy(SMAS_Section * s) {
+    assert(s);
+
     free(s->data);
 }
 
 void SMAS_LinkingUnit_init(SMAS_LinkingUnit * lu) {
+    assert(lu);
+
     for (size_t i = 0u; i < SME_SECTION_TYPE_COUNT; i++)
         SMAS_Section_init(&lu->sections[i]);
 }
 
 void SMAS_LinkingUnit_destroy(SMAS_LinkingUnit * lu) {
+    assert(lu);
+
     for (size_t i = 0u; i < SME_SECTION_TYPE_COUNT; i++)
         SMAS_Section_destroy(&lu->sections[i]);
 }
