@@ -169,6 +169,7 @@ SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
     size_t lu_index = 0u;
     int section_index = SME_SECTION_TYPE_TEXT;
     size_t numBindings = 0u;
+    size_t numPdBindings = 0u;
     void * dataToWrite = NULL;
 
     /* for .data and .fill: */
@@ -228,10 +229,12 @@ smas_assemble_newline:
 
             l->linkingUnit = lu_index;
             l->section = section_index;
-            if (section_index != SME_SECTION_TYPE_BIND) {
-                l->offset = lu->sections[section_index].length;
-            } else {
+            if (section_index == SME_SECTION_TYPE_BIND) {
                 l->offset = numBindings;
+            } else if (section_index == SME_SECTION_TYPE_PDBIND) {
+                l->offset = numPdBindings;
+            } else {
+                l->offset = lu->sections[section_index].length;
             }
 
             /* Fill pending label slots: */
@@ -282,6 +285,8 @@ smas_assemble_newline:
                     section_index = SME_SECTION_TYPE_BSS;
                 } else if (t->length == 4u && strncmp(t->text, "BIND", 4u) == 0) {
                     section_index = SME_SECTION_TYPE_BIND;
+                } else if (t->length == 6u && strncmp(t->text, "PDBIND", 6u) == 0) {
+                    section_index = SME_SECTION_TYPE_PDBIND;
                 } else if (t->length == 5u && strncmp(t->text, "DEBUG", 5u) == 0) {
                     section_index = SME_SECTION_TYPE_DEBUG;
                 } else {
@@ -294,7 +299,9 @@ smas_assemble_newline:
                 multiplier = 1u;
                 goto smas_assemble_data_or_fill;
             } else if (t->length == 5u && strncmp(t->text, ".fill", 5u) == 0) {
-                if (unlikely(section_index == SME_SECTION_TYPE_TEXT || section_index == SME_SECTION_TYPE_BIND))
+                if (unlikely(section_index == SME_SECTION_TYPE_TEXT
+                             || section_index == SME_SECTION_TYPE_BIND
+                             || section_index == SME_SECTION_TYPE_PDBIND))
                     goto smas_assemble_unexpected_token_t;
 
                 SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
@@ -307,8 +314,8 @@ smas_assemble_newline:
                     goto smas_assemble_invalid_parameter_t;
 
                 goto smas_assemble_data_or_fill;
-            } else if (likely(t->length == 13u && strncmp(t->text, ".bind_syscall", 13u) == 0)) {
-                if (unlikely(section_index != SME_SECTION_TYPE_BIND))
+            } else if (likely(t->length == 5u && strncmp(t->text, ".bind", 5u) == 0)) {
+                if (unlikely(section_index != SME_SECTION_TYPE_BIND && section_index != SME_SECTION_TYPE_PDBIND))
                     goto smas_assemble_unexpected_token_t;
 
                 SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
@@ -321,20 +328,24 @@ smas_assemble_newline:
                 if (!syscallSig)
                     goto smas_assemble_out_of_memory;
 
-                const size_t oldLen = lu->sections[SME_SECTION_TYPE_BIND].length;
+                const size_t oldLen = lu->sections[section_index].length;
                 const size_t newLen = oldLen + syscallSigLen + 1;
-                void * newData = realloc(lu->sections[SME_SECTION_TYPE_BIND].data, newLen);
+                void * newData = realloc(lu->sections[section_index].data, newLen);
                 if (unlikely(!newData)) {
                     free(syscallSig);
                     goto smas_assemble_out_of_memory;
                 }
-                lu->sections[SME_SECTION_TYPE_BIND].data = newData;
-                lu->sections[SME_SECTION_TYPE_BIND].length = newLen;
+                lu->sections[section_index].data = newData;
+                lu->sections[section_index].length = newLen;
 
-                memcpy(((uint8_t *) lu->sections[SME_SECTION_TYPE_BIND].data) + oldLen,
+                memcpy(((uint8_t *) lu->sections[section_index].data) + oldLen,
                        syscallSig, syscallSigLen + 1);
 
-                numBindings++;
+                if (section_index == SME_SECTION_TYPE_BIND) {
+                    numBindings++;
+                } else {
+                    numPdBindings++;
+                }
 
                 free(syscallSig);
             } else {
