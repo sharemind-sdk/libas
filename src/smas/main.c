@@ -96,9 +96,12 @@ int main(int argc, char * argv[]) {
     }
 
     /* Memory map input file: */
-    assert(inFileStat.st_size >= 0); /* off_t is some signed integer type. */
     if (((uintmax_t) inFileStat.st_size) > SIZE_MAX) {
         fprintf(stderr, "Error: Input file \"%s\" too large!\n", inName);
+        goto main_fail_2;
+    }
+    if (((uintmax_t) inFileStat.st_size) <= 0u) {
+        fprintf(stderr, "Error: Input file \"%s\" is empty!\n", inName);
         goto main_fail_2;
     }
     fileSize = (size_t) inFileStat.st_size;
