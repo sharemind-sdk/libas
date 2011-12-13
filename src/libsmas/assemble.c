@@ -171,6 +171,7 @@ SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
     size_t numBindings = 0u;
     size_t numPdBindings = 0u;
     void * dataToWrite = NULL;
+    size_t dataToWriteLength = 0u;
 
     /* for .data and .fill: */
     uint64_t multiplier;
@@ -580,8 +581,17 @@ smas_assemble_data_or_fill:
         type = 6u;
     } else if (t->length == 5u && strncmp(t->text, "int64", t->length) == 0) {
         type = 7u;
+    } else if (t->length == 6u && strncmp(t->text, "string", t->length) == 0) {
+        type = 8u;
     } else {
         goto smas_assemble_invalid_parameter_t;
+    }
+
+    if (type < 8u) {
+        dataToWriteLength = widths[type];
+    } else {
+        assert(type == 8u);
+        dataToWriteLength = 0u;
     }
 
     SMAS_ASSEMBLE_INC_DO_EOL(smas_assemble_data_write,smas_assemble_data_opt_param);
@@ -623,13 +633,15 @@ smas_assemble_data_opt_param:
                 if (v > INT64_MAX)
                     goto smas_assemble_invalid_parameter_t;
                 break;
+            case 8u: /* string */
+                goto smas_assemble_invalid_parameter_t;
             default:
                 abort();
         }
-        dataToWrite = malloc(widths[type]);
+        dataToWrite = malloc(dataToWriteLength);
         if (!dataToWrite)
             goto smas_assemble_out_of_memory;
-        memcpy(dataToWrite, &v, widths[type]);
+        memcpy(dataToWrite, &v, dataToWriteLength);
     } else if (t->type == SMAS_TOKEN_HEX) {
         const int64_t v = SMAS_token_hex_value(t);
         switch (type) {
@@ -663,13 +675,19 @@ smas_assemble_data_opt_param:
                 break;
             case 7u: /* int64; All should be fine here. */
                 break;
+            case 8u: /* string */
+                goto smas_assemble_invalid_parameter_t;
             default:
                 abort();
         }
-        dataToWrite = malloc(widths[type]);
+        dataToWrite = malloc(dataToWriteLength);
         if (!dataToWrite)
             goto smas_assemble_out_of_memory;
-        memcpy(dataToWrite, &v, widths[type]);
+        memcpy(dataToWrite, &v, dataToWriteLength);
+    } else if (t->type == SMAS_TOKEN_STRING && type == 8u) {
+        dataToWrite = SMAS_token_string_value(t, &dataToWriteLength);
+        if (!dataToWrite)
+            goto smas_assemble_out_of_memory;
     } else {
         goto smas_assemble_invalid_parameter_t;
     }
@@ -681,10 +699,10 @@ smas_assemble_data_write:
 
     assert(section_index != SME_SECTION_TYPE_TEXT);
     if (section_index == SME_SECTION_TYPE_BSS) {
-        lu->sections[SME_SECTION_TYPE_BSS].length += (multiplier * widths[type]);
+        lu->sections[SME_SECTION_TYPE_BSS].length += (multiplier * dataToWriteLength);
     } else {
         const size_t oldLen = lu->sections[section_index].length;
-        const size_t newLen = oldLen + (multiplier * widths[type]);
+        const size_t newLen = oldLen + (multiplier * dataToWriteLength);
         void * newData = realloc(lu->sections[section_index].data, newLen);
         if (unlikely(!newData)) {
             free(dataToWrite);
@@ -697,15 +715,16 @@ smas_assemble_data_write:
         if (dataToWrite) {
             newData = ((uint8_t *) newData) + oldLen;
             for (;;) {
-                memcpy(newData, dataToWrite, widths[type]);
+                memcpy(newData, dataToWrite, dataToWriteLength);
                 if (!--multiplier)
                     break;
-                newData = ((uint8_t *) newData) + widths[type];
+                newData = ((uint8_t *) newData) + dataToWriteLength;
             };
         }
     }
 
-    free(dataToWrite);
+    if (dataToWrite)
+        free(dataToWrite);
     dataToWrite = NULL;
     goto smas_assemble_newline;
 
