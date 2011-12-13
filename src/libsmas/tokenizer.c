@@ -114,7 +114,7 @@ tokenize_begin2:
         case 'a' ... 'z': case 'A' ... 'Z': case '_':
             goto tokenize_keyword;
         default:
-            abort();
+            goto tokenize_error;
     }
     goto tokenize_error;
 
