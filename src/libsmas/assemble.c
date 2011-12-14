@@ -712,14 +712,16 @@ smas_assemble_data_write:
         lu->sections[section_index].length = newLen;
 
         /* Actually write the values. */
+        newData = ((uint8_t *) newData) + oldLen;
         if (dataToWrite) {
-            newData = ((uint8_t *) newData) + oldLen;
             for (;;) {
                 memcpy(newData, dataToWrite, dataToWriteLength);
                 if (!--multiplier)
                     break;
                 newData = ((uint8_t *) newData) + dataToWriteLength;
             };
+        } else {
+            memset(newData, 0, dataToWriteLength);
         }
     }
 
