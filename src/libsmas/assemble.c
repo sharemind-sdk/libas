@@ -114,7 +114,7 @@ static int SMAS_LabelSlot_fill(SMAS_LabelSlot * s, SMAS_LabelLocation * l) {
     if (!s->doJumpLabel) { /* Normal absolute label */
         ((SMVM_CodeBlock *) *s->data)[s->cbdata_index].uint64[0] = absTarget;
     } else { /* Relative jump label */
-        if (s->linkingUnit != l->linkingUnit || s->section != l->section)
+        if (s->section != l->section || s->linkingUnit != l->linkingUnit)
             goto SMAS_LabelSlot_fill_error;
 
         assert(s->section == SME_SECTION_TYPE_TEXT);
@@ -192,6 +192,28 @@ SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
 
     SMAS_LabelSlotsTrie lst;
     SMAS_LabelSlotsTrie_init(&lst);
+
+    {
+        SMAS_LabelLocation * l = SMAS_LabelLocations_get_or_insert(&ll, "RODATA", NULL);
+        if (unlikely(!l))
+            goto smas_assemble_out_of_memory;
+        /* l->linkingUnit = SIZE_MAX; */ /* Not used. */
+        l->section = -1;
+        l->offset = 1u;
+        l = SMAS_LabelLocations_get_or_insert(&ll, "DATA", NULL);
+        if (unlikely(!l))
+            goto smas_assemble_out_of_memory;
+        /* l->linkingUnit = SIZE_MAX; */ /* Not used. */
+        l->section = -1;
+        l->offset = 2u;
+        l = SMAS_LabelLocations_get_or_insert(&ll, "BSS", NULL);
+        if (unlikely(!l))
+            goto smas_assemble_out_of_memory;
+        /* l->linkingUnit = SIZE_MAX; */ /* Not used. */
+        l->section = -1;
+        l->offset = 3u;
+    }
+
 
     lu = SMAS_LinkingUnits_push(lus);
     if (unlikely(!lu))
@@ -467,6 +489,9 @@ smas_assemble_newline:
 
                         /* Is this a jump instruction location? */
                         if (doJumpLabel) {
+                            if (loc->section < 0)
+                                goto smas_assemble_invalid_label;
+
                             assert(jmpOffset >= loc->offset); /* Because we're one-pass. */
 
                             /* Check whether the label is defined in the same linking unit: */
@@ -495,10 +520,16 @@ smas_assemble_newline:
                             /** \todo Maybe check whether there's really an instruction there */
                         } else {
                             size_t absTarget = loc->offset;
-                            if (!SMAS_Assemble_assign_add_sizet_int64(&absTarget, SMAS_token_label_offset(ot))) {
-                                if (errorToken)
-                                    *errorToken = ot;
-                                goto smas_assemble_invalid_label_offset;
+                            int64_t offset = SMAS_token_label_offset(ot);
+                            if (loc->section < 0) {
+                                if (offset != 0)
+                                    goto smas_assemble_invalid_label_offset;
+                            } else {
+                                if (!SMAS_Assemble_assign_add_sizet_int64(&absTarget, offset)) {
+                                    if (errorToken)
+                                        *errorToken = ot;
+                                    goto smas_assemble_invalid_label_offset;
+                                }
                             }
                             instr->uint64[0] = absTarget;
                         }
