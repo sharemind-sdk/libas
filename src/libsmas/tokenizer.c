@@ -15,21 +15,22 @@
 
 
 #define TOKENIZE_INC_CHECK_EOF(eof) \
-    if (*c == '\n') { \
-        sl++; \
-        sc = 1; \
-    } else \
-        sc++; \
-    if (++c == e) { \
-        goto eof; \
-    } else (void)0
+    do { \
+        if (*c == '\n') { \
+            sl++; \
+            sc = 1; \
+        } else \
+            sc++; \
+        if (++c == e) \
+            goto eof; \
+    } while (0)
 
 #define NEWTOKEN(d,type,text,sl,sc) \
-    if (1) { \
+    do { \
         d = SMAS_tokens_append(ts, (type), (text), (sl), (sc)); \
         if (!d) \
             goto tokenize_error_oom; \
-    }
+    } while (0)
 
 SMAS_Tokens * SMAS_tokenize(const char * program, size_t length,
                             size_t * errorSl, size_t *errorSc)
@@ -120,9 +121,9 @@ tokenize_begin2:
 
 tokenize_comment:
 
-    while (likely(*c != '\n')) {
+    while (likely(*c != '\n'))
         TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-    }
+
     goto tokenize_begin2;
 
 tokenize_directive:
