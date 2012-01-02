@@ -5,6 +5,7 @@
 /config.local
 /CTestTestfile.cmake
 Makefile
+!/doc/Makefile
 /Testing/
 /tests/*.sb
 .help/
@@ -14,3 +15,4 @@ Makefile
 .ui/
 *~
 *.kate-swp
+/doc/deps.png
