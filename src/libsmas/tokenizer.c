@@ -55,28 +55,16 @@ SMAS_Tokens * SMAS_tokenize(const char * program, size_t length,
     if (unlikely(c == e))
         goto tokenize_ok;
 
-    if (unlikely(*c == '\xff'))
-        goto tokenize_bom1;
-    if (unlikely(*c == '\xfe'))
-        goto tokenize_bom2;
-    goto tokenize_begin2;
-
-tokenize_bom1:
-
-    TOKENIZE_INC_CHECK_EOF(tokenize_error);
-    if (likely(*c == '\xfe'))
-        goto tokenize_error;
-    goto tokenize_bom_end;
-
-tokenize_bom2:
-
-    TOKENIZE_INC_CHECK_EOF(tokenize_error);
-    if (likely(*c == '\xff'))
-        goto tokenize_error;
-
-tokenize_bom_end:
-
-    TOKENIZE_INC_CHECK_EOF(tokenize_ok);
+    /* Lex optional UTF-8 byte-order mark 0xefbbbf */
+    if (unlikely(*c == '\xef')) {
+        TOKENIZE_INC_CHECK_EOF(tokenize_error);
+        if (unlikely(*c != '\xbb'))
+            goto tokenize_error;
+        TOKENIZE_INC_CHECK_EOF(tokenize_error);
+        if (unlikely(*c != '\xbf'))
+            goto tokenize_error;
+        TOKENIZE_INC_CHECK_EOF(tokenize_ok);
+    }
 
 tokenize_begin2:
 
