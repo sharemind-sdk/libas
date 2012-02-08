@@ -10,8 +10,8 @@
 #include "linker.h"
 
 #include <assert.h>
+#include <sharemind/codeblock.h>
 #include <stdlib.h>
-#include "../codeblock.h"
 #include "../libsme/libsme.h"
 #include "../libsme/libsme_0x0.h"
 

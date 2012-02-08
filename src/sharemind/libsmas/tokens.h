@@ -10,9 +10,9 @@
 #ifndef SHAREMIND_LIBSMAS_TOKENS_H
 #define SHAREMIND_LIBSMAS_TOKENS_H
 
+#include <sharemind/preprocessor.h>
 #include <stdint.h>
 #include <string.h>
-#include "../preprocessor.h"
 
 
 #ifdef __cplusplus

@@ -10,11 +10,11 @@
 #include "assemble.h"
 
 #include <assert.h>
+#include <sharemind/likely.h>
+#include <sharemind/trie.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "../libsmvmi/instr.h"
-#include "../likely.h"
-#include "../trie.h"
 
 
 static inline int SMAS_Assemble_assign_add_sizet_int64(size_t * lhs, const int64_t rhs) {

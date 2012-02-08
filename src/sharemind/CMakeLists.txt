@@ -35,6 +35,15 @@ IF(NOT SHAREMIND_INSTALL_INCLUDE_DIR)
     MESSAGE(FATAL_ERROR "SHAREMIND_INSTALL_INCLUDE_DIR not defined!")
 ENDIF(NOT SHAREMIND_INSTALL_INCLUDE_DIR)
 
+IF(NOT SHAREMIND_EXT_VM_GLOBALS_DIR)
+    SET(SHAREMIND_EXT_VM_GLOBALS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../ext/vm_globals")
+ENDIF(NOT SHAREMIND_EXT_VM_GLOBALS_DIR)
+IF(NOT IS_DIRECTORY "${SHAREMIND_EXT_VM_GLOBALS_DIR}/include/sharemind")
+    MESSAGE(FATAL "SHAREMIND_EXT_VM_GLOBALS_DIR is invalid!")
+ENDIF()
+INCLUDE_DIRECTORIES(BEFORE SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/../sharemind/.." "${SHAREMIND_EXT_VM_GLOBALS_DIR}/include")
+
+
 SET(SHAREMIND_VM_INSTALL_INCLUDE_DIR "${SHAREMIND_INSTALL_INCLUDE_DIR}/vm")
 SET(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -O2 -fstrict-aliasing -Wstrict-aliasing=1 -fwrapv -Wabi -Wbad-function-cast -Wc++-compat -Wformat -Wswitch-default -Wunused -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wconversion -Wsign-conversion -Wlogical-op -Wunused-macros")
 SET(CMAKE_CXX_FLAGS "-std=gnu++98 -Wall -Wextra -O2 -fstrict-aliasing -Wstrict-aliasing=1 -fwrapv -Wabi -Wformat -Wswitch-default -Wunused -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-qual -Wconversion -Wsign-conversion -Wlogical-op -Wunused-macros")
@@ -45,18 +54,6 @@ SET(VM_OUT_OF_MEMORY_DEBUG FALSE CACHE BOOL "Enable out of memory debugging for 
 SET(TESTS_DIR_S "${CMAKE_CURRENT_SOURCE_DIR}/../../tests")
 
 SET(OTHER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/config.local.example"
-                "${CMAKE_CURRENT_SOURCE_DIR}/codeblock.h"
-                "${CMAKE_CURRENT_SOURCE_DIR}/fnv.h"
-                "${CMAKE_CURRENT_SOURCE_DIR}/instrset.h"
-                "${CMAKE_CURRENT_SOURCE_DIR}/likely.h"
-                "${CMAKE_CURRENT_SOURCE_DIR}/map.h"
-                "${CMAKE_CURRENT_SOURCE_DIR}/refs.h"
-                "${CMAKE_CURRENT_SOURCE_DIR}/preprocessor.h"
-                "${CMAKE_CURRENT_SOURCE_DIR}/stack.h"
-                "${CMAKE_CURRENT_SOURCE_DIR}/static_assert.h"
-                "${CMAKE_CURRENT_SOURCE_DIR}/stringmap.h"
-                "${CMAKE_CURRENT_SOURCE_DIR}/trie.h"
-                "${CMAKE_CURRENT_SOURCE_DIR}/vector.h"
                 "${TESTS_DIR_S}/alloc_zero.sa"
                 "${TESTS_DIR_S}/benchmark.sa"
                 "${TESTS_DIR_S}/except_bmodbyzero_int8.sa"

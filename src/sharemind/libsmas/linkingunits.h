@@ -10,10 +10,10 @@
 #ifndef SHAREMIND_LIBSMAS_LINKINGUNITS_H
 #define SHAREMIND_LIBSMAS_LINKINGUNITS_H
 
+#include <sharemind/codeblock.h>
+#include <sharemind/vector.h>
 #include <stddef.h>
-#include "../codeblock.h"
 #include "../libsme/libsme.h"
-#include "../vector.h"
 
 #ifdef __cplusplus
 extern "C" {

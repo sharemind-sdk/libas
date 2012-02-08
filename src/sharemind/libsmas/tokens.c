@@ -10,10 +10,10 @@
 #include "tokens.h"
 
 #include <assert.h>
+#include <sharemind/likely.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../likely.h"
 #include "stdion.h"
 
 

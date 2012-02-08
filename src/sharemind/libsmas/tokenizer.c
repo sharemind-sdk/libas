@@ -10,8 +10,8 @@
 #include "tokenizer.h"
 
 #include <assert.h>
+#include <sharemind/likely.h>
 #include <stdlib.h>
-#include "../likely.h"
 
 
 #define TOKENIZE_INC_CHECK_EOF(eof) \

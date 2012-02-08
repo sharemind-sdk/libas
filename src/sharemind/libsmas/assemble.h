@@ -10,7 +10,7 @@
 #ifndef SHAREMIND_LIBSMAS_ASSEMBLE_H
 #define SHAREMIND_LIBSMAS_ASSEMBLE_H
 
-#include "../preprocessor.h"
+#include <sharemind/preprocessor.h>
 #include "linkingunits.h"
 #include "tokens.h"
 

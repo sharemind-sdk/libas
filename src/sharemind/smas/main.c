@@ -8,6 +8,7 @@
  */
 
 #include <fcntl.h>
+#include <sharemind/static_assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
@@ -16,7 +17,6 @@
 #include "../libsmas/assemble.h"
 #include "../libsmas/linker.h"
 #include "../libsmas/tokenizer.h"
-#include "../static_assert.h"
 
 
 SM_STATIC_ASSERT(sizeof(off_t) <= sizeof(size_t));

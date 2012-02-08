@@ -1,0 +1,3 @@
+[submodule "ext/vm_globals"]
+	path = ext/vm_globals
+	url = https://sharemind.cyber.ee/git/vm_globals.git
