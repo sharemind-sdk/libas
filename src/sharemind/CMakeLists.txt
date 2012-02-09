@@ -31,9 +31,9 @@ IF(NOT SHAREMIND_LIB_DIR)
     MESSAGE(FATAL_ERROR "SHAREMIND_LIB_DIR not defined!")
 ENDIF(NOT SHAREMIND_LIB_DIR)
 
-IF(NOT SHAREMIND_INSTALL_INCLUDE_DIR)
-    MESSAGE(FATAL_ERROR "SHAREMIND_INSTALL_INCLUDE_DIR not defined!")
-ENDIF(NOT SHAREMIND_INSTALL_INCLUDE_DIR)
+IF(NOT SHAREMIND_INCLUDE_DESTINATION)
+    MESSAGE(FATAL_ERROR "SHAREMIND_INCLUDE_DESTINATION not defined!")
+ENDIF(NOT SHAREMIND_INCLUDE_DESTINATION)
 
 IF(NOT SHAREMIND_EXT_VM_GLOBALS_DIR)
     SET(SHAREMIND_EXT_VM_GLOBALS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../ext/vm_globals")
@@ -56,7 +56,6 @@ INCLUDE_DIRECTORIES(BEFORE SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/../sharemind/.."
 ADD_SUBDIRECTORY("${SHAREMIND_EXT_LIBMODAPI_DIR}/src/sharemind" "${SHAREMIND_BIN_DIR}")
 
 
-SET(SHAREMIND_VM_INSTALL_INCLUDE_DIR "${SHAREMIND_INSTALL_INCLUDE_DIR}/vm")
 SET(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -O2 -fstrict-aliasing -Wstrict-aliasing=1 -fwrapv -Wabi -Wbad-function-cast -Wc++-compat -Wformat -Wswitch-default -Wunused -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wconversion -Wsign-conversion -Wlogical-op -Wunused-macros")
 SET(CMAKE_CXX_FLAGS "-std=gnu++98 -Wall -Wextra -O2 -fstrict-aliasing -Wstrict-aliasing=1 -fwrapv -Wabi -Wformat -Wswitch-default -Wunused -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-qual -Wconversion -Wsign-conversion -Wlogical-op -Wunused-macros")
 ADD_DEFINITIONS("-D_XOPEN_SOURCE=500" "-D__STDC_LIMIT_MACROS")
@@ -206,7 +205,7 @@ SET_TARGET_PROPERTIES("libsmvmi" PROPERTIES
 SET_SOURCE_FILES_PROPERTIES("libsmvmi/instr.c" PROPERTIES OBJECT_DEPENDS
                             "${M4_DIR_B}/instruction_structs.h;${M4_DIR_B}/instruction_index.h")
 INSTALL(DIRECTORY "libsmvmi/"
-        DESTINATION "${SHAREMIND_VM_INSTALL_INCLUDE_DIR}/libsmvmi"
+        DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libsmvmi"
         FILES_MATCHING PATTERN "*.h")
 
 
@@ -223,7 +222,7 @@ SET_TARGET_PROPERTIES("libsme" PROPERTIES
                       VERSION "0.1.0.0"
                       SOVERSION "0.1")
 INSTALL(DIRECTORY "libsme/"
-        DESTINATION "${SHAREMIND_VM_INSTALL_INCLUDE_DIR}/libsme"
+        DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libsme"
         FILES_MATCHING PATTERN "*.h")
 
 
@@ -245,7 +244,7 @@ SET_TARGET_PROPERTIES("libsmas" PROPERTIES
                       SOVERSION "0.1")
 TARGET_LINK_LIBRARIES("libsmas" "libsmvmi" "libsme")
 INSTALL(DIRECTORY "libsmas/"
-        DESTINATION "${SHAREMIND_VM_INSTALL_INCLUDE_DIR}/libsmas"
+        DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libsmas"
         FILES_MATCHING PATTERN "stdion.h" EXCLUDE
                        PATTERN "*.h")
 
@@ -283,7 +282,7 @@ SET_SOURCE_FILES_PROPERTIES("libsmvm/vm_internal_core.c" PROPERTIES OBJECT_DEPEN
                             "${M4_DIR_B}/static_label_structs.h;${M4_DIR_B}/dispatches.h")
 TARGET_LINK_LIBRARIES("libsmvm" "libsmvmi" "libsme" "m")
 INSTALL(FILES "libsmvm/vm.h"
-        DESTINATION "${SHAREMIND_VM_INSTALL_INCLUDE_DIR}/libsmvm")
+        DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libsmvm")
 
 
 ################################################################################
