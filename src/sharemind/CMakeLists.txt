@@ -38,10 +38,22 @@ ENDIF(NOT SHAREMIND_INSTALL_INCLUDE_DIR)
 IF(NOT SHAREMIND_EXT_VM_GLOBALS_DIR)
     SET(SHAREMIND_EXT_VM_GLOBALS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../ext/vm_globals")
 ENDIF(NOT SHAREMIND_EXT_VM_GLOBALS_DIR)
-IF(NOT IS_DIRECTORY "${SHAREMIND_EXT_VM_GLOBALS_DIR}/include/sharemind")
+IF(NOT EXISTS "${SHAREMIND_EXT_VM_GLOBALS_DIR}/include/sharemind/CMakeLists.txt")
     MESSAGE(FATAL "SHAREMIND_EXT_VM_GLOBALS_DIR is invalid!")
 ENDIF()
-INCLUDE_DIRECTORIES(BEFORE SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/../sharemind/.." "${SHAREMIND_EXT_VM_GLOBALS_DIR}/include")
+
+IF(NOT SHAREMIND_EXT_LIBMODAPI_DIR)
+    SET(SHAREMIND_EXT_LIBMODAPI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../ext/libmodapi")
+ENDIF(NOT SHAREMIND_EXT_LIBMODAPI_DIR)
+IF(NOT EXISTS "${SHAREMIND_EXT_LIBMODAPI_DIR}/src/sharemind/CMakeLists.txt")
+    MESSAGE(FATAL "SHAREMIND_EXT_LIBMODAPI_DIR is invalid!")
+ENDIF()
+
+INCLUDE_DIRECTORIES(BEFORE SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/../sharemind/.."
+                                  "${SHAREMIND_EXT_VM_GLOBALS_DIR}/include"
+                                  "${SHAREMIND_EXT_LIBMODAPI_DIR}/src")
+
+ADD_SUBDIRECTORY("${SHAREMIND_EXT_LIBMODAPI_DIR}/src/sharemind" "${SHAREMIND_BIN_DIR}")
 
 
 SET(SHAREMIND_VM_INSTALL_INCLUDE_DIR "${SHAREMIND_INSTALL_INCLUDE_DIR}/vm")
@@ -239,44 +251,6 @@ INSTALL(DIRECTORY "libsmas/"
 
 
 ################################################################################
-# libsmmod
-################################################################################
-
-ADD_LIBRARY("libsmmod" SHARED
-            "libsmmod/apis.c"
-            "libsmmod/modapi.c"
-            "libsmmod/module.c"
-            "libsmmod/module_0x1.c"
-            "libsmmod/pd.c"
-            "libsmmod/pd_0x1.c"
-            "libsmmod/pdk.c"
-            "libsmmod/pdpi.c"
-            "libsmmod/pdpi_0x1.c"
-            "libsmmod/syscall.c")
-SET(OTHER_FILES ${OTHER_FILES}
-    "libsmmod/api_0x1.h"
-    "libsmmod/apis.h"
-    "libsmmod/facilitymap.h"
-    "libsmmod/libsmmod.h"
-    "libsmmod/modapi.h"
-    "libsmmod/module.h"
-    "libsmmod/module_0x1.h"
-    "libsmmod/pd.h"
-    "libsmmod/pd_0x1.h"
-    "libsmmod/pdk.h"
-    "libsmmod/pdpi.h"
-    "libsmmod/pdpi_0x1.h"
-    "libsmmod/syscall.h")
-SET_TARGET_PROPERTIES("libsmmod" PROPERTIES
-                      OUTPUT_NAME "smmod"
-                      LIBRARY_OUTPUT_DIRECTORY "${SHAREMIND_LIB_DIR}"
-                      VERSION "0.1.0.0"
-                      SOVERSION "0.1")
-INSTALL(FILES "libsmmod/libsmmod.h" "libsmmod/api_0x1.h"
-        DESTINATION "${SHAREMIND_VM_INSTALL_INCLUDE_DIR}/libsmmod")
-
-
-################################################################################
 # libsmvm
 ################################################################################
 
@@ -360,7 +334,7 @@ IF(VM_OUT_OF_MEMORY_DEBUG)
     SET_TARGET_PROPERTIES("vm" PROPERTIES COMPILE_DEFINITIONS "VM_OUT_OF_MEMORY_DEBUG")
   ENDIF(VM_OUT_OF_MEMORY_DEBUG_FAIL_BACKTRACE)
 ENDIF(VM_OUT_OF_MEMORY_DEBUG)
-TARGET_LINK_LIBRARIES("vm" "dl" "libsmmod" "libsmvm")
+TARGET_LINK_LIBRARIES("vm" "dl" "libmodapi" "libsmvm")
 
 
 ################################################################################
