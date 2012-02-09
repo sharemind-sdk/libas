@@ -42,6 +42,13 @@ IF(NOT EXISTS "${SHAREMIND_EXT_VM_GLOBALS_DIR}/include/sharemind/CMakeLists.txt"
     MESSAGE(FATAL "SHAREMIND_EXT_VM_GLOBALS_DIR is invalid!")
 ENDIF()
 
+IF(NOT SHAREMIND_EXT_LIBEXECUTABLE_DIR)
+    SET(SHAREMIND_EXT_LIBEXECUTABLE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../ext/libexecutable")
+ENDIF(NOT SHAREMIND_EXT_LIBEXECUTABLE_DIR)
+IF(NOT EXISTS "${SHAREMIND_EXT_LIBEXECUTABLE_DIR}/src/sharemind/CMakeLists.txt")
+    MESSAGE(FATAL "SHAREMIND_EXT_LIBEXECUTABLE_DIR is invalid!")
+ENDIF()
+
 IF(NOT SHAREMIND_EXT_LIBMODAPI_DIR)
     SET(SHAREMIND_EXT_LIBMODAPI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../ext/libmodapi")
 ENDIF(NOT SHAREMIND_EXT_LIBMODAPI_DIR)
@@ -51,9 +58,11 @@ ENDIF()
 
 INCLUDE_DIRECTORIES(BEFORE SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/../sharemind/.."
                                   "${SHAREMIND_EXT_VM_GLOBALS_DIR}/include"
+                                  "${SHAREMIND_EXT_LIBEXECUTABLE_DIR}/src"
                                   "${SHAREMIND_EXT_LIBMODAPI_DIR}/src")
 
-ADD_SUBDIRECTORY("${SHAREMIND_EXT_LIBMODAPI_DIR}/src/sharemind" "${SHAREMIND_BIN_DIR}")
+ADD_SUBDIRECTORY("${SHAREMIND_EXT_LIBEXECUTABLE_DIR}/src/sharemind" "${SHAREMIND_BIN_DIR}/libexecutable")
+ADD_SUBDIRECTORY("${SHAREMIND_EXT_LIBMODAPI_DIR}/src/sharemind" "${SHAREMIND_BIN_DIR}/libsmmod")
 
 
 SET(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -O2 -fstrict-aliasing -Wstrict-aliasing=1 -fwrapv -Wabi -Wbad-function-cast -Wc++-compat -Wformat -Wswitch-default -Wunused -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wconversion -Wsign-conversion -Wlogical-op -Wunused-macros")
@@ -210,23 +219,6 @@ INSTALL(DIRECTORY "libsmvmi/"
 
 
 ################################################################################
-# libsme
-################################################################################
-
-ADD_LIBRARY("libsme" SHARED
-            "libsme/libsme.c"
-            "libsme/libsme_0x0.c")
-SET_TARGET_PROPERTIES("libsme" PROPERTIES
-                      OUTPUT_NAME "sme"
-                      LIBRARY_OUTPUT_DIRECTORY "${SHAREMIND_LIB_DIR}"
-                      VERSION "0.1.0.0"
-                      SOVERSION "0.1")
-INSTALL(DIRECTORY "libsme/"
-        DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libsme"
-        FILES_MATCHING PATTERN "*.h")
-
-
-################################################################################
 # libsmas
 ################################################################################
 
@@ -242,7 +234,7 @@ SET_TARGET_PROPERTIES("libsmas" PROPERTIES
                       LIBRARY_OUTPUT_DIRECTORY "${SHAREMIND_LIB_DIR}"
                       VERSION "0.1.0.0"
                       SOVERSION "0.1")
-TARGET_LINK_LIBRARIES("libsmas" "libsmvmi" "libsme")
+TARGET_LINK_LIBRARIES("libsmas" "libsmvmi" "libexecutable")
 INSTALL(DIRECTORY "libsmas/"
         DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libsmas"
         FILES_MATCHING PATTERN "stdion.h" EXCLUDE
@@ -280,7 +272,7 @@ SET_SOURCE_FILES_PROPERTIES("libsmvm/vm_internal_helpers.c" PROPERTIES OBJECT_DE
                             "${M4_DIR_B}/preprocess_pass2_functions.h")
 SET_SOURCE_FILES_PROPERTIES("libsmvm/vm_internal_core.c" PROPERTIES OBJECT_DEPENDS
                             "${M4_DIR_B}/static_label_structs.h;${M4_DIR_B}/dispatches.h")
-TARGET_LINK_LIBRARIES("libsmvm" "libsmvmi" "libsme" "m")
+TARGET_LINK_LIBRARIES("libsmvm" "libsmvmi" "libexecutable" "m")
 INSTALL(FILES "libsmvm/vm.h"
         DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libsmvm")
 
@@ -368,7 +360,7 @@ SET_TARGET_PROPERTIES("libmod_pd_getconfig" PROPERTIES
 # Installs:
 ################################################################################
 
-INSTALL(TARGETS "libsmvmi" "libsme" "libsmas" "libsmvm" "vm" "smas" "libmod_putchar"
+INSTALL(TARGETS "libsmvmi" "libsmas" "libsmvm" "vm" "smas" "libmod_putchar"
         RUNTIME DESTINATION "bin"
         LIBRARY DESTINATION "lib"
         PUBLIC_HEADER DESTINATION "include")
