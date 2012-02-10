@@ -11,9 +11,9 @@
 #define SHAREMIND_LIBSMAS_LINKINGUNITS_H
 
 #include <sharemind/codeblock.h>
+#include <sharemind/libexecutable/libexecutable.h>
 #include <sharemind/vector.h>
 #include <stddef.h>
-#include "../libsme/libsme.h"
 
 #ifdef __cplusplus
 extern "C" {

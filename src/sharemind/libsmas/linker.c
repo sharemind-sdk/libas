@@ -11,9 +11,9 @@
 
 #include <assert.h>
 #include <sharemind/codeblock.h>
+#include <sharemind/libexecutable/libexecutable.h>
+#include <sharemind/libexecutable/libexecutable_0x0.h>
 #include <stdlib.h>
-#include "../libsme/libsme.h"
-#include "../libsme/libsme_0x0.h"
 
 
 /* COMMON */
