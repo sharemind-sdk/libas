@@ -12,31 +12,31 @@
 #include <stdlib.h>
 
 
-void SMAS_Section_init(SMAS_Section * s) {
+void SharemindAssemblerSection_init(SharemindAssemblerSection * s) {
     assert(s);
 
     s->length = 0u;
     s->data = NULL;
 }
 
-void SMAS_Section_destroy(SMAS_Section * s) {
+void SharemindAssemblerSection_destroy(SharemindAssemblerSection * s) {
     assert(s);
 
     free(s->data);
 }
 
-void SMAS_LinkingUnit_init(SMAS_LinkingUnit * lu) {
+void SharemindAssemblerLinkingUnit_init(SharemindAssemblerLinkingUnit * lu) {
     assert(lu);
 
     for (size_t i = 0u; i < SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT; i++)
-        SMAS_Section_init(&lu->sections[i]);
+        SharemindAssemblerSection_init(&lu->sections[i]);
 }
 
-void SMAS_LinkingUnit_destroy(SMAS_LinkingUnit * lu) {
+void SharemindAssemblerLinkingUnit_destroy(SharemindAssemblerLinkingUnit * lu) {
     assert(lu);
 
     for (size_t i = 0u; i < SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT; i++)
-        SMAS_Section_destroy(&lu->sections[i]);
+        SharemindAssemblerSection_destroy(&lu->sections[i]);
 }
 
-SHAREMIND_VECTOR_DEFINE(SMAS_LinkingUnits,SMAS_LinkingUnit,malloc,free,realloc,)
+SHAREMIND_VECTOR_DEFINE(SharemindAssemblerLinkingUnits,SharemindAssemblerLinkingUnit,malloc,free,realloc,)

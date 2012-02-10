@@ -27,13 +27,16 @@
 
 #define NEWTOKEN(d,type,text,sl,sc) \
     do { \
-        d = SMAS_tokens_append(ts, (type), (text), (sl), (sc)); \
+        d = SharemindAssemblerTokens_append(ts, (type), (text), (sl), (sc)); \
         if (!d) \
             goto tokenize_error_oom; \
     } while (0)
 
-SMAS_Tokens * SMAS_tokenize(const char * program, size_t length,
-                            size_t * errorSl, size_t *errorSc)
+SharemindAssemblerTokens * sharemind_assembler_tokenize(
+        const char * program,
+        size_t length,
+        size_t * errorSl,
+        size_t *errorSc)
 {
     assert(program);
 
@@ -43,11 +46,11 @@ SMAS_Tokens * SMAS_tokenize(const char * program, size_t length,
 
     size_t sl = 1u, sc = 1u;
 
-    SMAS_Tokens * ts = SMAS_tokens_new();
+    SharemindAssemblerTokens * ts = SharemindAssemblerTokens_new();
     if (unlikely(!ts))
         return NULL;
     ts->numTokens = 0u;
-    SMAS_Token * lastToken = NULL;
+    SharemindAssemblerToken * lastToken = NULL;
 
     size_t hexmin = 0u;
     size_t hexstart = 0u;
@@ -70,8 +73,8 @@ tokenize_begin2:
 
     switch (*c) {
         case '\n':
-            if (lastToken && lastToken->type != SMAS_TOKEN_NEWLINE) {
-                NEWTOKEN(lastToken, SMAS_TOKEN_NEWLINE, c, sl, sc);
+            if (lastToken && lastToken->type != SHAREMIND_ASSEMBLER_TOKEN_NEWLINE) {
+                NEWTOKEN(lastToken, SHAREMIND_ASSEMBLER_TOKEN_NEWLINE, c, sl, sc);
                 lastToken->length = 1u;
             }
         case ' ': case '\t': case '\r': case '\v': case '\f':
@@ -122,7 +125,7 @@ tokenize_directive:
         default:
             goto tokenize_error;
     }
-    NEWTOKEN(lastToken, SMAS_TOKEN_DIRECTIVE, c - 1, sl, sc);
+    NEWTOKEN(lastToken, SHAREMIND_ASSEMBLER_TOKEN_DIRECTIVE, c - 1, sl, sc);
     lastToken->length = 2u;
     goto tokenize_keyword2;
 
@@ -134,7 +137,7 @@ tokenize_hex:
         default:
             goto tokenize_error;
     }
-    NEWTOKEN(lastToken, hexmin ? SMAS_TOKEN_HEX : SMAS_TOKEN_UHEX, c - 2 - hexmin, sl, sc);
+    NEWTOKEN(lastToken, hexmin ? SHAREMIND_ASSEMBLER_TOKEN_HEX : SHAREMIND_ASSEMBLER_TOKEN_UHEX, c - 2 - hexmin, sl, sc);
     lastToken->length = 3u + hexmin;
     hexmin = 0u;
     hexstart = 0u;
@@ -148,9 +151,9 @@ tokenize_hex2:
                 if (lastToken->length > 18u)
                     goto tokenize_error;
                 if (lastToken->length == 18u) {
-                    if (lastToken->text[hexstart] == '-' && SMAS_read_hex(lastToken->text + 3, 18u) > ((uint64_t) -(INT64_MIN + 1)) + 1u)
+                    if (lastToken->text[hexstart] == '-' && sharemind_assembler_read_hex(lastToken->text + 3, 18u) > ((uint64_t) -(INT64_MIN + 1)) + 1u)
                         goto tokenize_error;
-                    if (lastToken->text[hexstart] == '+' && SMAS_read_hex(lastToken->text + 3, 18u) > (uint64_t) INT64_MAX)
+                    if (lastToken->text[hexstart] == '+' && sharemind_assembler_read_hex(lastToken->text + 3, 18u) > (uint64_t) INT64_MAX)
                         goto tokenize_error;
                 }
             } else {
@@ -178,7 +181,7 @@ tokenize_string:
             continue;
         }
     } while (likely(*c != '"'));
-    NEWTOKEN(lastToken, SMAS_TOKEN_STRING, t, sl, sc);
+    NEWTOKEN(lastToken, SHAREMIND_ASSEMBLER_TOKEN_STRING, t, sl, sc);
     assert(t < c);
     lastToken->length = (size_t) (c - t + 1u);
     TOKENIZE_INC_CHECK_EOF(tokenize_ok);
@@ -193,7 +196,7 @@ tokenize_label:
         default:
             goto tokenize_error;
     }
-    NEWTOKEN(lastToken, SMAS_TOKEN_LABEL, c - 1, sl, sc);
+    NEWTOKEN(lastToken, SHAREMIND_ASSEMBLER_TOKEN_LABEL, c - 1, sl, sc);
     lastToken->length = 2u;
 
 tokenize_label2:
@@ -241,12 +244,12 @@ tokenize_label3:
             goto tokenize_error;
     }
     lastToken->length += 4u;
-    lastToken->type = SMAS_TOKEN_LABEL_O;
+    lastToken->type = SHAREMIND_ASSEMBLER_TOKEN_LABEL_O;
     goto tokenize_hex2;
 
 tokenize_keyword:
 
-    NEWTOKEN(lastToken, SMAS_TOKEN_KEYWORD, c, sl, sc);
+    NEWTOKEN(lastToken, SHAREMIND_ASSEMBLER_TOKEN_KEYWORD, c, sl, sc);
     lastToken->length = 1u;
     goto tokenize_keyword2;
 
@@ -277,7 +280,7 @@ tokenize_keyword2:
     goto tokenize_keyword2;
 
 tokenize_ok:
-    SMAS_tokens_pop_back_newlines(ts);
+    SharemindAssemblerTokens_pop_back_newlines(ts);
     return ts;
 
 tokenize_error:
@@ -289,7 +292,7 @@ tokenize_error:
 
 tokenize_error_oom:
 
-    SMAS_tokens_free(ts);
+    SharemindAssemblerTokens_free(ts);
 
     return NULL;
 }

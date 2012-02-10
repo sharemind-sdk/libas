@@ -7,8 +7,8 @@
  * code is subject to the appropriate license agreement.
  */
 
-#ifndef SHAREMIND_LIBSMAS_TOKENIZER_H
-#define SHAREMIND_LIBSMAS_TOKENIZER_H
+#ifndef SHAREMIND_LIBAS_TOKENIZER_H
+#define SHAREMIND_LIBAS_TOKENIZER_H
 
 #include <string.h>
 #include "tokens.h"
@@ -18,14 +18,16 @@
 extern "C" {
 #endif
 
-SMAS_Tokens * SMAS_tokenize(const char * program,
+
+SharemindAssemblerTokens * sharemind_assembler_tokenize(const char * program,
                             size_t length,
                             size_t * errorSl,
                             size_t *errorSc)
     __attribute__ ((nonnull(1), warn_unused_result));
 
+
 #ifdef __cplusplus
 } /* extern "C" { */
 #endif
 
-#endif /* SHAREMIND_LIBSMAS_TOKENIZER_H */
+#endif /* SHAREMIND_LIBAS_TOKENIZER_H */

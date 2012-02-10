@@ -17,9 +17,9 @@
 #include "stdion.h"
 
 
-SHAREMIND_ENUM_DEFINE_TOSTRING(SMAS_TokenType, SMAS_ENUM_TokenType);
+SHAREMIND_ENUM_DEFINE_TOSTRING(SharemindAssemblerTokenType, SHAREMIND_ASSEMBLER_TOKEN_TYPE_ENUM);
 
-uint64_t SMAS_read_hex(const char * c, size_t l) {
+uint64_t sharemind_assembler_read_hex(const char * c, size_t l) {
     assert(c);
 
     const char * e = c + l;
@@ -38,16 +38,16 @@ uint64_t SMAS_read_hex(const char * c, size_t l) {
     return v;
 }
 
-int64_t SMAS_token_hex_value(const SMAS_Token * t) {
+int64_t SharemindAssemblerToken_hex_value(const SharemindAssemblerToken * t) {
     assert(t);
-    assert(t->type == SMAS_TOKEN_HEX);
+    assert(t->type == SHAREMIND_ASSEMBLER_TOKEN_HEX);
     assert(t->length >= 4u);
     assert(t->length <= 19u);
     assert(t->text[0u] == '-' || t->text[0u] == '+');
     assert(t->text[1u] == '0');
     assert(t->text[2u] == 'x');
 
-    uint64_t v = SMAS_read_hex(t->text + 3u, t->length - 3u);
+    uint64_t v = sharemind_assembler_read_hex(t->text + 3u, t->length - 3u);
 
     if (t->text[0] == '-') {
         assert(v <= ((uint64_t) (INT64_MIN + 1)) + 1u);
@@ -59,20 +59,20 @@ int64_t SMAS_token_hex_value(const SMAS_Token * t) {
     }
 }
 
-uint64_t SMAS_token_uhex_value(const SMAS_Token * t) {
+uint64_t SharemindAssemblerToken_uhex_value(const SharemindAssemblerToken * t) {
     assert(t);
-    assert(t->type == SMAS_TOKEN_UHEX);
+    assert(t->type == SHAREMIND_ASSEMBLER_TOKEN_UHEX);
     assert(t->length >= 3u);
     assert(t->length <= 18u);
     assert(t->text[0u] == '0');
     assert(t->text[1u] == 'x');
 
-    return SMAS_read_hex(t->text + 2u, t->length - 2u);
+    return sharemind_assembler_read_hex(t->text + 2u, t->length - 2u);
 }
 
-size_t SMAS_token_string_length(const SMAS_Token * t) {
+size_t SharemindAssemblerToken_string_length(const SharemindAssemblerToken * t) {
     assert(t);
-    assert(t->type == SMAS_TOKEN_STRING);
+    assert(t->type == SHAREMIND_ASSEMBLER_TOKEN_STRING);
     assert(t->length >= 2u);
     size_t l = 0u;
     for (size_t i = 1u; i < t->length - 1; i++) {
@@ -86,11 +86,11 @@ size_t SMAS_token_string_length(const SMAS_Token * t) {
     return l;
 }
 
-char * SMAS_token_string_value(const SMAS_Token * t, size_t * length) {
+char * SharemindAssemblerToken_string_value(const SharemindAssemblerToken * t, size_t * length) {
     assert(t);
-    assert(t->type == SMAS_TOKEN_STRING);
+    assert(t->type == SHAREMIND_ASSEMBLER_TOKEN_STRING);
     assert(t->length >= 2u);
-    size_t l = SMAS_token_string_length(t);
+    size_t l = SharemindAssemblerToken_string_length(t);
     if (length)
         *length = l;
 
@@ -132,11 +132,11 @@ char * SMAS_token_string_value(const SMAS_Token * t, size_t * length) {
     return s;
 }
 
-char * SMAS_token_label_label_new(const SMAS_Token * t) {
+char * SharemindAssemblerToken_label_to_new_string(const SharemindAssemblerToken * t) {
     assert(t);
-    assert(t->type == SMAS_TOKEN_LABEL || t->type == SMAS_TOKEN_LABEL_O);
+    assert(t->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL || t->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL_O);
     size_t l;
-    if (t->type == SMAS_TOKEN_LABEL) {
+    if (t->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL) {
         assert(t->length >= 2u);
         l = t->length;
     } else {
@@ -156,11 +156,11 @@ char * SMAS_token_label_label_new(const SMAS_Token * t) {
     return c;
 }
 
-int64_t SMAS_token_label_offset(const SMAS_Token * t) {
+int64_t SharemindAssemblerToken_label_offset(const SharemindAssemblerToken * t) {
     assert(t);
-    assert(t->type == SMAS_TOKEN_LABEL || t->type == SMAS_TOKEN_LABEL_O);
+    assert(t->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL || t->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL_O);
     assert(t->text[0] == ':');
-    if (t->type == SMAS_TOKEN_LABEL) {
+    if (t->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL) {
         assert(t->length >= 2u);
         return 0u;
     }
@@ -170,7 +170,7 @@ int64_t SMAS_token_label_offset(const SMAS_Token * t) {
         h++;
     int neg = (*h == '-');
     h += 3;
-    uint64_t v = SMAS_read_hex(h, t->length - (size_t) (h - t->text));
+    uint64_t v = sharemind_assembler_read_hex(h, t->length - (size_t) (h - t->text));
 
     if (neg) {
         assert(v <= ((uint64_t) (INT64_MIN + 1)) + 1u);
@@ -181,8 +181,8 @@ int64_t SMAS_token_label_offset(const SMAS_Token * t) {
     }
 }
 
-SMAS_Tokens * SMAS_tokens_new(void) {
-    SMAS_Tokens * ts = (SMAS_Tokens *) malloc(sizeof(SMAS_Tokens));
+SharemindAssemblerTokens * SharemindAssemblerTokens_new(void) {
+    SharemindAssemblerTokens * ts = (SharemindAssemblerTokens *) malloc(sizeof(SharemindAssemblerTokens));
     if (unlikely(!ts))
         return NULL;
     ts->numTokens = 0u;
@@ -190,40 +190,40 @@ SMAS_Tokens * SMAS_tokens_new(void) {
     return ts;
 }
 
-void SMAS_tokens_free(SMAS_Tokens * ts) {
+void SharemindAssemblerTokens_free(SharemindAssemblerTokens * ts) {
     assert(ts);
 
     free(ts->array);
     free(ts);
 }
 
-void SMAS_tokens_print(const SMAS_Tokens * ts) {
+void SharemindAssemblerTokens_print(const SharemindAssemblerTokens * ts) {
     assert(ts);
 
     int newLine = 1;
     for (size_t i = 0; i < ts->numTokens; i++) {
-        SMAS_Token * t = &ts->array[i];
+        SharemindAssemblerToken * t = &ts->array[i];
         if (!newLine)
             putchar(' ');
         else
             newLine = 0;
 
-        const char * tokenStr = SMAS_TokenType_toString(t->type);
+        const char * tokenStr = SharemindAssemblerTokenType_toString(t->type);
         assert(tokenStr);
         printf("%s", tokenStr + 10u);
         switch (t->type) {
-            case SMAS_TOKEN_NEWLINE:
+            case SHAREMIND_ASSEMBLER_TOKEN_NEWLINE:
                 putchar('\n');
                 newLine = 1;
                 break;
-            case SMAS_TOKEN_DIRECTIVE:
-            case SMAS_TOKEN_HEX:
-            case SMAS_TOKEN_STRING:
-            case SMAS_TOKEN_LABEL_O:
-            case SMAS_TOKEN_LABEL:
-            case SMAS_TOKEN_KEYWORD:
+            case SHAREMIND_ASSEMBLER_TOKEN_DIRECTIVE:
+            case SHAREMIND_ASSEMBLER_TOKEN_HEX:
+            case SHAREMIND_ASSEMBLER_TOKEN_STRING:
+            case SHAREMIND_ASSEMBLER_TOKEN_LABEL_O:
+            case SHAREMIND_ASSEMBLER_TOKEN_LABEL:
+            case SHAREMIND_ASSEMBLER_TOKEN_KEYWORD:
                 putchar('(');
-                nputs(t->text, t->length);
+                sharemind_assembler_nputs(t->text, t->length);
                 putchar(')');
                 break;
             default:
@@ -233,19 +233,20 @@ void SMAS_tokens_print(const SMAS_Tokens * ts) {
     printf("\n");
 }
 
-SMAS_Token * SMAS_tokens_append(SMAS_Tokens * ts,
-                                SMAS_TokenType type,
-                                const char * start,
-                                size_t start_line,
-                                size_t start_column)
+SharemindAssemblerToken * SharemindAssemblerTokens_append(
+        SharemindAssemblerTokens * ts,
+        SharemindAssemblerTokenType type,
+        const char * start,
+        size_t start_line,
+        size_t start_column)
 {
     assert(ts);
-    SMAS_Token * nts = (SMAS_Token *) realloc(ts->array, sizeof(SMAS_Token) * (ts->numTokens + 1));
+    SharemindAssemblerToken * nts = (SharemindAssemblerToken *) realloc(ts->array, sizeof(SharemindAssemblerToken) * (ts->numTokens + 1));
     if (unlikely(!nts))
         return NULL;
     ts->array = nts;
 
-    SMAS_Token * nt = &nts[ts->numTokens];
+    SharemindAssemblerToken * nt = &nts[ts->numTokens];
     ts->numTokens++;
     nt->type = type;
     nt->text = start;
@@ -254,14 +255,14 @@ SMAS_Token * SMAS_tokens_append(SMAS_Tokens * ts,
     return nt;
 }
 
-void SMAS_tokens_pop_back_newlines(SMAS_Tokens * ts) {
+void SharemindAssemblerTokens_pop_back_newlines(SharemindAssemblerTokens * ts) {
     assert(ts);
 
-    if (ts->array[ts->numTokens - 1].type != SMAS_TOKEN_NEWLINE)
+    if (ts->array[ts->numTokens - 1].type != SHAREMIND_ASSEMBLER_TOKEN_NEWLINE)
         return;
 
     ts->numTokens--;
-    SMAS_Token * nts = (SMAS_Token *) realloc(ts->array, sizeof(SMAS_Token) * ts->numTokens);
+    SharemindAssemblerToken * nts = (SharemindAssemblerToken *) realloc(ts->array, sizeof(SharemindAssemblerToken) * ts->numTokens);
     if (likely(nts))
         ts->array = nts;
 }

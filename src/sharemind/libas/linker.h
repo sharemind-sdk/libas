@@ -7,8 +7,8 @@
  * code is subject to the appropriate license agreement.
  */
 
-#ifndef SHAREMIND_LIBSMAS_LINKER_H
-#define SHAREMIND_LIBSMAS_LINKER_H
+#ifndef SHAREMIND_LIBAS_LINKER_H
+#define SHAREMIND_LIBAS_LINKER_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -19,14 +19,17 @@
 extern "C" {
 #endif
 
-uint8_t * SMAS_link(uint16_t version,
-                    SMAS_LinkingUnits * lus,
-                    size_t * length,
-                    uint8_t activeLinkingUnit)
+
+uint8_t * sharemind_assembler_link(
+        uint16_t version,
+        SharemindAssemblerLinkingUnits * lus,
+        size_t * length,
+        uint8_t activeLinkingUnit)
     __attribute__ ((nonnull(2, 3), warn_unused_result));
+
 
 #ifdef __cplusplus
 } /* extern "C" { */
 #endif
 
-#endif /* SHAREMIND_LIBSMAS_LINKER_H */
+#endif /* SHAREMIND_LIBAS_LINKER_H */

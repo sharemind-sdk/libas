@@ -12,7 +12,7 @@
 #include <assert.h>
 
 
-int fnputs(const char * s, size_t len, FILE * stream) {
+int sharemind_assembler_fnputs(const char * s, size_t len, FILE * stream) {
     assert(s);
     assert(stream);
 
@@ -25,7 +25,7 @@ int fnputs(const char * s, size_t len, FILE * stream) {
     return r;
 }
 
-int nputs(const char * s, size_t len) {
+int sharemind_assembler_nputs(const char * s, size_t len) {
     assert(s);
 
     int r = 0;

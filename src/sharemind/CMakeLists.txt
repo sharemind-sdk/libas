@@ -35,6 +35,10 @@ IF(NOT SHAREMIND_INCLUDE_DESTINATION)
     MESSAGE(FATAL_ERROR "SHAREMIND_INCLUDE_DESTINATION not defined!")
 ENDIF(NOT SHAREMIND_INCLUDE_DESTINATION)
 
+IF(NOT SHAREMIND_GEN_DIR)
+    MESSAGE(FATAL_ERROR "SHAREMIND_GEN_DIR not defined!")
+ENDIF(NOT SHAREMIND_GEN_DIR)
+
 IF(NOT SHAREMIND_EXT_VM_GLOBALS_DIR)
     SET(SHAREMIND_EXT_VM_GLOBALS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../ext/vm_globals")
 ENDIF(NOT SHAREMIND_EXT_VM_GLOBALS_DIR)
@@ -57,12 +61,13 @@ IF(NOT EXISTS "${SHAREMIND_EXT_LIBMODAPI_DIR}/src/sharemind/CMakeLists.txt")
 ENDIF()
 
 INCLUDE_DIRECTORIES(BEFORE SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/../sharemind/.."
+                                  "${SHAREMIND_GEN_DIR}"
                                   "${SHAREMIND_EXT_VM_GLOBALS_DIR}/include"
                                   "${SHAREMIND_EXT_LIBEXECUTABLE_DIR}/src"
                                   "${SHAREMIND_EXT_LIBMODAPI_DIR}/src")
 
-ADD_SUBDIRECTORY("${SHAREMIND_EXT_LIBEXECUTABLE_DIR}/src/sharemind" "${SHAREMIND_BIN_DIR}/libexecutable")
-ADD_SUBDIRECTORY("${SHAREMIND_EXT_LIBMODAPI_DIR}/src/sharemind" "${SHAREMIND_BIN_DIR}/libsmmod")
+ADD_SUBDIRECTORY("${SHAREMIND_EXT_LIBEXECUTABLE_DIR}/src/sharemind" "${SHAREMIND_EXT_DIR}/libexecutable")
+ADD_SUBDIRECTORY("${SHAREMIND_EXT_LIBMODAPI_DIR}/src/sharemind" "${SHAREMIND_EXT_DIR}/libmodapi")
 
 
 SET(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -O2 -fstrict-aliasing -Wstrict-aliasing=1 -fwrapv -Wabi -Wbad-function-cast -Wc++-compat -Wformat -Wswitch-default -Wunused -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wconversion -Wsign-conversion -Wlogical-op -Wunused-macros")
@@ -162,13 +167,9 @@ ENDIF(NOT (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
 
 SET(M4_DIR "m4")
 SET(M4_DIR_S "${CMAKE_CURRENT_SOURCE_DIR}/${M4_DIR}")
-IF(NOT "${CMAKE_CURRENT_BINARY_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
-  SET(M4_DIR_B "${CMAKE_CURRENT_BINARY_DIR}/generated_sources/${M4_DIR}")
-  FILE(MAKE_DIRECTORY ${M4_DIR_B})
-  INCLUDE_DIRECTORIES(BEFORE ${M4_DIR_B})
-ELSE(NOT "${CMAKE_CURRENT_BINARY_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
-  SET(M4_DIR_B ${M4_DIR_S})
-ENDIF(NOT "${CMAKE_CURRENT_BINARY_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
+
+SET(M4_DIR_B "${SHAREMIND_GEN_DIR}/sharemind/m4")
+FILE(MAKE_DIRECTORY "${M4_DIR_B}")
 
 SET(M4_2_H_SOURCES
     "dispatches.m4"
@@ -202,90 +203,91 @@ ENDFOREACH(_H_SOURCE ${M4_2_H_SOURCES})
 
 
 ################################################################################
-# libsmvmi
+# libvmi
 ################################################################################
 
-ADD_LIBRARY("libsmvmi" SHARED "libsmvmi/instr.c")
-SET_TARGET_PROPERTIES("libsmvmi" PROPERTIES
-                      OUTPUT_NAME "smvmi"
+ADD_LIBRARY("libvmi" SHARED "libvmi/instr.c")
+SET_TARGET_PROPERTIES("libvmi" PROPERTIES
+                      OUTPUT_NAME "sharemind_vmi"
                       LIBRARY_OUTPUT_DIRECTORY "${SHAREMIND_LIB_DIR}"
                       VERSION "0.1.0.0"
                       SOVERSION "0.1")
-SET_SOURCE_FILES_PROPERTIES("libsmvmi/instr.c" PROPERTIES OBJECT_DEPENDS
+SET_SOURCE_FILES_PROPERTIES("libvmi/instr.c" PROPERTIES OBJECT_DEPENDS
                             "${M4_DIR_B}/instruction_structs.h;${M4_DIR_B}/instruction_index.h")
-INSTALL(DIRECTORY "libsmvmi/"
-        DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libsmvmi"
+INSTALL(DIRECTORY "libvmi/"
+        DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libvmi"
         FILES_MATCHING PATTERN "*.h")
 
 
 ################################################################################
-# libsmas
+# libas
 ################################################################################
 
-ADD_LIBRARY("libsmas" SHARED
-            "libsmas/assemble.c"
-            "libsmas/linker.c"
-            "libsmas/linkingunits.c"
-            "libsmas/stdion.c"
-            "libsmas/tokenizer.c"
-            "libsmas/tokens.c")
-SET_TARGET_PROPERTIES("libsmas" PROPERTIES
-                      OUTPUT_NAME "smas"
+ADD_LIBRARY("libas" SHARED
+            "libas/assemble.c"
+            "libas/linker.c"
+            "libas/linkingunits.c"
+            "libas/stdion.c"
+            "libas/tokenizer.c"
+            "libas/tokens.c")
+SET_TARGET_PROPERTIES("libas" PROPERTIES
+                      OUTPUT_NAME "sharemind_as"
                       LIBRARY_OUTPUT_DIRECTORY "${SHAREMIND_LIB_DIR}"
                       VERSION "0.1.0.0"
                       SOVERSION "0.1")
-TARGET_LINK_LIBRARIES("libsmas" "libsmvmi" "libexecutable")
-INSTALL(DIRECTORY "libsmas/"
-        DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libsmas"
+TARGET_LINK_LIBRARIES("libas" "libvmi" "libexecutable")
+INSTALL(DIRECTORY "libas/"
+        DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libas"
         FILES_MATCHING PATTERN "stdion.h" EXCLUDE
                        PATTERN "*.h")
 
 
 ################################################################################
-# libsmvm
+# libvm
 ################################################################################
 
-SET(LIBSMVM_DEFINES "SMVM_NO_THREADS")
+SET(LIBVM_DEFINES "SHAREMIND_NO_THREADS")
 IF(VM_FAST_BUILD)
-  SET(LIBSMVM_DEFINES "${LIBSMVM_DEFINES};SMVM_FAST_BUILD")
+  SET(LIBVM_DEFINES "${LIBVM_DEFINES};SHAREMIND_FAST_BUILD")
 ENDIF(VM_FAST_BUILD)
-SET(LIBSMVM_SOURCES
-    "libsmvm/vm_internal_core.c"
-    "libsmvm/vm_internal_helpers.c")
+SET(LIBVM_SOURCES
+    "libvm/vm_internal_core.c"
+    "libvm/vm_internal_helpers.c")
 IF(VM_SOFT_FLOAT)
-  SET(LIBSMVM_SOURCES ${LIBSMVM_SOURCES} "3rdparty/softfloat/softfloat.c")
-  SET(LIBSMVM_DEFINES "${LIBSMVM_DEFINES};SMVM_SOFT_FLOAT")
+  SET(LIBVM_SOURCES ${LIBVM_SOURCES} "3rdparty/softfloat/softfloat.c")
+  SET(LIBVM_DEFINES "${LIBVM_DEFINES};SHAREMIND_SOFT_FLOAT")
 ENDIF(VM_SOFT_FLOAT)
 SET(OTHER_FILES ${OTHER_FILES}
-    "libsmvm/vm.h"
-    "libsmvm/vm_internal_helpers.h"
-    "libsmvm/vm_internal_core.h")
-ADD_LIBRARY("libsmvm" SHARED ${LIBSMVM_SOURCES})
-SET_TARGET_PROPERTIES("libsmvm" PROPERTIES
-                      OUTPUT_NAME "smvm"
+    "libvm/vm.h"
+    "libvm/vm_internal_helpers.h"
+    "libvm/vm_internal_core.h")
+ADD_LIBRARY("libvm" SHARED ${LIBVM_SOURCES})
+SET_TARGET_PROPERTIES("libvm" PROPERTIES
+                      OUTPUT_NAME "sharemind_vm"
                       LIBRARY_OUTPUT_DIRECTORY "${SHAREMIND_LIB_DIR}"
                       VERSION "0.1.0.0"
                       SOVERSION "0.1"
                       COMPILE_FLAGS "-frounding-math -ftrapping-math -fsignaling-nans"
-                      COMPILE_DEFINITIONS "${LIBSMVM_DEFINES}")
-SET_SOURCE_FILES_PROPERTIES("libsmvm/vm_internal_helpers.c" PROPERTIES OBJECT_DEPENDS
+                      COMPILE_DEFINITIONS "${LIBVM_DEFINES}")
+SET_SOURCE_FILES_PROPERTIES("libvm/vm_internal_helpers.c" PROPERTIES OBJECT_DEPENDS
                             "${M4_DIR_B}/preprocess_pass2_functions.h")
-SET_SOURCE_FILES_PROPERTIES("libsmvm/vm_internal_core.c" PROPERTIES OBJECT_DEPENDS
+SET_SOURCE_FILES_PROPERTIES("libvm/vm_internal_core.c" PROPERTIES OBJECT_DEPENDS
                             "${M4_DIR_B}/static_label_structs.h;${M4_DIR_B}/dispatches.h")
-TARGET_LINK_LIBRARIES("libsmvm" "libsmvmi" "libexecutable" "m")
-INSTALL(FILES "libsmvm/vm.h"
-        DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libsmvm")
+TARGET_LINK_LIBRARIES("libvm" "libvmi" "libexecutable" "m")
+INSTALL(FILES "libvm/vm.h"
+        DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libvm")
 
 
 ################################################################################
-# smas
+# as
 ################################################################################
 
-ADD_EXECUTABLE("smas" "smas/main.c")
-SET_TARGET_PROPERTIES("smas" PROPERTIES
+ADD_EXECUTABLE("as" "as/main.c")
+SET_TARGET_PROPERTIES("as" PROPERTIES
+                      OUTPUT_NAME "smas"
                       RUNTIME_OUTPUT_DIRECTORY "${SHAREMIND_BIN_DIR}"
                       VERSION "0.1.0.0")
-TARGET_LINK_LIBRARIES("smas" "libsmas")
+TARGET_LINK_LIBRARIES("as" "libas")
 
 
 ################################################################################
@@ -304,6 +306,7 @@ IF(VM_OUT_OF_MEMORY_DEBUG)
 ENDIF(VM_OUT_OF_MEMORY_DEBUG)
 ADD_EXECUTABLE("vm" ${VM_FILES})
 SET_TARGET_PROPERTIES("vm" PROPERTIES
+                      OUTPUT_NAME "vm"
                       RUNTIME_OUTPUT_DIRECTORY "${SHAREMIND_BIN_DIR}"
                       VERSION "0.1.0.0")
 SET(OTHER_FILES ${OTHER_FILES}
@@ -325,7 +328,7 @@ IF(VM_OUT_OF_MEMORY_DEBUG)
     SET_TARGET_PROPERTIES("vm" PROPERTIES COMPILE_DEFINITIONS "VM_OUT_OF_MEMORY_DEBUG")
   ENDIF(VM_OUT_OF_MEMORY_DEBUG_FAIL_BACKTRACE)
 ENDIF(VM_OUT_OF_MEMORY_DEBUG)
-TARGET_LINK_LIBRARIES("vm" "dl" "libmodapi" "libsmvm")
+TARGET_LINK_LIBRARIES("vm" "dl" "libmodapi" "libvm")
 
 
 ################################################################################
@@ -335,7 +338,7 @@ TARGET_LINK_LIBRARIES("vm" "dl" "libmodapi" "libsmvm")
 ADD_LIBRARY("libmod_putchar" SHARED
             "mod_putchar/mod_putchar.c")
 SET_TARGET_PROPERTIES("libmod_putchar" PROPERTIES
-                      OUTPUT_NAME "smvm_mod_putchar"
+                      OUTPUT_NAME "sharemind_mod_putchar"
                       LIBRARY_OUTPUT_DIRECTORY "${SHAREMIND_LIB_DIR}"
                       VERSION "0.1.0.0"
                       SOVERSION "0.1")
@@ -350,7 +353,7 @@ ADD_LIBRARY("libmod_pd_getconfig" SHARED
             "mod_pd_getconfig/mod_pd_getconfig.c"
                ${PREPARED_OTHER_FILES}) # <-- hack for Qt Creator to include other files
 SET_TARGET_PROPERTIES("libmod_pd_getconfig" PROPERTIES
-                      OUTPUT_NAME "smvm_mod_pd_getconfig"
+                      OUTPUT_NAME "sharemind_mod_pd_getconfig"
                       LIBRARY_OUTPUT_DIRECTORY "${SHAREMIND_LIB_DIR}"
                       VERSION "0.1.0.0"
                       SOVERSION "0.1")
@@ -360,7 +363,7 @@ SET_TARGET_PROPERTIES("libmod_pd_getconfig" PROPERTIES
 # Installs:
 ################################################################################
 
-INSTALL(TARGETS "libsmvmi" "libsmas" "libsmvm" "vm" "smas" "libmod_putchar"
+INSTALL(TARGETS "libvmi" "libas" "libvm" "vm" "as" "libmod_putchar"
         RUNTIME DESTINATION "bin"
         LIBRARY DESTINATION "lib"
         PUBLIC_HEADER DESTINATION "include")
@@ -373,26 +376,26 @@ INSTALL(TARGETS "libsmvmi" "libsmas" "libsmvm" "vm" "smas" "libmod_putchar"
 SET(TESTS_DIR_B "${CMAKE_CURRENT_BINARY_DIR}/tests")
 FILE(MAKE_DIRECTORY "${TESTS_DIR_B}")
 
-FUNCTION(add_test_assemble_execute smas_args vm_args testfile suffix)
+FUNCTION(add_test_assemble_execute as_args vm_args testfile suffix)
     ADD_TEST(NAME "${testfile}${suffix}"
              COMMAND "${TESTS_DIR_S}/run_test_assemble_execute.sh"
-                 $<TARGET_FILE:smas> "${smas_args}" $<TARGET_FILE:vm> "${vm_args}" "${TESTS_DIR_S}/${testfile}.sa" "${TESTS_DIR_B}/${testfile}.sb" ${ARGN})
+                 $<TARGET_FILE:as> "${as_args}" $<TARGET_FILE:vm> "${vm_args}" "${TESTS_DIR_S}/${testfile}.sa" "${TESTS_DIR_B}/${testfile}.sb" ${ARGN})
     SET_TESTS_PROPERTIES("${testfile}${suffix}" PROPERTIES COST "20.0")
     ADD_TEST(NAME "valgrind_${testfile}${suffix}"
              COMMAND "${TESTS_DIR_S}/valgrind_run_test_assemble_execute.sh"
-                 $<TARGET_FILE:smas> "${smas_args}" $<TARGET_FILE:vm> "${vm_args}" "${TESTS_DIR_S}/${testfile}.sa" "--suppressions=${TESTS_DIR_S}/valgrind.supp" ${ARGN})
+                 $<TARGET_FILE:as> "${as_args}" $<TARGET_FILE:vm> "${vm_args}" "${TESTS_DIR_S}/${testfile}.sa" "--suppressions=${TESTS_DIR_S}/valgrind.supp" ${ARGN})
     SET_TESTS_PROPERTIES("valgrind_${testfile}${suffix}" PROPERTIES
                          COST "10.0"
                          PASS_REGULAR_EXPRESSION "VALGIND TEST SUCCESS")
 ENDFUNCTION()
 
-FUNCTION(add_test_assemble_execute_regex smas_args vm_args testfile suffix regex)
-    add_test_assemble_execute("${smas_args}" "${vm_args}" "${testfile}" "${suffix}" "${ARGN}")
+FUNCTION(add_test_assemble_execute_regex as_args vm_args testfile suffix regex)
+    add_test_assemble_execute("${as_args}" "${vm_args}" "${testfile}" "${suffix}" "${ARGN}")
     SET_TESTS_PROPERTIES("${testfile}${suffix}" PROPERTIES PASS_REGULAR_EXPRESSION "${regex}")
 ENDFUNCTION()
 
-FUNCTION(add_test_assemble_execute_exception smas_args vm_args testfile suffix exceptions)
-    add_test_assemble_execute_regex("${smas_args}" "${vm_args}" "${testfile}" "${suffix}" "Exception (${exceptions})" "${ARGN}")
+FUNCTION(add_test_assemble_execute_exception as_args vm_args testfile suffix exceptions)
+    add_test_assemble_execute_regex("${as_args}" "${vm_args}" "${testfile}" "${suffix}" "Exception (${exceptions})" "${ARGN}")
 ENDFUNCTION()
 
 
@@ -400,44 +403,44 @@ add_test_assemble_execute("" "" "benchmark" "")
 SET_TESTS_PROPERTIES("benchmark" PROPERTIES COST "5.0")
 SET_TESTS_PROPERTIES("valgrind_benchmark" PROPERTIES COST "0.0")
 
-add_test_assemble_execute_exception("" "" "except_bmodbyzero_int8" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_bmodbyzero_int16" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_bmodbyzero_int32" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_bmodbyzero_int64" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_bmodbyzero_uint8" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_bmodbyzero_uint16" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_bmodbyzero_uint32" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_bmodbyzero_uint64" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_bmod2byzero_int8" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_bmod2byzero_int16" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_bmod2byzero_int32" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_bmod2byzero_int64" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_bmod2byzero_uint8" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_bmod2byzero_uint16" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_bmod2byzero_uint32" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_bmod2byzero_uint64" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_divbyzero_float32" "" "SMVM_E_FLOATING_POINT_DIVIDE_BY_ZERO|SMVM_E_UNKNOWN_FPE")
-add_test_assemble_execute_exception("" "" "except_divbyzero_int8" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_divbyzero_int16" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_divbyzero_int32" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_divbyzero_int64" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_divbyzero_uint8" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_divbyzero_uint16" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_divbyzero_uint32" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_divbyzero_uint64" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_divoverflow_int64" "" "SMVM_E_INTEGER_OVERFLOW")
-add_test_assemble_execute_exception("" "" "except_invalid_float32" "" "SMVM_E_FLOATING_POINT_INVALID_OPERATION|SMVM_E_UNKNOWN_FPE")
-add_test_assemble_execute_exception("" "" "except_overflow_float32" "" "SMVM_E_FLOATING_POINT_OVERFLOW|SMVM_E_UNKNOWN_FPE")
-add_test_assemble_execute_exception("" "" "except_tmodbyzero_int8" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_tmodbyzero_int16" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_tmodbyzero_int32" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_tmodbyzero_int64" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_tmodbyzero_uint8" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_tmodbyzero_uint16" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_tmodbyzero_uint32" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_tmodbyzero_uint64" "" "SMVM_E_INTEGER_DIVIDE_BY_ZERO")
-add_test_assemble_execute_exception("" "" "except_underflow_float32" "" "SMVM_E_FLOATING_POINT_UNDERFLOW|SMVM_E_UNKNOWN_FPE")
-add_test_assemble_execute_exception("" "" "except_write_to_rodata" "" "SMVM_E_WRITE_DENIED")
+add_test_assemble_execute_exception("" "" "except_bmodbyzero_int8" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_bmodbyzero_int16" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_bmodbyzero_int32" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_bmodbyzero_int64" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_bmodbyzero_uint8" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_bmodbyzero_uint16" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_bmodbyzero_uint32" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_bmodbyzero_uint64" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_bmod2byzero_int8" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_bmod2byzero_int16" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_bmod2byzero_int32" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_bmod2byzero_int64" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_bmod2byzero_uint8" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_bmod2byzero_uint16" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_bmod2byzero_uint32" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_bmod2byzero_uint64" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_divbyzero_float32" "" "SHAREMIND_VM_PROCESS_FLOATING_POINT_DIVIDE_BY_ZERO|SHAREMIND_VM_PROCESS_UNKNOWN_FPE")
+add_test_assemble_execute_exception("" "" "except_divbyzero_int8" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_divbyzero_int16" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_divbyzero_int32" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_divbyzero_int64" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_divbyzero_uint8" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_divbyzero_uint16" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_divbyzero_uint32" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_divbyzero_uint64" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_divoverflow_int64" "" "SHAREMIND_VM_PROCESS_INTEGER_OVERFLOW")
+add_test_assemble_execute_exception("" "" "except_invalid_float32" "" "SHAREMIND_VM_PROCESS_FLOATING_POINT_INVALID_OPERATION|SHAREMIND_VM_PROCESS_UNKNOWN_FPE")
+add_test_assemble_execute_exception("" "" "except_overflow_float32" "" "SHAREMIND_VM_PROCESS_FLOATING_POINT_OVERFLOW|SHAREMIND_VM_PROCESS_UNKNOWN_FPE")
+add_test_assemble_execute_exception("" "" "except_tmodbyzero_int8" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_tmodbyzero_int16" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_tmodbyzero_int32" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_tmodbyzero_int64" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_tmodbyzero_uint8" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_tmodbyzero_uint16" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_tmodbyzero_uint32" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_tmodbyzero_uint64" "" "SHAREMIND_VM_PROCESS_INTEGER_DIVIDE_BY_ZERO")
+add_test_assemble_execute_exception("" "" "except_underflow_float32" "" "SHAREMIND_VM_PROCESS_FLOATING_POINT_UNDERFLOW|SHAREMIND_VM_PROCESS_UNKNOWN_FPE")
+add_test_assemble_execute_exception("" "" "except_write_to_rodata" "" "SHAREMIND_VM_PROCESS_WRITE_DENIED")
 add_test_assemble_execute("" "" "alloc_zero" "")
 add_test_assemble_execute("" "" "bmod" "")
 add_test_assemble_execute("" "" "bmod2" "")

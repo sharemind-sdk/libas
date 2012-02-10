@@ -8,15 +8,15 @@
  */
 
 #include <fcntl.h>
+#include <sharemind/libas/assemble.h>
+#include <sharemind/libas/linker.h>
+#include <sharemind/libas/tokenizer.h>
 #include <sharemind/static_assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "../libsmas/assemble.h"
-#include "../libsmas/linker.h"
-#include "../libsmas/tokenizer.h"
 
 
 SHAREMIND_STATIC_ASSERT(sizeof(off_t) <= sizeof(size_t));
@@ -29,8 +29,8 @@ int main(int argc, char * argv[]) {
     struct stat inFileStat;
     size_t fileSize;
     void * map;
-    SMAS_Tokens * ts;
-    SMAS_LinkingUnits lus;
+    SharemindAssemblerTokens * ts;
+    SharemindAssemblerLinkingUnits lus;
     size_t outputLength;
     uint8_t * output;
     FILE * outFile;
@@ -122,7 +122,7 @@ int main(int argc, char * argv[]) {
     {
         size_t sl = 0u;
         size_t sc = 0u;
-        ts = SMAS_tokenize((const char *) map, fileSize, &sl, &sc);
+        ts = sharemind_assembler_tokenize((const char *) map, fileSize, &sl, &sc);
         if (unlikely(!ts)) {
             fprintf(stderr, "Error: Tokenization failed at (%zu,%zu)!\n", sl, sc);
             goto main_fail_3;
@@ -132,18 +132,18 @@ int main(int argc, char * argv[]) {
 
     /* Assemble the linking units: */
     {
-        SMAS_LinkingUnits_init(&lus);
-        const SMAS_Token * errorToken;
+        SharemindAssemblerLinkingUnits_init(&lus);
+        const SharemindAssemblerToken * errorToken;
         char * errorString;
-        SMAS_Assemble_Error r = SMAS_assemble(ts, &lus, &errorToken, &errorString);
-        if (r != SMAS_ASSEMBLE_OK) {
-            const char * smasErrorStr = SMAS_Assemble_Error_toString(r);
+        SharemindAssemblerError r = sharemind_assembler_assemble(ts, &lus, &errorToken, &errorString);
+        if (r != SHAREMIND_ASSEMBLE_OK) {
+            const char * smasErrorStr = SharemindAssemblerError_toString(r);
             assert(smasErrorStr);
 
             fprintf(stderr, "Error: ");
 
             if (errorToken)
-                fprintf(stderr, "(%zu, %zu, %s) ", errorToken->start_line, errorToken->start_column, SMAS_TokenType_toString(errorToken->type) + 11);
+                fprintf(stderr, "(%zu, %zu, %s) ", errorToken->start_line, errorToken->start_column, SharemindAssemblerTokenType_toString(errorToken->type) + 11);
 
             fprintf(stderr, "%s", smasErrorStr);
             if (errorString)
@@ -155,7 +155,7 @@ int main(int argc, char * argv[]) {
         }
         assert(!errorToken);
         assert(!errorString);
-        SMAS_tokens_free(ts);
+        SharemindAssemblerTokens_free(ts);
 
         if (munmap(map, fileSize) != 0)
             fprintf(stderr, "Error: Failed to munmap input file!\n");
@@ -164,8 +164,8 @@ int main(int argc, char * argv[]) {
     } /* Active resources: lus */
 
     /* Generate the Sharemind Executable: */
-    output = SMAS_link(0x0, &lus, &outputLength, 0);
-    SMAS_LinkingUnits_destroy_with(&lus, &SMAS_LinkingUnit_destroy);
+    output = sharemind_assembler_link(0x0, &lus, &outputLength, 0);
+    SharemindAssemblerLinkingUnits_destroy_with(&lus, &SharemindAssemblerLinkingUnit_destroy);
     if (!output) {
         fprintf(stderr, "Error generating output!\n");
         goto main_fail_1;
@@ -203,8 +203,8 @@ main_fail_5:
 
 main_fail_4:
 
-    SMAS_LinkingUnits_destroy_with(&lus, &SMAS_LinkingUnit_destroy);
-    SMAS_tokens_free(ts);
+    SharemindAssemblerLinkingUnits_destroy_with(&lus, &SharemindAssemblerLinkingUnit_destroy);
+    SharemindAssemblerTokens_free(ts);
 
 main_fail_3:
 

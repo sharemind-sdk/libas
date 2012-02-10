@@ -14,10 +14,10 @@
 #include <sharemind/trie.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "../libsmvmi/instr.h"
+#include "../libvmi/instr.h"
 
 
-static inline int SMAS_Assemble_assign_add_sizet_int64(size_t * lhs, const int64_t rhs) {
+static inline int sharemind_assembler_assign_add_sizet_int64(size_t * lhs, const int64_t rhs) {
     if (rhs > 0) {
         if (((uint64_t) rhs) > SIZE_MAX - (*lhs))
             return 0;
@@ -37,7 +37,7 @@ static inline int SMAS_Assemble_assign_add_sizet_int64(size_t * lhs, const int64
     return 1;
 }
 
-static inline int SMAS_Assemble_substract_sizet_sizet_to_int64(int64_t *dest, const size_t lhs, const size_t rhs) {
+static inline int sharemind_assembler_substract_sizet_sizet_to_int64(int64_t *dest, const size_t lhs, const size_t rhs) {
     if (lhs >= rhs) {
         size_t r = lhs - rhs;
         if (r > INT64_MAX)
@@ -62,10 +62,11 @@ typedef struct {
     size_t linkingUnit;
     int section;
     size_t offset;
-} SMAS_LabelLocation;
+} SharemindAssemblerLabelLocation;
 
-SHAREMIND_TRIE_DECLARE(SMAS_LabelLocations,SMAS_LabelLocation,)
-SHAREMIND_TRIE_DEFINE(SMAS_LabelLocations,SMAS_LabelLocation,malloc,free,)
+SHAREMIND_TRIE_DECLARE(SharemindAssemblerLabelLocations,SharemindAssemblerLabelLocation,)
+SHAREMIND_TRIE_DEFINE(SharemindAssemblerLabelLocations,SharemindAssemblerLabelLocation,malloc,free,)
+
 
 typedef struct {
     size_t linkingUnit;
@@ -75,10 +76,10 @@ typedef struct {
     size_t jmpOffset;
     void ** data;
     size_t cbdata_index;
-    const SMAS_Token * token; /* NULL if this slot is already filled */
-} SMAS_LabelSlot;
+    const SharemindAssemblerToken * token; /* NULL if this slot is already filled */
+} SharemindAssemblerLabelSlot;
 
-static int SMAS_LabelSlot_filled(SMAS_LabelSlot * s, SMAS_LabelSlot ** d) {
+static int SharemindAssemblerLabelSlot_filled(SharemindAssemblerLabelSlot * s, SharemindAssemblerLabelSlot ** d) {
     assert(s);
     if (s->token == NULL)
         return 1;
@@ -86,86 +87,87 @@ static int SMAS_LabelSlot_filled(SMAS_LabelSlot * s, SMAS_LabelSlot ** d) {
     return 0;
 }
 
-SHAREMIND_VECTOR_DECLARE(SMAS_LabelSlots,SMAS_LabelSlot,,)
-SHAREMIND_VECTOR_DEFINE(SMAS_LabelSlots,SMAS_LabelSlot,malloc,free,realloc,)
-SHAREMIND_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelLocationPointer,SMAS_LabelLocation *,)
-SHAREMIND_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelLocationPointer,SMAS_LabelLocation *,SMAS_LabelLocation * p,p,)
-SHAREMIND_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelSlotPointerPointer,SMAS_LabelSlot **,)
-SHAREMIND_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelSlotPointerPointer,SMAS_LabelSlot **,SMAS_LabelSlot ** p,p,)
+SHAREMIND_VECTOR_DECLARE(SharemindAssemblerLabelSlots,SharemindAssemblerLabelSlot,,)
+SHAREMIND_VECTOR_DEFINE(SharemindAssemblerLabelSlots,SharemindAssemblerLabelSlot,malloc,free,realloc,)
+SHAREMIND_VECTOR_DECLARE_FOREACH_WITH(SharemindAssemblerLabelSlots,SharemindAssemblerLabelSlot,labelLocationPointer,SharemindAssemblerLabelLocation *,)
+SHAREMIND_VECTOR_DEFINE_FOREACH_WITH(SharemindAssemblerLabelSlots,SharemindAssemblerLabelSlot,labelLocationPointer,SharemindAssemblerLabelLocation *,SharemindAssemblerLabelLocation * p,p,)
+SHAREMIND_VECTOR_DECLARE_FOREACH_WITH(SharemindAssemblerLabelSlots,SharemindAssemblerLabelSlot,labelSlotPointerPointer,SharemindAssemblerLabelSlot **,)
+SHAREMIND_VECTOR_DEFINE_FOREACH_WITH(SharemindAssemblerLabelSlots,SharemindAssemblerLabelSlot,labelSlotPointerPointer,SharemindAssemblerLabelSlot **,SharemindAssemblerLabelSlot ** p,p,)
 
-static int SMAS_LabelSlots_allSlotsFilled(SMAS_LabelSlots * ss, SMAS_LabelSlot ** d) {
-    return SMAS_LabelSlots_foreach_with_labelSlotPointerPointer(ss, &SMAS_LabelSlot_filled, d);
+static int SharemindAssemblerLabelSlots_all_slots_filled(SharemindAssemblerLabelSlots * ss, SharemindAssemblerLabelSlot ** d) {
+    return SharemindAssemblerLabelSlots_foreach_with_labelSlotPointerPointer(ss, &SharemindAssemblerLabelSlot_filled, d);
 }
 
-SHAREMIND_TRIE_DECLARE(SMAS_LabelSlotsTrie,SMAS_LabelSlots,)
-SHAREMIND_TRIE_DEFINE(SMAS_LabelSlotsTrie,SMAS_LabelSlots,malloc,free,)
-SHAREMIND_TRIE_DECLARE_FOREACH_WITH(SMAS_LabelSlotsTrie,SMAS_LabelSlots,labelSlotPointerPointer,SMAS_LabelSlot **,SMAS_LabelSlot ** p,)
-SHAREMIND_TRIE_DEFINE_FOREACH_WITH(SMAS_LabelSlotsTrie,SMAS_LabelSlots,labelSlotPointerPointer,SMAS_LabelSlot **,SMAS_LabelSlot ** p,p,)
+SHAREMIND_TRIE_DECLARE(SharemindAssemblerLabelSlotsTrie,SharemindAssemblerLabelSlots,)
+SHAREMIND_TRIE_DEFINE(SharemindAssemblerLabelSlotsTrie,SharemindAssemblerLabelSlots,malloc,free,)
+SHAREMIND_TRIE_DECLARE_FOREACH_WITH(SharemindAssemblerLabelSlotsTrie,SharemindAssemblerLabelSlots,labelSlotPointerPointer,SharemindAssemblerLabelSlot **,SharemindAssemblerLabelSlot ** p,)
+SHAREMIND_TRIE_DEFINE_FOREACH_WITH(SharemindAssemblerLabelSlotsTrie,SharemindAssemblerLabelSlots,labelSlotPointerPointer,SharemindAssemblerLabelSlot **,SharemindAssemblerLabelSlot ** p,p,)
 
-static int SMAS_LabelSlot_fill(SMAS_LabelSlot * s, SMAS_LabelLocation * l) {
+static int SharemindAssemblerLabelSlot_fill(SharemindAssemblerLabelSlot * s, SharemindAssemblerLabelLocation * l) {
     assert(s);
     assert(s->token);
     assert(l);
 
     size_t absTarget = l->offset;
-    if (!SMAS_Assemble_assign_add_sizet_int64(&absTarget, s->extraOffset))
-        goto SMAS_LabelSlot_fill_error;
+    if (!sharemind_assembler_assign_add_sizet_int64(&absTarget, s->extraOffset))
+        goto fill_error;
 
     if (!s->doJumpLabel) { /* Normal absolute label */
-        ((SHAREMIND_CodeBlock *) *s->data)[s->cbdata_index].uint64[0] = absTarget;
+        ((SharemindCodeBlock *) *s->data)[s->cbdata_index].uint64[0] = absTarget;
     } else { /* Relative jump label */
         if (s->section != l->section || s->linkingUnit != l->linkingUnit)
-            goto SMAS_LabelSlot_fill_error;
+            goto fill_error;
 
         assert(s->section == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT);
         assert(s->jmpOffset < l->offset); /* Because we're one-pass. */
 
-        if (!SMAS_Assemble_substract_sizet_sizet_to_int64(&((SHAREMIND_CodeBlock *) *s->data)[s->cbdata_index].int64[0], absTarget, s->jmpOffset))
-            goto SMAS_LabelSlot_fill_error;
+        if (!sharemind_assembler_substract_sizet_sizet_to_int64(&((SharemindCodeBlock *) *s->data)[s->cbdata_index].int64[0], absTarget, s->jmpOffset))
+            goto fill_error;
 
         /** \todo Maybe check whether there's really an instruction there */
     }
     s->token = NULL;
     return 1;
 
-SMAS_LabelSlot_fill_error:
+fill_error:
     /** \todo Provide better diagnostics */
     return 0;
 }
 
-SHAREMIND_ENUM_CUSTOM_DEFINE_TOSTRING(SMAS_Assemble_Error, SMAS_ENUM_Assemble_Error);
+SHAREMIND_ENUM_CUSTOM_DEFINE_TOSTRING(SharemindAssemblerError, SHAREMIND_ASSEMBLER_ERROR_ENUM);
 
-#define SMAS_ASSEMBLE_EOF_TEST     (unlikely(  t >= e))
-#define SMAS_ASSEMBLE_INC_EOF_TEST (unlikely(++t >= e))
+#define SHAREMIND_ASSEMBLER_ASSEMBLE_EOF_TEST     (unlikely(  t >= e))
+#define SHAREMIND_ASSEMBLER_ASSEMBLE_INC_EOF_TEST (unlikely(++t >= e))
 
-#define SMAS_ASSEMBLE_INC_CHECK_EOF(eof) \
-    if (SMAS_ASSEMBLE_INC_EOF_TEST) { \
+#define SHAREMIND_ASSEMBLER_ASSEMBLE_INC_CHECK_EOF(eof) \
+    if (SHAREMIND_ASSEMBLER_ASSEMBLE_INC_EOF_TEST) { \
         goto eof; \
     } else (void) 0
 
-#define SMAS_ASSEMBLE_DO_EOL(eof,noexpect) \
+#define SHAREMIND_ASSEMBLER_ASSEMBLE_DO_EOL(eof,noexpect) \
     if (1) { \
-        if (SMAS_ASSEMBLE_EOF_TEST) \
+        if (SHAREMIND_ASSEMBLER_ASSEMBLE_EOF_TEST) \
             goto eof; \
-        if (unlikely(t->type != SMAS_TOKEN_NEWLINE)) \
+        if (unlikely(t->type != SHAREMIND_ASSEMBLER_TOKEN_NEWLINE)) \
             goto noexpect; \
     } else (void) 0
 
-#define SMAS_ASSEMBLE_INC_DO_EOL(eof,noexpect) \
+#define SHAREMIND_ASSEMBLER_ASSEMBLE_INC_DO_EOL(eof,noexpect) \
     if (1) { \
         t++; \
-        SMAS_ASSEMBLE_DO_EOL(eof,noexpect); \
+        SHAREMIND_ASSEMBLER_ASSEMBLE_DO_EOL(eof,noexpect); \
     } else (void) 0
 
-SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
-                                  SMAS_LinkingUnits * lus,
-                                  const SMAS_Token ** errorToken,
-                                  char ** errorString)
+SharemindAssemblerError sharemind_assembler_assemble(
+        const SharemindAssemblerTokens * ts,
+        SharemindAssemblerLinkingUnits * lus,
+        const SharemindAssemblerToken ** errorToken,
+        char ** errorString)
 {
-    SMAS_Assemble_Error returnStatus;
-    SMAS_Token * t;
-    SMAS_Token * e;
-    SMAS_LinkingUnit * lu;
+    SharemindAssemblerError returnStatus;
+    SharemindAssemblerToken * t;
+    SharemindAssemblerToken * e;
+    SharemindAssemblerLinkingUnit * lu;
     size_t lu_index = 0u;
     int section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
     size_t numBindings = 0u;
@@ -187,67 +189,67 @@ SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
     if (errorString)
         *errorString = NULL;
 
-    SMAS_LabelLocations ll;
-    SMAS_LabelLocations_init(&ll);
+    SharemindAssemblerLabelLocations ll;
+    SharemindAssemblerLabelLocations_init(&ll);
 
-    SMAS_LabelSlotsTrie lst;
-    SMAS_LabelSlotsTrie_init(&lst);
+    SharemindAssemblerLabelSlotsTrie lst;
+    SharemindAssemblerLabelSlotsTrie_init(&lst);
 
     {
-        SMAS_LabelLocation * l = SMAS_LabelLocations_get_or_insert(&ll, "RODATA", NULL);
+        SharemindAssemblerLabelLocation * l = SharemindAssemblerLabelLocations_get_or_insert(&ll, "RODATA", NULL);
         if (unlikely(!l))
-            goto smas_assemble_out_of_memory;
+            goto assemble_out_of_memory;
         /* l->linkingUnit = SIZE_MAX; */ /* Not used. */
         l->section = -1;
         l->offset = 1u;
-        l = SMAS_LabelLocations_get_or_insert(&ll, "DATA", NULL);
+        l = SharemindAssemblerLabelLocations_get_or_insert(&ll, "DATA", NULL);
         if (unlikely(!l))
-            goto smas_assemble_out_of_memory;
+            goto assemble_out_of_memory;
         /* l->linkingUnit = SIZE_MAX; */ /* Not used. */
         l->section = -1;
         l->offset = 2u;
-        l = SMAS_LabelLocations_get_or_insert(&ll, "BSS", NULL);
+        l = SharemindAssemblerLabelLocations_get_or_insert(&ll, "BSS", NULL);
         if (unlikely(!l))
-            goto smas_assemble_out_of_memory;
+            goto assemble_out_of_memory;
         /* l->linkingUnit = SIZE_MAX; */ /* Not used. */
         l->section = -1;
         l->offset = 3u;
     }
 
 
-    lu = SMAS_LinkingUnits_push(lus);
+    lu = SharemindAssemblerLinkingUnits_push(lus);
     if (unlikely(!lu))
-        goto smas_assemble_out_of_memory;
+        goto assemble_out_of_memory;
 
-    SMAS_LinkingUnit_init(lu);
+    SharemindAssemblerLinkingUnit_init(lu);
 
     if (unlikely(ts->numTokens <= 0))
-        goto smas_assemble_ok;
+        goto assemble_ok;
 
     t = &ts->array[0u];
     e = &ts->array[ts->numTokens];
 
-smas_assemble_newline:
+assemble_newline:
     switch (t->type) {
-        case SMAS_TOKEN_NEWLINE:
+        case SHAREMIND_ASSEMBLER_TOKEN_NEWLINE:
             break;
-        case SMAS_TOKEN_LABEL:
+        case SHAREMIND_ASSEMBLER_TOKEN_LABEL:
         {
-            char * label = SMAS_token_label_label_new(t);
+            char * label = SharemindAssemblerToken_label_to_new_string(t);
             if (unlikely(!label))
-                goto smas_assemble_out_of_memory;
+                goto assemble_out_of_memory;
 
             int newValue;
-            SMAS_LabelLocation * l = SMAS_LabelLocations_get_or_insert(&ll, label, &newValue);
+            SharemindAssemblerLabelLocation * l = SharemindAssemblerLabelLocations_get_or_insert(&ll, label, &newValue);
             if (unlikely(!l)) {
                 free(label);
-                goto smas_assemble_out_of_memory;
+                goto assemble_out_of_memory;
             }
 
             /* Check for duplicate label: */
             if (unlikely(!newValue)) {
                 free(label);
-                goto smas_assemble_duplicate_label_t;
+                goto assemble_duplicate_label_t;
             }
 
             l->linkingUnit = lu_index;
@@ -261,42 +263,42 @@ smas_assemble_newline:
             }
 
             /* Fill pending label slots: */
-            SMAS_LabelSlots * slots = SMAS_LabelSlotsTrie_find(&lst, label);
+            SharemindAssemblerLabelSlots * slots = SharemindAssemblerLabelSlotsTrie_find(&lst, label);
             free(label);
             if (slots) {
-                if (!SMAS_LabelSlots_foreach_with_labelLocationPointer(slots, &SMAS_LabelSlot_fill, l))
-                    goto smas_assemble_invalid_label_t;
+                if (!SharemindAssemblerLabelSlots_foreach_with_labelLocationPointer(slots, &SharemindAssemblerLabelSlot_fill, l))
+                    goto assemble_invalid_label_t;
             }
             break;
         }
-        case SMAS_TOKEN_DIRECTIVE:
+        case SHAREMIND_ASSEMBLER_TOKEN_DIRECTIVE:
             if (t->length == 13u && strncmp(t->text, ".linking_unit", 13u) == 0) {
-                SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
-                if (unlikely(t->type != SMAS_TOKEN_UHEX))
-                    goto smas_assemble_invalid_parameter_t;
+                SHAREMIND_ASSEMBLER_ASSEMBLE_INC_CHECK_EOF(assemble_unexpected_eof);
+                if (unlikely(t->type != SHAREMIND_ASSEMBLER_TOKEN_UHEX))
+                    goto assemble_invalid_parameter_t;
 
-                const uint64_t v = SMAS_token_uhex_value(t);
+                const uint64_t v = SharemindAssemblerToken_uhex_value(t);
                 if (unlikely(v > UINT8_MAX))
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
 
                 if (likely(v != lu_index)) {
                     if (unlikely(v > lus->size))
-                        goto smas_assemble_invalid_parameter_t;
+                        goto assemble_invalid_parameter_t;
                     if (v == lus->size) {
-                        lu = SMAS_LinkingUnits_push(lus);
+                        lu = SharemindAssemblerLinkingUnits_push(lus);
                         if (unlikely(!lu))
-                            goto smas_assemble_out_of_memory;
-                        SMAS_LinkingUnit_init(lu);
+                            goto assemble_out_of_memory;
+                        SharemindAssemblerLinkingUnit_init(lu);
                     } else {
-                        lu = SMAS_LinkingUnits_get_pointer(lus, v);
+                        lu = SharemindAssemblerLinkingUnits_get_pointer(lus, v);
                     }
                     lu_index = v;
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
                 }
             } else if (t->length == 8u && strncmp(t->text, ".section", 8u) == 0) {
-                SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
-                if (unlikely(t->type != SMAS_TOKEN_KEYWORD))
-                    goto smas_assemble_invalid_parameter_t;
+                SHAREMIND_ASSEMBLER_ASSEMBLE_INC_CHECK_EOF(assemble_unexpected_eof);
+                if (unlikely(t->type != SHAREMIND_ASSEMBLER_TOKEN_KEYWORD))
+                    goto assemble_invalid_parameter_t;
 
                 if (t->length == 4u && strncmp(t->text, "TEXT", 4u) == 0) {
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
@@ -313,50 +315,50 @@ smas_assemble_newline:
                 } else if (t->length == 5u && strncmp(t->text, "DEBUG", 5u) == 0) {
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_DEBUG;
                 } else {
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
                 }
             } else if (t->length == 5u && strncmp(t->text, ".data", 5u) == 0) {
                 if (unlikely(section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT))
-                    goto smas_assemble_unexpected_token_t;
+                    goto assemble_unexpected_token_t;
 
                 multiplier = 1u;
-                goto smas_assemble_data_or_fill;
+                goto assemble_data_or_fill;
             } else if (t->length == 5u && strncmp(t->text, ".fill", 5u) == 0) {
                 if (unlikely(section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT
                              || section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND
                              || section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND))
-                    goto smas_assemble_unexpected_token_t;
+                    goto assemble_unexpected_token_t;
 
-                SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
+                SHAREMIND_ASSEMBLER_ASSEMBLE_INC_CHECK_EOF(assemble_unexpected_eof);
 
-                if (unlikely(t->type != SMAS_TOKEN_UHEX))
-                    goto smas_assemble_invalid_parameter_t;
+                if (unlikely(t->type != SHAREMIND_ASSEMBLER_TOKEN_UHEX))
+                    goto assemble_invalid_parameter_t;
 
-                multiplier = SMAS_token_uhex_value(t);
+                multiplier = SharemindAssemblerToken_uhex_value(t);
                 if (unlikely(multiplier >= 65536u))
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
 
-                goto smas_assemble_data_or_fill;
+                goto assemble_data_or_fill;
             } else if (likely(t->length == 5u && strncmp(t->text, ".bind", 5u) == 0)) {
                 if (unlikely(section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND && section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND))
-                    goto smas_assemble_unexpected_token_t;
+                    goto assemble_unexpected_token_t;
 
-                SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
+                SHAREMIND_ASSEMBLER_ASSEMBLE_INC_CHECK_EOF(assemble_unexpected_eof);
 
-                if (unlikely(t->type != SMAS_TOKEN_STRING))
-                    goto smas_assemble_invalid_parameter_t;
+                if (unlikely(t->type != SHAREMIND_ASSEMBLER_TOKEN_STRING))
+                    goto assemble_invalid_parameter_t;
 
                 size_t syscallSigLen;
-                char * syscallSig = SMAS_token_string_value(t, &syscallSigLen);
+                char * syscallSig = SharemindAssemblerToken_string_value(t, &syscallSigLen);
                 if (!syscallSig)
-                    goto smas_assemble_out_of_memory;
+                    goto assemble_out_of_memory;
 
                 const size_t oldLen = lu->sections[section_index].length;
                 const size_t newLen = oldLen + syscallSigLen + 1;
                 void * newData = realloc(lu->sections[section_index].data, newLen);
                 if (unlikely(!newData)) {
                     free(syscallSig);
-                    goto smas_assemble_out_of_memory;
+                    goto assemble_out_of_memory;
                 }
                 lu->sections[section_index].data = newData;
                 lu->sections[section_index].length = newLen;
@@ -372,66 +374,66 @@ smas_assemble_newline:
 
                 free(syscallSig);
             } else {
-                goto smas_assemble_unknown_directive_t;
+                goto assemble_unknown_directive_t;
             }
 
-            SMAS_ASSEMBLE_INC_DO_EOL(smas_assemble_check_labels,smas_assemble_unexpected_token_t);
-            goto smas_assemble_newline;
-        case SMAS_TOKEN_KEYWORD:
+            SHAREMIND_ASSEMBLER_ASSEMBLE_INC_DO_EOL(assemble_check_labels,assemble_unexpected_token_t);
+            goto assemble_newline;
+        case SHAREMIND_ASSEMBLER_TOKEN_KEYWORD:
         {
             if (unlikely(section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT))
-                goto smas_assemble_unexpected_token_t;
+                goto assemble_unexpected_token_t;
 
             size_t args = 0u;
             size_t l = t->length;
             char * name = (char *) malloc(sizeof(char) * (l + 1u));
             if (unlikely(!name))
-                goto smas_assemble_out_of_memory;
+                goto assemble_out_of_memory;
             strncpy(name, t->text, l);
 
-            const SMAS_Token * ot = t;
+            const SharemindAssemblerToken * ot = t;
             /* Collect instruction name and count arguments: */
             for (;;) {
-                if (SMAS_ASSEMBLE_INC_EOF_TEST)
+                if (SHAREMIND_ASSEMBLER_ASSEMBLE_INC_EOF_TEST)
                     break;
-                if (t->type == SMAS_TOKEN_NEWLINE) {
+                if (t->type == SHAREMIND_ASSEMBLER_TOKEN_NEWLINE) {
                     break;
-                } else if (t->type == SMAS_TOKEN_KEYWORD) {
+                } else if (t->type == SHAREMIND_ASSEMBLER_TOKEN_KEYWORD) {
                     size_t newSize = l + t->length + 1u;
                     if (unlikely(newSize < l))
-                        goto smas_assemble_invalid_parameter_t;
+                        goto assemble_invalid_parameter_t;
                     char * newName = (char *) realloc(name, sizeof(char) * (newSize + 1u));
                     if (unlikely(!newName)) {
                         free(name);
-                        goto smas_assemble_out_of_memory;
+                        goto assemble_out_of_memory;
                     }
                     name = newName;
                     name[l] = '_';
                     strncpy(name + l + 1u, t->text, t->length);
                     l = newSize;
-                } else if (likely(t->type == SMAS_TOKEN_UHEX || t->type == SMAS_TOKEN_HEX || t->type == SMAS_TOKEN_LABEL || t->type == SMAS_TOKEN_LABEL_O)) {
+                } else if (likely(t->type == SHAREMIND_ASSEMBLER_TOKEN_UHEX || t->type == SHAREMIND_ASSEMBLER_TOKEN_HEX || t->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL || t->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL_O)) {
                     args++;
                 } else {
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
                 }
             }
             name[l] = '\0';
 
             /* Detect and check instruction: */
-            const SMVMI_Instruction * i = SMVMI_Instruction_from_name(name);
+            const SharemindVmInstruction * i = sharemind_vm_instruction_from_name(name);
             if (unlikely(!i)) {
                 if (errorToken)
                     *errorToken = ot;
                 if (errorString)
                     *errorString = name;
-                goto smas_assemble_unknown_instruction;
+                goto assemble_unknown_instruction;
             }
             if (unlikely(i->numArgs != args)) {
                 if (errorToken)
                     *errorToken = ot;
                 if (errorString)
                     *errorString = name;
-                goto smas_assemble_invalid_number_of_parameters;
+                goto assemble_invalid_number_of_parameters;
             }
             free(name);
 
@@ -453,12 +455,12 @@ smas_assemble_newline:
             }
 
             /* Allocate whole instruction: */
-            char * newData = (char *) realloc((void *) lu->sections[section_index].data, sizeof(SHAREMIND_CodeBlock) * (lu->sections[section_index].length + args + 1));
+            char * newData = (char *) realloc((void *) lu->sections[section_index].data, sizeof(SharemindCodeBlock) * (lu->sections[section_index].length + args + 1));
             if (unlikely(!newData))
-                goto smas_assemble_out_of_memory;
+                goto assemble_out_of_memory;
             lu->sections[section_index].data = newData;
-            SHAREMIND_CodeBlock * cbdata = (SHAREMIND_CodeBlock *) lu->sections[section_index].data;
-            SHAREMIND_CodeBlock * instr = &cbdata[lu->sections[section_index].length];
+            SharemindCodeBlock * cbdata = (SharemindCodeBlock *) lu->sections[section_index].data;
+            SharemindCodeBlock * instr = &cbdata[lu->sections[section_index].length];
             lu->sections[section_index].length += args + 1;
 
             /* Write instruction code */
@@ -468,29 +470,29 @@ smas_assemble_newline:
             for (;;) {
                 if (++ot == t)
                     break;
-                if (ot->type == SMAS_TOKEN_UHEX) {
+                if (ot->type == SHAREMIND_ASSEMBLER_TOKEN_UHEX) {
                     doJumpLabel = 0; /* Past first argument */
                     instr++;
-                    instr->uint64[0] = SMAS_token_uhex_value(ot);
-                } else if (ot->type == SMAS_TOKEN_HEX) {
+                    instr->uint64[0] = SharemindAssemblerToken_uhex_value(ot);
+                } else if (ot->type == SHAREMIND_ASSEMBLER_TOKEN_HEX) {
                     doJumpLabel = 0; /* Past first argument */
                     instr++;
-                    instr->int64[0] = SMAS_token_hex_value(ot);
-                } else if (likely(ot->type == SMAS_TOKEN_LABEL || ot->type == SMAS_TOKEN_LABEL_O)) {
+                    instr->int64[0] = SharemindAssemblerToken_hex_value(ot);
+                } else if (likely(ot->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL || ot->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL_O)) {
                     instr++;
-                    char * label = SMAS_token_label_label_new(ot);
+                    char * label = SharemindAssemblerToken_label_to_new_string(ot);
                     if (unlikely(!label))
-                        goto smas_assemble_out_of_memory;
+                        goto assemble_out_of_memory;
 
                     /* Check whether label is defined: */
-                    SMAS_LabelLocation * loc = SMAS_LabelLocations_find(&ll, label);
+                    SharemindAssemblerLabelLocation * loc = SharemindAssemblerLabelLocations_find(&ll, label);
                     if (loc) {
                         free(label);
 
                         /* Is this a jump instruction location? */
                         if (doJumpLabel) {
                             if (loc->section < 0)
-                                goto smas_assemble_invalid_label;
+                                goto assemble_invalid_label;
 
                             assert(jmpOffset >= loc->offset); /* Because we're one-pass. */
 
@@ -498,7 +500,7 @@ smas_assemble_newline:
                             if (loc->linkingUnit != lu_index) {
                                 if (errorToken)
                                     *errorToken = ot;
-                                goto smas_assemble_invalid_label;
+                                goto assemble_invalid_label;
                             }
 
                             /* Verify that the label is defined in a TEXT section: */
@@ -506,95 +508,95 @@ smas_assemble_newline:
                             if (loc->section != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT) {
                                 if (errorToken)
                                     *errorToken = ot;
-                                goto smas_assemble_invalid_label;
+                                goto assemble_invalid_label;
                             }
 
                             size_t absTarget = loc->offset;
-                            if (!SMAS_Assemble_assign_add_sizet_int64(&absTarget, SMAS_token_label_offset(ot))
-                                || !SMAS_Assemble_substract_sizet_sizet_to_int64(&instr->int64[0], absTarget, jmpOffset))
+                            if (!sharemind_assembler_assign_add_sizet_int64(&absTarget, SharemindAssemblerToken_label_offset(ot))
+                                || !sharemind_assembler_substract_sizet_sizet_to_int64(&instr->int64[0], absTarget, jmpOffset))
                             {
                                 if (errorToken)
                                     *errorToken = ot;
-                                goto smas_assemble_invalid_label_offset;
+                                goto assemble_invalid_label_offset;
                             }
                             /** \todo Maybe check whether there's really an instruction there */
                         } else {
                             size_t absTarget = loc->offset;
-                            int64_t offset = SMAS_token_label_offset(ot);
+                            int64_t offset = SharemindAssemblerToken_label_offset(ot);
                             if (loc->section < 0) {
                                 if (offset != 0)
-                                    goto smas_assemble_invalid_label_offset;
+                                    goto assemble_invalid_label_offset;
                             } else {
-                                if (!SMAS_Assemble_assign_add_sizet_int64(&absTarget, offset)) {
+                                if (!sharemind_assembler_assign_add_sizet_int64(&absTarget, offset)) {
                                     if (errorToken)
                                         *errorToken = ot;
-                                    goto smas_assemble_invalid_label_offset;
+                                    goto assemble_invalid_label_offset;
                                 }
                             }
                             instr->uint64[0] = absTarget;
                         }
                     } else {
                         int newValue;
-                        SMAS_LabelSlots * slots = SMAS_LabelSlotsTrie_get_or_insert(&lst, label, &newValue);
+                        SharemindAssemblerLabelSlots * slots = SharemindAssemblerLabelSlotsTrie_get_or_insert(&lst, label, &newValue);
                         free(label);
                         if (unlikely(!slots))
-                            goto smas_assemble_out_of_memory;
+                            goto assemble_out_of_memory;
 
                         if (newValue)
-                            SMAS_LabelSlots_init(slots);
+                            SharemindAssemblerLabelSlots_init(slots);
 
-                        SMAS_LabelSlot * slot = SMAS_LabelSlots_push(slots);
+                        SharemindAssemblerLabelSlot * slot = SharemindAssemblerLabelSlots_push(slots);
                         if (unlikely(!slot))
-                            goto smas_assemble_out_of_memory;
+                            goto assemble_out_of_memory;
 
                         slot->linkingUnit = lu_index;
                         slot->section = section_index;
-                        slot->extraOffset = SMAS_token_label_offset(ot);
+                        slot->extraOffset = SharemindAssemblerToken_label_offset(ot);
                         slot->doJumpLabel = doJumpLabel; /* Signal a relative jump label */
                         slot->jmpOffset = jmpOffset;
                         slot->data = &lu->sections[section_index].data;
-                        assert(instr > (SHAREMIND_CodeBlock *) lu->sections[section_index].data);
-                        assert(((uintmax_t) (instr - (SHAREMIND_CodeBlock *) lu->sections[section_index].data)) <= SIZE_MAX);
-                        slot->cbdata_index = (size_t) (instr - (SHAREMIND_CodeBlock *) lu->sections[section_index].data);
+                        assert(instr > (SharemindCodeBlock *) lu->sections[section_index].data);
+                        assert(((uintmax_t) (instr - (SharemindCodeBlock *) lu->sections[section_index].data)) <= SIZE_MAX);
+                        slot->cbdata_index = (size_t) (instr - (SharemindCodeBlock *) lu->sections[section_index].data);
                         slot->token = ot;
                     }
                     doJumpLabel = 0; /* Past first argument */
                 } else {
                     /* Skip keywords, because they're already included in the instruction code. */
-                    assert(ot->type == SMAS_TOKEN_KEYWORD);
+                    assert(ot->type == SHAREMIND_ASSEMBLER_TOKEN_KEYWORD);
                 }
             }
 
-            SMAS_ASSEMBLE_DO_EOL(smas_assemble_check_labels,smas_assemble_unexpected_token_t);
-            goto smas_assemble_newline;
+            SHAREMIND_ASSEMBLER_ASSEMBLE_DO_EOL(assemble_check_labels,assemble_unexpected_token_t);
+            goto assemble_newline;
         }
         default:
-            goto smas_assemble_unexpected_token_t;
+            goto assemble_unexpected_token_t;
     } /* switch */
 
-    if (!SMAS_ASSEMBLE_INC_EOF_TEST)
-        goto smas_assemble_newline;
+    if (!SHAREMIND_ASSEMBLER_ASSEMBLE_INC_EOF_TEST)
+        goto assemble_newline;
 
-smas_assemble_check_labels:
+assemble_check_labels:
 
     /* Check for undefined labels: */
     {
-        SMAS_LabelSlot * undefinedSlot;
-        if (likely(SMAS_LabelSlotsTrie_foreach_with_labelSlotPointerPointer(&lst, &SMAS_LabelSlots_allSlotsFilled, &undefinedSlot)))
-            goto smas_assemble_ok;
+        SharemindAssemblerLabelSlot * undefinedSlot;
+        if (likely(SharemindAssemblerLabelSlotsTrie_foreach_with_labelSlotPointerPointer(&lst, &SharemindAssemblerLabelSlots_all_slots_filled, &undefinedSlot)))
+            goto assemble_ok;
 
         assert(undefinedSlot);
         if (errorToken)
             *errorToken = undefinedSlot->token;
-        goto smas_assemble_undefined_label;
+        goto assemble_undefined_label;
     }
 
-smas_assemble_data_or_fill:
+assemble_data_or_fill:
 
-    SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
+    SHAREMIND_ASSEMBLER_ASSEMBLE_INC_CHECK_EOF(assemble_unexpected_eof);
 
-    if (unlikely(t->type != SMAS_TOKEN_KEYWORD))
-        goto smas_assemble_invalid_parameter_t;
+    if (unlikely(t->type != SHAREMIND_ASSEMBLER_TOKEN_KEYWORD))
+        goto assemble_invalid_parameter_t;
 
     if (t->length == 5u && strncmp(t->text, "uint8", t->length) == 0) {
         type = 0u;
@@ -615,7 +617,7 @@ smas_assemble_data_or_fill:
     } else if (t->length == 6u && strncmp(t->text, "string", t->length) == 0) {
         type = 8u;
     } else {
-        goto smas_assemble_invalid_parameter_t;
+        goto assemble_invalid_parameter_t;
     }
 
     if (type < 8u) {
@@ -625,108 +627,108 @@ smas_assemble_data_or_fill:
         dataToWriteLength = 0u;
     }
 
-    SMAS_ASSEMBLE_INC_DO_EOL(smas_assemble_data_write,smas_assemble_data_opt_param);
-    goto smas_assemble_data_write;
+    SHAREMIND_ASSEMBLER_ASSEMBLE_INC_DO_EOL(assemble_data_write,assemble_data_opt_param);
+    goto assemble_data_write;
 
-smas_assemble_data_opt_param:
+assemble_data_opt_param:
 
     assert(!dataToWrite);
-    if (t->type == SMAS_TOKEN_UHEX) {
-        const uint64_t v = SMAS_token_uhex_value(t);
+    if (t->type == SHAREMIND_ASSEMBLER_TOKEN_UHEX) {
+        const uint64_t v = SharemindAssemblerToken_uhex_value(t);
         switch (type) {
             case 0u: /* uint8 */
                 if (v > UINT8_MAX)
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
                 break;
             case 1u: /* uint16 */
                 if (v > UINT16_MAX)
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
                 break;
             case 2u: /* uint32 */
                 if (v > UINT32_MAX)
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
                 break;
             case 3u: /* uint64; All should be fine here. */
                 break;
             case 4u: /* int8 */
                 if (v > INT8_MAX)
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
                 break;
             case 5u: /* int16 */
                 if (v > INT16_MAX)
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
                 break;
             case 6u: /* int32 */
                 if (v > INT32_MAX)
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
                 break;
             case 7u: /* int64 */
                 if (v > INT64_MAX)
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
                 break;
             case 8u: /* string */
-                goto smas_assemble_invalid_parameter_t;
+                goto assemble_invalid_parameter_t;
             default:
                 abort();
         }
         dataToWrite = malloc(dataToWriteLength);
         if (!dataToWrite)
-            goto smas_assemble_out_of_memory;
+            goto assemble_out_of_memory;
         memcpy(dataToWrite, &v, dataToWriteLength);
-    } else if (t->type == SMAS_TOKEN_HEX) {
-        const int64_t v = SMAS_token_hex_value(t);
+    } else if (t->type == SHAREMIND_ASSEMBLER_TOKEN_HEX) {
+        const int64_t v = SharemindAssemblerToken_hex_value(t);
         switch (type) {
             case 0u: /* uint8 */
                 if (v > UINT8_MAX || v < 0)
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
                 break;
             case 1u: /* uint16 */
                 if (v > UINT16_MAX || v < 0)
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
                 break;
             case 2u: /* uint32 */
                 if (v > UINT32_MAX || v < 0)
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
                 break;
             case 3u: /* uint64 */
                 if (v < 0)
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
                 break;
             case 4u: /* int8 */
                 if (v < INT8_MIN || v > INT8_MAX)
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
                 break;
             case 5u: /* int16 */
                 if (v < INT16_MIN || v > INT16_MAX)
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
                 break;
             case 6u: /* int32 */
                 if (v < INT32_MIN || v > INT32_MAX)
-                    goto smas_assemble_invalid_parameter_t;
+                    goto assemble_invalid_parameter_t;
                 break;
             case 7u: /* int64; All should be fine here. */
                 break;
             case 8u: /* string */
-                goto smas_assemble_invalid_parameter_t;
+                goto assemble_invalid_parameter_t;
             default:
                 abort();
         }
         dataToWrite = malloc(dataToWriteLength);
         if (!dataToWrite)
-            goto smas_assemble_out_of_memory;
+            goto assemble_out_of_memory;
         memcpy(dataToWrite, &v, dataToWriteLength);
-    } else if (t->type == SMAS_TOKEN_STRING && type == 8u) {
-        dataToWrite = SMAS_token_string_value(t, &dataToWriteLength);
+    } else if (t->type == SHAREMIND_ASSEMBLER_TOKEN_STRING && type == 8u) {
+        dataToWrite = SharemindAssemblerToken_string_value(t, &dataToWriteLength);
         if (!dataToWrite)
-            goto smas_assemble_out_of_memory;
+            goto assemble_out_of_memory;
     } else {
-        goto smas_assemble_invalid_parameter_t;
+        goto assemble_invalid_parameter_t;
     }
     assert(dataToWrite);
 
-    SMAS_ASSEMBLE_INC_DO_EOL(smas_assemble_data_write,smas_assemble_unexpected_token_t);
+    SHAREMIND_ASSEMBLER_ASSEMBLE_INC_DO_EOL(assemble_data_write,assemble_unexpected_token_t);
 
-smas_assemble_data_write:
+assemble_data_write:
 
     assert(section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT);
     if (section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
@@ -737,7 +739,7 @@ smas_assemble_data_write:
         void * newData = realloc(lu->sections[section_index].data, newLen);
         if (unlikely(!newData)) {
             free(dataToWrite);
-            goto smas_assemble_out_of_memory;
+            goto assemble_out_of_memory;
         }
         lu->sections[section_index].data = newData;
         lu->sections[section_index].length = newLen;
@@ -759,17 +761,17 @@ smas_assemble_data_write:
     if (dataToWrite)
         free(dataToWrite);
     dataToWrite = NULL;
-    goto smas_assemble_newline;
+    goto assemble_newline;
 
-smas_assemble_ok:
-    returnStatus = SMAS_ASSEMBLE_OK;
-    goto smas_assemble_free_and_return;
+assemble_ok:
+    returnStatus = SHAREMIND_ASSEMBLE_OK;
+    goto assemble_free_and_return;
 
-smas_assemble_out_of_memory:
-    returnStatus = SMAS_ASSEMBLE_OUT_OF_MEMORY;
-    goto smas_assemble_free_and_return;
+assemble_out_of_memory:
+    returnStatus = SHAREMIND_ASSEMBLE_OUT_OF_MEMORY;
+    goto assemble_free_and_return;
 
-smas_assemble_unexpected_token_t:
+assemble_unexpected_token_t:
     if (errorToken)
         *errorToken = t;
     if (errorString) {
@@ -777,56 +779,56 @@ smas_assemble_unexpected_token_t:
         strncpy(*errorString, t->text, t->length);
         *errorString[t->length] = '\0';
     }
-    returnStatus = SMAS_ASSEMBLE_UNEXPECTED_TOKEN;
-    goto smas_assemble_free_and_return;
+    returnStatus = SHAREMIND_ASSEMBLE_UNEXPECTED_TOKEN;
+    goto assemble_free_and_return;
 
-smas_assemble_unexpected_eof:
-    returnStatus = SMAS_ASSEMBLE_UNEXPECTED_EOF;
-    goto smas_assemble_free_and_return;
+assemble_unexpected_eof:
+    returnStatus = SHAREMIND_ASSEMBLE_UNEXPECTED_EOF;
+    goto assemble_free_and_return;
 
-smas_assemble_duplicate_label_t:
+assemble_duplicate_label_t:
     if (errorToken)
         *errorToken = t;
-    returnStatus = SMAS_ASSEMBLE_DUPLICATE_LABEL;
-    goto smas_assemble_free_and_return;
+    returnStatus = SHAREMIND_ASSEMBLE_DUPLICATE_LABEL;
+    goto assemble_free_and_return;
 
-smas_assemble_unknown_directive_t:
+assemble_unknown_directive_t:
     if (errorToken)
         *errorToken = t;
-    returnStatus = SMAS_ASSEMBLE_UNKNOWN_DIRECTIVE;
-    goto smas_assemble_free_and_return;
+    returnStatus = SHAREMIND_ASSEMBLE_UNKNOWN_DIRECTIVE;
+    goto assemble_free_and_return;
 
-smas_assemble_unknown_instruction:
-    returnStatus = SMAS_ASSEMBLE_UNKNOWN_INSTRUCTION;
-    goto smas_assemble_free_and_return;
+assemble_unknown_instruction:
+    returnStatus = SHAREMIND_ASSEMBLE_UNKNOWN_INSTRUCTION;
+    goto assemble_free_and_return;
 
-smas_assemble_invalid_number_of_parameters:
-    returnStatus = SMAS_ASSEMBLE_INVALID_NUMBER_OF_PARAMETERS;
-    goto smas_assemble_free_and_return;
+assemble_invalid_number_of_parameters:
+    returnStatus = SHAREMIND_ASSEMBLE_INVALID_NUMBER_OF_PARAMETERS;
+    goto assemble_free_and_return;
 
-smas_assemble_invalid_parameter_t:
+assemble_invalid_parameter_t:
     if (errorToken)
         *errorToken = t;
-    returnStatus = SMAS_ASSEMBLE_INVALID_PARAMETER;
-    goto smas_assemble_free_and_return;
+    returnStatus = SHAREMIND_ASSEMBLE_INVALID_PARAMETER;
+    goto assemble_free_and_return;
 
-smas_assemble_undefined_label:
-    returnStatus = SMAS_ASSEMBLE_UNDEFINED_LABEL;
-    goto smas_assemble_free_and_return;
+assemble_undefined_label:
+    returnStatus = SHAREMIND_ASSEMBLE_UNDEFINED_LABEL;
+    goto assemble_free_and_return;
 
-smas_assemble_invalid_label_t:
+assemble_invalid_label_t:
     if (errorToken)
         *errorToken = t;
-smas_assemble_invalid_label:
-    returnStatus = SMAS_ASSEMBLE_INVALID_LABEL;
-    goto smas_assemble_free_and_return;
+assemble_invalid_label:
+    returnStatus = SHAREMIND_ASSEMBLE_INVALID_LABEL;
+    goto assemble_free_and_return;
 
-smas_assemble_invalid_label_offset:
-    returnStatus = SMAS_ASSEMBLE_INVALID_LABEL_OFFSET;
-    goto smas_assemble_free_and_return;
+assemble_invalid_label_offset:
+    returnStatus = SHAREMIND_ASSEMBLE_INVALID_LABEL_OFFSET;
+    goto assemble_free_and_return;
 
-smas_assemble_free_and_return:
-    SMAS_LabelSlotsTrie_destroy_with(&lst, &SMAS_LabelSlots_destroy);
-    SMAS_LabelLocations_destroy(&ll);
+assemble_free_and_return:
+    SharemindAssemblerLabelSlotsTrie_destroy_with(&lst, &SharemindAssemblerLabelSlots_destroy);
+    SharemindAssemblerLabelLocations_destroy(&ll);
     return returnStatus;
 }
