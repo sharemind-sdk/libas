@@ -17,7 +17,7 @@
 #include "stdion.h"
 
 
-SM_ENUM_DEFINE_TOSTRING(SMAS_TokenType, SMAS_ENUM_TokenType);
+SHAREMIND_ENUM_DEFINE_TOSTRING(SMAS_TokenType, SMAS_ENUM_TokenType);
 
 uint64_t SMAS_read_hex(const char * c, size_t l) {
     assert(c);

@@ -18,10 +18,10 @@
 
 /* COMMON */
 
-SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LinkingUnits,SMAS_LinkingUnit,sizetPointer,size_t *,)
-SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,SMAS_LinkingUnit,sizetPointer,size_t *,size_t * l,l,)
-SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LinkingUnits,SMAS_LinkingUnit,outputPointer,uint8_t **,)
-SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,SMAS_LinkingUnit,outputPointer,uint8_t **,uint8_t ** p,p,)
+SHAREMIND_VECTOR_DECLARE_FOREACH_WITH(SMAS_LinkingUnits,SMAS_LinkingUnit,sizetPointer,size_t *,)
+SHAREMIND_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,SMAS_LinkingUnit,sizetPointer,size_t *,size_t * l,l,)
+SHAREMIND_VECTOR_DECLARE_FOREACH_WITH(SMAS_LinkingUnits,SMAS_LinkingUnit,outputPointer,uint8_t **,)
+SHAREMIND_VECTOR_DEFINE_FOREACH_WITH(SMAS_LinkingUnits,SMAS_LinkingUnit,outputPointer,uint8_t **,uint8_t ** p,p,)
 
 static int SMAS_link_0x0(Sharemind_Executable_Common_Header ** data, SMAS_LinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit);
 
@@ -56,7 +56,7 @@ static int calculateLinkingUnitSize_0x0(SMAS_LinkingUnit * lu, size_t * s) {
             *s += sizeof(Sharemind_Executable_Section_Header_0x0);
             if (i != SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
                 if (i == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT) {
-                    *s += lu->sections[i].length * sizeof(SMVM_CodeBlock);
+                    *s += lu->sections[i].length * sizeof(SHAREMIND_CodeBlock);
                 } else {
                     *s += lu->sections[i].length + extraPadding[lu->sections[i].length % 8];
                 }

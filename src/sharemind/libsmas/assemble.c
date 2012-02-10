@@ -64,8 +64,8 @@ typedef struct {
     size_t offset;
 } SMAS_LabelLocation;
 
-SM_TRIE_DECLARE(SMAS_LabelLocations,SMAS_LabelLocation,)
-SM_TRIE_DEFINE(SMAS_LabelLocations,SMAS_LabelLocation,malloc,free,)
+SHAREMIND_TRIE_DECLARE(SMAS_LabelLocations,SMAS_LabelLocation,)
+SHAREMIND_TRIE_DEFINE(SMAS_LabelLocations,SMAS_LabelLocation,malloc,free,)
 
 typedef struct {
     size_t linkingUnit;
@@ -86,21 +86,21 @@ static int SMAS_LabelSlot_filled(SMAS_LabelSlot * s, SMAS_LabelSlot ** d) {
     return 0;
 }
 
-SM_VECTOR_DECLARE(SMAS_LabelSlots,SMAS_LabelSlot,,)
-SM_VECTOR_DEFINE(SMAS_LabelSlots,SMAS_LabelSlot,malloc,free,realloc,)
-SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelLocationPointer,SMAS_LabelLocation *,)
-SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelLocationPointer,SMAS_LabelLocation *,SMAS_LabelLocation * p,p,)
-SM_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelSlotPointerPointer,SMAS_LabelSlot **,)
-SM_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelSlotPointerPointer,SMAS_LabelSlot **,SMAS_LabelSlot ** p,p,)
+SHAREMIND_VECTOR_DECLARE(SMAS_LabelSlots,SMAS_LabelSlot,,)
+SHAREMIND_VECTOR_DEFINE(SMAS_LabelSlots,SMAS_LabelSlot,malloc,free,realloc,)
+SHAREMIND_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelLocationPointer,SMAS_LabelLocation *,)
+SHAREMIND_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelLocationPointer,SMAS_LabelLocation *,SMAS_LabelLocation * p,p,)
+SHAREMIND_VECTOR_DECLARE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelSlotPointerPointer,SMAS_LabelSlot **,)
+SHAREMIND_VECTOR_DEFINE_FOREACH_WITH(SMAS_LabelSlots,SMAS_LabelSlot,labelSlotPointerPointer,SMAS_LabelSlot **,SMAS_LabelSlot ** p,p,)
 
 static int SMAS_LabelSlots_allSlotsFilled(SMAS_LabelSlots * ss, SMAS_LabelSlot ** d) {
     return SMAS_LabelSlots_foreach_with_labelSlotPointerPointer(ss, &SMAS_LabelSlot_filled, d);
 }
 
-SM_TRIE_DECLARE(SMAS_LabelSlotsTrie,SMAS_LabelSlots,)
-SM_TRIE_DEFINE(SMAS_LabelSlotsTrie,SMAS_LabelSlots,malloc,free,)
-SM_TRIE_DECLARE_FOREACH_WITH(SMAS_LabelSlotsTrie,SMAS_LabelSlots,labelSlotPointerPointer,SMAS_LabelSlot **,SMAS_LabelSlot ** p,)
-SM_TRIE_DEFINE_FOREACH_WITH(SMAS_LabelSlotsTrie,SMAS_LabelSlots,labelSlotPointerPointer,SMAS_LabelSlot **,SMAS_LabelSlot ** p,p,)
+SHAREMIND_TRIE_DECLARE(SMAS_LabelSlotsTrie,SMAS_LabelSlots,)
+SHAREMIND_TRIE_DEFINE(SMAS_LabelSlotsTrie,SMAS_LabelSlots,malloc,free,)
+SHAREMIND_TRIE_DECLARE_FOREACH_WITH(SMAS_LabelSlotsTrie,SMAS_LabelSlots,labelSlotPointerPointer,SMAS_LabelSlot **,SMAS_LabelSlot ** p,)
+SHAREMIND_TRIE_DEFINE_FOREACH_WITH(SMAS_LabelSlotsTrie,SMAS_LabelSlots,labelSlotPointerPointer,SMAS_LabelSlot **,SMAS_LabelSlot ** p,p,)
 
 static int SMAS_LabelSlot_fill(SMAS_LabelSlot * s, SMAS_LabelLocation * l) {
     assert(s);
@@ -112,7 +112,7 @@ static int SMAS_LabelSlot_fill(SMAS_LabelSlot * s, SMAS_LabelLocation * l) {
         goto SMAS_LabelSlot_fill_error;
 
     if (!s->doJumpLabel) { /* Normal absolute label */
-        ((SMVM_CodeBlock *) *s->data)[s->cbdata_index].uint64[0] = absTarget;
+        ((SHAREMIND_CodeBlock *) *s->data)[s->cbdata_index].uint64[0] = absTarget;
     } else { /* Relative jump label */
         if (s->section != l->section || s->linkingUnit != l->linkingUnit)
             goto SMAS_LabelSlot_fill_error;
@@ -120,7 +120,7 @@ static int SMAS_LabelSlot_fill(SMAS_LabelSlot * s, SMAS_LabelLocation * l) {
         assert(s->section == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT);
         assert(s->jmpOffset < l->offset); /* Because we're one-pass. */
 
-        if (!SMAS_Assemble_substract_sizet_sizet_to_int64(&((SMVM_CodeBlock *) *s->data)[s->cbdata_index].int64[0], absTarget, s->jmpOffset))
+        if (!SMAS_Assemble_substract_sizet_sizet_to_int64(&((SHAREMIND_CodeBlock *) *s->data)[s->cbdata_index].int64[0], absTarget, s->jmpOffset))
             goto SMAS_LabelSlot_fill_error;
 
         /** \todo Maybe check whether there's really an instruction there */
@@ -133,7 +133,7 @@ SMAS_LabelSlot_fill_error:
     return 0;
 }
 
-SM_ENUM_CUSTOM_DEFINE_TOSTRING(SMAS_Assemble_Error, SMAS_ENUM_Assemble_Error);
+SHAREMIND_ENUM_CUSTOM_DEFINE_TOSTRING(SMAS_Assemble_Error, SMAS_ENUM_Assemble_Error);
 
 #define SMAS_ASSEMBLE_EOF_TEST     (unlikely(  t >= e))
 #define SMAS_ASSEMBLE_INC_EOF_TEST (unlikely(++t >= e))
@@ -453,12 +453,12 @@ smas_assemble_newline:
             }
 
             /* Allocate whole instruction: */
-            char * newData = (char *) realloc((void *) lu->sections[section_index].data, sizeof(SMVM_CodeBlock) * (lu->sections[section_index].length + args + 1));
+            char * newData = (char *) realloc((void *) lu->sections[section_index].data, sizeof(SHAREMIND_CodeBlock) * (lu->sections[section_index].length + args + 1));
             if (unlikely(!newData))
                 goto smas_assemble_out_of_memory;
             lu->sections[section_index].data = newData;
-            SMVM_CodeBlock * cbdata = (SMVM_CodeBlock *) lu->sections[section_index].data;
-            SMVM_CodeBlock * instr = &cbdata[lu->sections[section_index].length];
+            SHAREMIND_CodeBlock * cbdata = (SHAREMIND_CodeBlock *) lu->sections[section_index].data;
+            SHAREMIND_CodeBlock * instr = &cbdata[lu->sections[section_index].length];
             lu->sections[section_index].length += args + 1;
 
             /* Write instruction code */
@@ -553,9 +553,9 @@ smas_assemble_newline:
                         slot->doJumpLabel = doJumpLabel; /* Signal a relative jump label */
                         slot->jmpOffset = jmpOffset;
                         slot->data = &lu->sections[section_index].data;
-                        assert(instr > (SMVM_CodeBlock *) lu->sections[section_index].data);
-                        assert(((uintmax_t) (instr - (SMVM_CodeBlock *) lu->sections[section_index].data)) <= SIZE_MAX);
-                        slot->cbdata_index = (size_t) (instr - (SMVM_CodeBlock *) lu->sections[section_index].data);
+                        assert(instr > (SHAREMIND_CodeBlock *) lu->sections[section_index].data);
+                        assert(((uintmax_t) (instr - (SHAREMIND_CodeBlock *) lu->sections[section_index].data)) <= SIZE_MAX);
+                        slot->cbdata_index = (size_t) (instr - (SHAREMIND_CodeBlock *) lu->sections[section_index].data);
                         slot->token = ot;
                     }
                     doJumpLabel = 0; /* Past first argument */

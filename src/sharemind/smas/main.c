@@ -19,7 +19,7 @@
 #include "../libsmas/tokenizer.h"
 
 
-SM_STATIC_ASSERT(sizeof(off_t) <= sizeof(size_t));
+SHAREMIND_STATIC_ASSERT(sizeof(off_t) <= sizeof(size_t));
 
 int main(int argc, char * argv[]) {
     const char * inName = NULL;

@@ -36,7 +36,7 @@ typedef struct {
 void SMAS_LinkingUnit_init(SMAS_LinkingUnit * lu) __attribute__ ((nonnull(1)));
 void SMAS_LinkingUnit_destroy(SMAS_LinkingUnit * lu) __attribute__ ((nonnull(1)));
 
-SM_VECTOR_DECLARE(SMAS_LinkingUnits,SMAS_LinkingUnit,,)
+SHAREMIND_VECTOR_DECLARE(SMAS_LinkingUnits,SMAS_LinkingUnit,,)
 
 
 #ifdef __cplusplus

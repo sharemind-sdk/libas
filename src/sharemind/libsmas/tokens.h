@@ -31,8 +31,8 @@ uint64_t SMAS_read_hex(const char * c, size_t l) __attribute__ ((nonnull(1)));
     (SMAS_TOKEN_LABEL_O) \
     (SMAS_TOKEN_LABEL) \
     (SMAS_TOKEN_KEYWORD)
-SM_ENUM_DEFINE(SMAS_TokenType, SMAS_ENUM_TokenType);
-SM_ENUM_DECLARE_TOSTRING(SMAS_TokenType);
+SHAREMIND_ENUM_DEFINE(SMAS_TokenType, SMAS_ENUM_TokenType);
+SHAREMIND_ENUM_DECLARE_TOSTRING(SMAS_TokenType);
 
 typedef struct {
     SMAS_TokenType type;
