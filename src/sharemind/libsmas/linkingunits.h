@@ -11,7 +11,7 @@
 #define SHAREMIND_LIBSMAS_LINKINGUNITS_H
 
 #include <sharemind/codeblock.h>
-#include <sharemind/libexecutable/libexecutable.h>
+#include <sharemind/libexecutable/sharemind_executable_section_type.h>
 #include <sharemind/vector.h>
 #include <stddef.h>
 
@@ -30,7 +30,7 @@ void SMAS_Section_destroy(SMAS_Section * s) __attribute__ ((nonnull(1)));
 
 
 typedef struct {
-    SMAS_Section sections[SME_SECTION_TYPE_COUNT];
+    SMAS_Section sections[SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT];
 } SMAS_LinkingUnit;
 
 void SMAS_LinkingUnit_init(SMAS_LinkingUnit * lu) __attribute__ ((nonnull(1)));

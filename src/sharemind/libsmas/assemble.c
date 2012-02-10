@@ -117,7 +117,7 @@ static int SMAS_LabelSlot_fill(SMAS_LabelSlot * s, SMAS_LabelLocation * l) {
         if (s->section != l->section || s->linkingUnit != l->linkingUnit)
             goto SMAS_LabelSlot_fill_error;
 
-        assert(s->section == SME_SECTION_TYPE_TEXT);
+        assert(s->section == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT);
         assert(s->jmpOffset < l->offset); /* Because we're one-pass. */
 
         if (!SMAS_Assemble_substract_sizet_sizet_to_int64(&((SMVM_CodeBlock *) *s->data)[s->cbdata_index].int64[0], absTarget, s->jmpOffset))
@@ -167,7 +167,7 @@ SMAS_Assemble_Error SMAS_assemble(const SMAS_Tokens * ts,
     SMAS_Token * e;
     SMAS_LinkingUnit * lu;
     size_t lu_index = 0u;
-    int section_index = SME_SECTION_TYPE_TEXT;
+    int section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
     size_t numBindings = 0u;
     size_t numPdBindings = 0u;
     void * dataToWrite = NULL;
@@ -252,9 +252,9 @@ smas_assemble_newline:
 
             l->linkingUnit = lu_index;
             l->section = section_index;
-            if (section_index == SME_SECTION_TYPE_BIND) {
+            if (section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND) {
                 l->offset = numBindings;
-            } else if (section_index == SME_SECTION_TYPE_PDBIND) {
+            } else if (section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND) {
                 l->offset = numPdBindings;
             } else {
                 l->offset = lu->sections[section_index].length;
@@ -291,7 +291,7 @@ smas_assemble_newline:
                         lu = SMAS_LinkingUnits_get_pointer(lus, v);
                     }
                     lu_index = v;
-                    section_index = SME_SECTION_TYPE_TEXT;
+                    section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
                 }
             } else if (t->length == 8u && strncmp(t->text, ".section", 8u) == 0) {
                 SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
@@ -299,32 +299,32 @@ smas_assemble_newline:
                     goto smas_assemble_invalid_parameter_t;
 
                 if (t->length == 4u && strncmp(t->text, "TEXT", 4u) == 0) {
-                    section_index = SME_SECTION_TYPE_TEXT;
+                    section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
                 } else if (t->length == 6u && strncmp(t->text, "RODATA", 6u) == 0) {
-                    section_index = SME_SECTION_TYPE_RODATA;
+                    section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_RODATA;
                 } else if (t->length == 4u && strncmp(t->text, "DATA", 4u) == 0) {
-                    section_index = SME_SECTION_TYPE_DATA;
+                    section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_DATA;
                 } else if (t->length == 3u && strncmp(t->text, "BSS", 3u) == 0) {
-                    section_index = SME_SECTION_TYPE_BSS;
+                    section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS;
                 } else if (t->length == 4u && strncmp(t->text, "BIND", 4u) == 0) {
-                    section_index = SME_SECTION_TYPE_BIND;
+                    section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND;
                 } else if (t->length == 6u && strncmp(t->text, "PDBIND", 6u) == 0) {
-                    section_index = SME_SECTION_TYPE_PDBIND;
+                    section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND;
                 } else if (t->length == 5u && strncmp(t->text, "DEBUG", 5u) == 0) {
-                    section_index = SME_SECTION_TYPE_DEBUG;
+                    section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_DEBUG;
                 } else {
                     goto smas_assemble_invalid_parameter_t;
                 }
             } else if (t->length == 5u && strncmp(t->text, ".data", 5u) == 0) {
-                if (unlikely(section_index == SME_SECTION_TYPE_TEXT))
+                if (unlikely(section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT))
                     goto smas_assemble_unexpected_token_t;
 
                 multiplier = 1u;
                 goto smas_assemble_data_or_fill;
             } else if (t->length == 5u && strncmp(t->text, ".fill", 5u) == 0) {
-                if (unlikely(section_index == SME_SECTION_TYPE_TEXT
-                             || section_index == SME_SECTION_TYPE_BIND
-                             || section_index == SME_SECTION_TYPE_PDBIND))
+                if (unlikely(section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT
+                             || section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND
+                             || section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND))
                     goto smas_assemble_unexpected_token_t;
 
                 SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
@@ -338,7 +338,7 @@ smas_assemble_newline:
 
                 goto smas_assemble_data_or_fill;
             } else if (likely(t->length == 5u && strncmp(t->text, ".bind", 5u) == 0)) {
-                if (unlikely(section_index != SME_SECTION_TYPE_BIND && section_index != SME_SECTION_TYPE_PDBIND))
+                if (unlikely(section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND && section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND))
                     goto smas_assemble_unexpected_token_t;
 
                 SMAS_ASSEMBLE_INC_CHECK_EOF(smas_assemble_unexpected_eof);
@@ -364,7 +364,7 @@ smas_assemble_newline:
                 memcpy(((uint8_t *) lu->sections[section_index].data) + oldLen,
                        syscallSig, syscallSigLen + 1);
 
-                if (section_index == SME_SECTION_TYPE_BIND) {
+                if (section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND) {
                     numBindings++;
                 } else {
                     numPdBindings++;
@@ -379,7 +379,7 @@ smas_assemble_newline:
             goto smas_assemble_newline;
         case SMAS_TOKEN_KEYWORD:
         {
-            if (unlikely(section_index != SME_SECTION_TYPE_TEXT))
+            if (unlikely(section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT))
                 goto smas_assemble_unexpected_token_t;
 
             size_t args = 0u;
@@ -502,8 +502,8 @@ smas_assemble_newline:
                             }
 
                             /* Verify that the label is defined in a TEXT section: */
-                            assert(section_index == SME_SECTION_TYPE_TEXT);
-                            if (loc->section != SME_SECTION_TYPE_TEXT) {
+                            assert(section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT);
+                            if (loc->section != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT) {
                                 if (errorToken)
                                     *errorToken = ot;
                                 goto smas_assemble_invalid_label;
@@ -728,9 +728,9 @@ smas_assemble_data_opt_param:
 
 smas_assemble_data_write:
 
-    assert(section_index != SME_SECTION_TYPE_TEXT);
-    if (section_index == SME_SECTION_TYPE_BSS) {
-        lu->sections[SME_SECTION_TYPE_BSS].length += (multiplier * dataToWriteLength);
+    assert(section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT);
+    if (section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
+        lu->sections[SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS].length += (multiplier * dataToWriteLength);
     } else {
         const size_t oldLen = lu->sections[section_index].length;
         const size_t newLen = oldLen + (multiplier * dataToWriteLength);

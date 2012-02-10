@@ -28,14 +28,14 @@ void SMAS_Section_destroy(SMAS_Section * s) {
 void SMAS_LinkingUnit_init(SMAS_LinkingUnit * lu) {
     assert(lu);
 
-    for (size_t i = 0u; i < SME_SECTION_TYPE_COUNT; i++)
+    for (size_t i = 0u; i < SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT; i++)
         SMAS_Section_init(&lu->sections[i]);
 }
 
 void SMAS_LinkingUnit_destroy(SMAS_LinkingUnit * lu) {
     assert(lu);
 
-    for (size_t i = 0u; i < SME_SECTION_TYPE_COUNT; i++)
+    for (size_t i = 0u; i < SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT; i++)
         SMAS_Section_destroy(&lu->sections[i]);
 }
 
