@@ -16,13 +16,6 @@ IF(NOT Boost_FOUND)
     MESSAGE(FATAL_ERROR "Required Boost library headers not found!")
 ENDIF(NOT Boost_FOUND)
 
-FIND_PROGRAM(M4 m4)
-IF(M4)
-    MESSAGE(STATUS "Found m4 at ${M4}")
-ELSE(M4)
-    MESSAGE(FATAL_ERROR "Required m4 command not found!")
-ENDIF(M4)
-
 IF(NOT SHAREMIND_BIN_DIR)
     MESSAGE(FATAL_ERROR "SHAREMIND_BIN_DIR not defined!")
 ENDIF(NOT SHAREMIND_BIN_DIR)
@@ -60,6 +53,13 @@ IF(NOT EXISTS "${SHAREMIND_EXT_LIBMODAPI_DIR}/src/sharemind/CMakeLists.txt")
     MESSAGE(FATAL "SHAREMIND_EXT_LIBMODAPI_DIR is invalid!")
 ENDIF()
 
+IF(NOT SHAREMIND_EXT_VM_M4_DIR)
+    SET(SHAREMIND_EXT_VM_M4_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../ext/vm_m4")
+ENDIF(NOT SHAREMIND_EXT_VM_M4_DIR)
+IF(NOT EXISTS "${SHAREMIND_EXT_VM_M4_DIR}/src/sharemind/CMakeLists.txt")
+    MESSAGE(FATAL "SHAREMIND_EXT_VM_M4_DIR is invalid!")
+ENDIF()
+
 INCLUDE_DIRECTORIES(BEFORE SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/../sharemind/.."
                                   "${SHAREMIND_GEN_DIR}"
                                   "${SHAREMIND_EXT_VM_GLOBALS_DIR}/include"
@@ -68,7 +68,8 @@ INCLUDE_DIRECTORIES(BEFORE SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/../sharemind/.."
 
 ADD_SUBDIRECTORY("${SHAREMIND_EXT_LIBEXECUTABLE_DIR}/src/sharemind" "${SHAREMIND_EXT_DIR}/libexecutable")
 ADD_SUBDIRECTORY("${SHAREMIND_EXT_LIBMODAPI_DIR}/src/sharemind" "${SHAREMIND_EXT_DIR}/libmodapi")
-
+ADD_SUBDIRECTORY("${SHAREMIND_EXT_VM_M4_DIR}/src/sharemind" "${SHAREMIND_EXT_DIR}/vm_m4")
+SET(M4_DIR_B "${CMAKE_BINARY_DIR}/generated_sources/sharemind/m4")
 
 SET(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -O2 -fstrict-aliasing -Wstrict-aliasing=1 -fwrapv -Wabi -Wbad-function-cast -Wc++-compat -Wformat -Wswitch-default -Wunused -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wconversion -Wsign-conversion -Wlogical-op -Wunused-macros")
 SET(CMAKE_CXX_FLAGS "-std=gnu++98 -Wall -Wextra -O2 -fstrict-aliasing -Wstrict-aliasing=1 -fwrapv -Wabi -Wformat -Wswitch-default -Wunused -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-qual -Wconversion -Wsign-conversion -Wlogical-op -Wunused-macros")
@@ -162,51 +163,11 @@ ENDIF(NOT (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
 
 
 ################################################################################
-# m4 files
-################################################################################
-
-SET(M4_DIR "m4")
-SET(M4_DIR_S "${CMAKE_CURRENT_SOURCE_DIR}/${M4_DIR}")
-
-SET(M4_DIR_B "${SHAREMIND_GEN_DIR}/sharemind/m4")
-FILE(MAKE_DIRECTORY "${M4_DIR_B}")
-
-SET(M4_2_H_SOURCES
-    "dispatches.m4"
-    "instruction_index.m4"
-    "instruction_structs.m4"
-    "static_label_structs.m4"
-    "preprocess_pass2_functions.m4")
-SET(OTHER_FILES ${OTHER_FILES}
-                "${M4_DIR}/datatypebyte.m4"
-                "${M4_DIR}/foreach.m4"
-                "${M4_DIR}/forloop.m4"
-                "${M4_DIR}/instr.m4"
-                "${M4_DIR}/operandlocationbyte.m4"
-                "${M4_DIR}/product.m4"
-                "${M4_DIR}/stats.m4")
-
-ADD_CUSTOM_COMMAND(OUTPUT "${M4_DIR_B}/instr.m4f"
-                   COMMAND ${M4} ARGS -E -P "--include=${M4_DIR_S}" "${M4_DIR_S}/instr.m4" "--freeze-state=${M4_DIR_B}/instr.m4f"
-                   DEPENDS "${M4_DIR_S}/instr.m4"
-                   COMMENT "Generating ${M4_DIR_B}/instr.m4f")
-ADD_CUSTOM_COMMAND(TARGET "${M4_DIR_B}/instr.m4f" POST_BUILD
-                   COMMAND ${M4} ARGS -E -P "--include=${M4_DIR_S}" "--reload-state=${M4_DIR_B}/instr.m4f" "${M4_DIR_S}/stats.m4")
-FOREACH(_H_SOURCE ${M4_2_H_SOURCES})
-  SET(OTHER_FILES ${OTHER_FILES} "${M4_DIR}/${_H_SOURCE}")
-  SET(M4_2_H_SOURCES_S ${M4_2_H_SOURCES_S} "${M4_DIR_S}/${_H_SOURCE}")
-  STRING(REGEX REPLACE "\\.m4$" ".h" _H_TARGET ${_H_SOURCE})
-  ADD_CUSTOM_COMMAND(OUTPUT "${M4_DIR_B}/${_H_TARGET}"
-                     COMMAND ${M4} ARGS -E -P "--include=${M4_DIR_S}" "--reload-state=${M4_DIR_B}/instr.m4f" "${M4_DIR_S}/${_H_SOURCE}" > "${M4_DIR_B}/${_H_TARGET}"
-                     DEPENDS "${M4_DIR_S}/${_H_SOURCE}" "${M4_DIR_B}/instr.m4f")
-ENDFOREACH(_H_SOURCE ${M4_2_H_SOURCES})
-
-
-################################################################################
 # libvmi
 ################################################################################
 
 ADD_LIBRARY("libvmi" SHARED "libvmi/instr.c")
+ADD_DEPENDENCIES(libvmi m4_instruction_structs_h m4_instruction_index_h)
 SET_TARGET_PROPERTIES("libvmi" PROPERTIES
                       OUTPUT_NAME "sharemind_vmi"
                       LIBRARY_OUTPUT_DIRECTORY "${SHAREMIND_LIB_DIR}"
@@ -262,6 +223,7 @@ SET(OTHER_FILES ${OTHER_FILES}
     "libvm/vm_internal_helpers.h"
     "libvm/vm_internal_core.h")
 ADD_LIBRARY("libvm" SHARED ${LIBVM_SOURCES})
+ADD_DEPENDENCIES(libvm m4_preprocess_pass2_functions_h m4_static_label_structs_h m4_dispatches_h)
 SET_TARGET_PROPERTIES("libvm" PROPERTIES
                       OUTPUT_NAME "sharemind_vm"
                       LIBRARY_OUTPUT_DIRECTORY "${SHAREMIND_LIB_DIR}"
