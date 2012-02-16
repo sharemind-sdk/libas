@@ -67,11 +67,19 @@ IF(NOT EXISTS "${SHAREMIND_EXT_VM_M4_DIR}/src/sharemind/CMakeLists.txt")
     MESSAGE(FATAL "SHAREMIND_EXT_VM_M4_DIR is invalid!")
 ENDIF()
 
+IF(NOT SHAREMIND_EXT_LIBVM_DIR)
+    SET(SHAREMIND_EXT_LIBVM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../ext/libvm")
+ENDIF(NOT SHAREMIND_EXT_LIBVM_DIR)
+IF(NOT EXISTS "${SHAREMIND_EXT_LIBVM_DIR}/src/sharemind/CMakeLists.txt")
+    MESSAGE(FATAL "SHAREMIND_EXT_LIBVM_DIR is invalid!")
+ENDIF()
+
 INCLUDE_DIRECTORIES(BEFORE SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/../sharemind/.."
                                   "${SHAREMIND_GEN_DIR}"
                                   "${SHAREMIND_EXT_VM_GLOBALS_DIR}/include"
                                   "${SHAREMIND_EXT_LIBEXECUTABLE_DIR}/src"
                                   "${SHAREMIND_EXT_LIBMODAPI_DIR}/src"
+                                  "${SHAREMIND_EXT_LIBVM_DIR}/src"
                                   "${SHAREMIND_EXT_LIBVMI_DIR}/src"
                                   "${SHAREMIND_EXT_VM_M4_DIR}/src")
 
@@ -87,6 +95,9 @@ ENDIF(NOT SHAREMIND_VM_LIBMODAPI_SOURCE_DIR)
 IF(NOT SHAREMIND_VM_LIBVMI_SOURCE_DIR)
     ADD_SUBDIRECTORY("${SHAREMIND_EXT_LIBVMI_DIR}/src/sharemind" "${SHAREMIND_EXT_DIR}/libvmi")
 ENDIF(NOT SHAREMIND_VM_LIBVMI_SOURCE_DIR)
+IF(NOT SHAREMIND_VM_LIBVM_SOURCE_DIR)
+    ADD_SUBDIRECTORY("${SHAREMIND_EXT_LIBVM_DIR}/src/sharemind" "${SHAREMIND_EXT_DIR}/libvm")
+ENDIF(NOT SHAREMIND_VM_LIBVM_SOURCE_DIR)
 SET(M4_DIR_B "${CMAKE_BINARY_DIR}/generated_sources/sharemind/m4")
 
 SET(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -O2 -fstrict-aliasing -Wstrict-aliasing=1 -fwrapv -Wabi -Wbad-function-cast -Wc++-compat -Wformat -Wswitch-default -Wunused -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wconversion -Wsign-conversion -Wlogical-op -Wunused-macros")
@@ -204,43 +215,6 @@ INSTALL(DIRECTORY "libas/"
 
 
 ################################################################################
-# libvm
-################################################################################
-
-SET(LIBVM_DEFINES "SHAREMIND_NO_THREADS")
-IF(VM_FAST_BUILD)
-  SET(LIBVM_DEFINES "${LIBVM_DEFINES};SHAREMIND_FAST_BUILD")
-ENDIF(VM_FAST_BUILD)
-SET(LIBVM_SOURCES
-    "libvm/vm_internal_core.c"
-    "libvm/vm_internal_helpers.c")
-IF(VM_SOFT_FLOAT)
-  SET(LIBVM_SOURCES ${LIBVM_SOURCES} "3rdparty/softfloat/softfloat.c")
-  SET(LIBVM_DEFINES "${LIBVM_DEFINES};SHAREMIND_SOFT_FLOAT")
-ENDIF(VM_SOFT_FLOAT)
-SET(OTHER_FILES ${OTHER_FILES}
-    "libvm/vm.h"
-    "libvm/vm_internal_helpers.h"
-    "libvm/vm_internal_core.h")
-ADD_LIBRARY("libvm" SHARED ${LIBVM_SOURCES})
-ADD_DEPENDENCIES(libvm m4_preprocess_pass2_functions_h m4_static_label_structs_h m4_dispatches_h)
-SET_TARGET_PROPERTIES("libvm" PROPERTIES
-                      OUTPUT_NAME "sharemind_vm"
-                      LIBRARY_OUTPUT_DIRECTORY "${SHAREMIND_LIB_DIR}"
-                      VERSION "0.1.0.0"
-                      SOVERSION "0.1"
-                      COMPILE_FLAGS "-frounding-math -ftrapping-math -fsignaling-nans"
-                      COMPILE_DEFINITIONS "${LIBVM_DEFINES}")
-SET_SOURCE_FILES_PROPERTIES("libvm/vm_internal_helpers.c" PROPERTIES OBJECT_DEPENDS
-                            "${M4_DIR_B}/preprocess_pass2_functions.h")
-SET_SOURCE_FILES_PROPERTIES("libvm/vm_internal_core.c" PROPERTIES OBJECT_DEPENDS
-                            "${M4_DIR_B}/static_label_structs.h;${M4_DIR_B}/dispatches.h")
-TARGET_LINK_LIBRARIES("libvm" "libvmi" "libexecutable" "m")
-INSTALL(FILES "libvm/vm.h"
-        DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libvm")
-
-
-################################################################################
 # as
 ################################################################################
 
@@ -325,7 +299,7 @@ SET_TARGET_PROPERTIES("libmod_pd_getconfig" PROPERTIES
 # Installs:
 ################################################################################
 
-INSTALL(TARGETS "libas" "libvm" "vm" "as" "libmod_putchar"
+INSTALL(TARGETS "libas" "vm" "as" "libmod_putchar"
         RUNTIME DESTINATION "bin"
         LIBRARY DESTINATION "lib"
         PUBLIC_HEADER DESTINATION "include")
