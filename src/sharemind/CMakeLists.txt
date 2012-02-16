@@ -53,6 +53,13 @@ IF(NOT EXISTS "${SHAREMIND_EXT_LIBMODAPI_DIR}/src/sharemind/CMakeLists.txt")
     MESSAGE(FATAL "SHAREMIND_EXT_LIBMODAPI_DIR is invalid!")
 ENDIF()
 
+IF(NOT SHAREMIND_EXT_LIBVMI_DIR)
+    SET(SHAREMIND_EXT_LIBVMI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../ext/libvmi")
+ENDIF(NOT SHAREMIND_EXT_LIBVMI_DIR)
+IF(NOT EXISTS "${SHAREMIND_EXT_LIBVMI_DIR}/src/sharemind/CMakeLists.txt")
+    MESSAGE(FATAL "SHAREMIND_EXT_LIBVMI_DIR is invalid!")
+ENDIF()
+
 IF(NOT SHAREMIND_EXT_VM_M4_DIR)
     SET(SHAREMIND_EXT_VM_M4_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../ext/vm_m4")
 ENDIF(NOT SHAREMIND_EXT_VM_M4_DIR)
@@ -64,11 +71,16 @@ INCLUDE_DIRECTORIES(BEFORE SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/../sharemind/.."
                                   "${SHAREMIND_GEN_DIR}"
                                   "${SHAREMIND_EXT_VM_GLOBALS_DIR}/include"
                                   "${SHAREMIND_EXT_LIBEXECUTABLE_DIR}/src"
-                                  "${SHAREMIND_EXT_LIBMODAPI_DIR}/src")
+                                  "${SHAREMIND_EXT_LIBMODAPI_DIR}/src"
+                                  "${SHAREMIND_EXT_LIBVMI_DIR}/src"
+                                  "${SHAREMIND_EXT_VM_M4_DIR}/src")
 
+IF(NOT SHAREMIND_VM_M4_SOURCE_DIR)
+    ADD_SUBDIRECTORY("${SHAREMIND_EXT_VM_M4_DIR}/src/sharemind" "${SHAREMIND_EXT_DIR}/vm_m4")
+ENDIF(NOT SHAREMIND_VM_M4_SOURCE_DIR)
 ADD_SUBDIRECTORY("${SHAREMIND_EXT_LIBEXECUTABLE_DIR}/src/sharemind" "${SHAREMIND_EXT_DIR}/libexecutable")
 ADD_SUBDIRECTORY("${SHAREMIND_EXT_LIBMODAPI_DIR}/src/sharemind" "${SHAREMIND_EXT_DIR}/libmodapi")
-ADD_SUBDIRECTORY("${SHAREMIND_EXT_VM_M4_DIR}/src/sharemind" "${SHAREMIND_EXT_DIR}/vm_m4")
+ADD_SUBDIRECTORY("${SHAREMIND_EXT_LIBVMI_DIR}/src/sharemind" "${SHAREMIND_EXT_DIR}/libvmi")
 SET(M4_DIR_B "${CMAKE_BINARY_DIR}/generated_sources/sharemind/m4")
 
 SET(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -O2 -fstrict-aliasing -Wstrict-aliasing=1 -fwrapv -Wabi -Wbad-function-cast -Wc++-compat -Wformat -Wswitch-default -Wunused -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wconversion -Wsign-conversion -Wlogical-op -Wunused-macros")
@@ -160,24 +172,6 @@ IF(NOT (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         ENDIF(NOT (CMAKE_BINARY_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
     ENDIF(NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
 ENDIF(NOT (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
-
-
-################################################################################
-# libvmi
-################################################################################
-
-ADD_LIBRARY("libvmi" SHARED "libvmi/instr.c")
-ADD_DEPENDENCIES(libvmi m4_instruction_structs_h m4_instruction_index_h)
-SET_TARGET_PROPERTIES("libvmi" PROPERTIES
-                      OUTPUT_NAME "sharemind_vmi"
-                      LIBRARY_OUTPUT_DIRECTORY "${SHAREMIND_LIB_DIR}"
-                      VERSION "0.1.0.0"
-                      SOVERSION "0.1")
-SET_SOURCE_FILES_PROPERTIES("libvmi/instr.c" PROPERTIES OBJECT_DEPENDS
-                            "${M4_DIR_B}/instruction_structs.h;${M4_DIR_B}/instruction_index.h")
-INSTALL(DIRECTORY "libvmi/"
-        DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libvmi"
-        FILES_MATCHING PATTERN "*.h")
 
 
 ################################################################################
@@ -325,7 +319,7 @@ SET_TARGET_PROPERTIES("libmod_pd_getconfig" PROPERTIES
 # Installs:
 ################################################################################
 
-INSTALL(TARGETS "libvmi" "libas" "libvm" "vm" "as" "libmod_putchar"
+INSTALL(TARGETS "libas" "libvm" "vm" "as" "libmod_putchar"
         RUNTIME DESTINATION "bin"
         LIBRARY DESTINATION "lib"
         PUBLIC_HEADER DESTINATION "include")

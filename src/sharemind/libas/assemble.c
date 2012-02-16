@@ -10,11 +10,11 @@
 #include "assemble.h"
 
 #include <assert.h>
+#include <sharemind/libvmi/instr.h>
 #include <sharemind/likely.h>
 #include <sharemind/trie.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "../libvmi/instr.h"
 
 
 static inline int sharemind_assembler_assign_add_sizet_int64(size_t * lhs, const int64_t rhs) {

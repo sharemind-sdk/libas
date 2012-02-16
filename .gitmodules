@@ -7,3 +7,6 @@
 [submodule "ext/vm_m4"]
 	path = ext/vm_m4
 	url = ssh://sharemind.cyber.ee/projects/sharemind/git/vm_m4.git
+[submodule "ext/libvmi"]
+	path = ext/libvmi
+	url = ssh://sharemind.cyber.ee/projects/sharemind/git/libvmi.git
