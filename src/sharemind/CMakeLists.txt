@@ -230,12 +230,13 @@ TARGET_LINK_LIBRARIES("as" "libas")
 # vm
 ################################################################################
 
-SET(VM_FILES "vm/lasterror.cpp"
-             "vm/main.cpp"
+SET(VM_FILES "vm/main.cpp"
+             "vm/vm/lasterror.cpp"
              "vm/vm/modapiexception.cpp"
              "vm/vm/modules.cpp"
              "vm/vm/pd.cpp"
-             "vm/vm/pdi.cpp"
+             "vm/vm/Process.cpp"
+             "vm/vm/Program.cpp"
              "vm/vm/vm.cpp")
 IF(VM_OUT_OF_MEMORY_DEBUG)
   SET(VM_FILES ${VM_FILES} "vm/oomd.c")
@@ -246,14 +247,15 @@ SET_TARGET_PROPERTIES("vm" PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY "${SHAREMIND_BIN_DIR}"
                       VERSION "0.1.0.0")
 SET(OTHER_FILES ${OTHER_FILES}
-    "vm/lasterror.h"
     "vm/oomd.h"
-    "vm/scopedobjectmap.h"
+    "vm/vm/lasterror.h"
     "vm/vm/modapiexception.h"
     "vm/vm/modules.h"
     "vm/vm/pd.h"
-    "vm/vm/pdi.h"
     "vm/vm/pdk.h"
+    "vm/vm/Process.h"
+    "vm/vm/Program.h"
+    "vm/vm/scopedobjectmap.h"
     "vm/vm/vm.h")
 IF(VM_OUT_OF_MEMORY_DEBUG)
   # This is because of http://gcc.gnu.org/bugzilla/show_bug.cgi?id=44736 :
