@@ -28,7 +28,7 @@ static int sharemind_assembler_link_0x0(SharemindExecutableCommonHeader ** data,
                                         size_t * length,
                                         uint8_t activeLinkingUnit);
 
-uint8_t * sharemind_assembler_link(uint16_t version, SharemindAssemblerLinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit) {
+void * sharemind_assembler_link(uint16_t version, SharemindAssemblerLinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit) {
     assert(lus);
     assert(length);
 
@@ -42,7 +42,7 @@ uint8_t * sharemind_assembler_link(uint16_t version, SharemindAssemblerLinkingUn
     SharemindExecutableCommonHeader_init(data, version);
 
     if (sharemind_assembler_link_0x0(&data, lus, length, activeLinkingUnit)) {
-        return (uint8_t *) data;
+        return data;
     } else {
         free(data);
         (*length) = 0u;

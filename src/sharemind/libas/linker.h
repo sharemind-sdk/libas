@@ -20,7 +20,7 @@ extern "C" {
 #endif
 
 
-uint8_t * sharemind_assembler_link(
+void * sharemind_assembler_link(
         uint16_t version,
         SharemindAssemblerLinkingUnits * lus,
         size_t * length,
