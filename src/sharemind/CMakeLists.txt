@@ -11,6 +11,11 @@ CMAKE_MINIMUM_REQUIRED(VERSION "2.8")
 CMAKE_POLICY(SET CMP0015 NEW)
 PROJECT("SHAREMIND_LIBAS" "C")
 
+FIND_PACKAGE(Boost)
+IF(NOT Boost_FOUND)
+    MESSAGE(FATAL_ERROR "Required Boost library headers not found!")
+ENDIF(NOT Boost_FOUND)
+
 IF(NOT SHAREMIND_BIN_DIR)
     MESSAGE(FATAL_ERROR "SHAREMIND_BIN_DIR not defined!")
 ENDIF(NOT SHAREMIND_BIN_DIR)
@@ -60,7 +65,8 @@ INCLUDE_DIRECTORIES(BEFORE SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/../sharemind/.."
                                   "${SHAREMIND_EXT_VM_GLOBALS_DIR}/include"
                                   "${SHAREMIND_EXT_LIBEXECUTABLE_DIR}/src"
                                   "${SHAREMIND_EXT_LIBVMI_DIR}/src"
-                                  "${SHAREMIND_EXT_VM_M4_DIR}/src")
+                                  "${SHAREMIND_EXT_VM_M4_DIR}/src"
+                                  ${Boost_INCLUDE_DIRS})
 
 IF(NOT SHAREMIND_VM_M4_SOURCE_DIR)
     ADD_SUBDIRECTORY("${SHAREMIND_EXT_VM_M4_DIR}/src/sharemind" "${SHAREMIND_EXT_DIR}/vm_m4")
