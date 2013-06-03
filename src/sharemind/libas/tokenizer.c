@@ -174,13 +174,16 @@ tokenize_hex2:
 tokenize_string:
 
     t = c;
-    do {
+    for (;;) {
         TOKENIZE_INC_CHECK_EOF(tokenize_error);
         if (unlikely(*c == '\\')) {
             TOKENIZE_INC_CHECK_EOF(tokenize_error);
             continue;
         }
-    } while (likely(*c != '"'));
+
+        if (unlikely(*c == '"'))
+            break;
+    }
     NEWTOKEN(lastToken, SHAREMIND_ASSEMBLER_TOKEN_STRING, t, sl, sc);
     assert(t < c);
     lastToken->length = (size_t) (c - t + 1u);
