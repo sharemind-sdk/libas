@@ -22,7 +22,11 @@ ADD_DEFINITIONS("-D_XOPEN_SOURCE=500" "-D__STDC_LIMIT_MACROS")
 #  Libas:                                                                      #
 ################################################################################
 
-ADD_LIBRARY("libas" SHARED
+IF(NOT SHAREMIND_LIBAS_LINKING_MODE)
+    SET(SHAREMIND_LIBAS_LINKING_MODE SHARED)
+ENDIF()
+
+ADD_LIBRARY("libas" ${SHAREMIND_LIBAS_LINKING_MODE}
             "libas/assemble.c"
             "libas/linker.c"
             "libas/linkingunits.c"
