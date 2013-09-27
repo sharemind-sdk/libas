@@ -15,24 +15,31 @@ FOREACH(dir IN LISTS CMAKE_PREFIX_PATH)
   INCLUDE_DIRECTORIES(BEFORE SYSTEM "${dir}/include")
 ENDFOREACH()
 
-FUNCTION(SHAREMIND_LIBAS_TARGETLIB libname)
-  IF(TARGET "lib${libname}")
-    SET(SHAREMIND_LIBAS_TARGETLIB_${libname} "lib${libname}" PARENT_SCOPE)
-  ELSE()
-    FIND_LIBRARY(libfn "sharemind_${libname}")
-    IF(NOT libfn)
-      MESSAGE(FATAL_ERROR "Required library \"sharemind_${libname}\" not found!")
+FUNCTION(SHAREMIND_FIND_TARGETLIB libname)
+  IF(NOT DEFINED SHAREMIND_TARGETLIB_${libname})
+    IF(TARGET "lib${libname}")
+      SET(SHAREMIND_TARGETLIB_${libname} "lib${libname}" PARENT_SCOPE)
+    ELSE()
+      FIND_LIBRARY(libfn "sharemind_${libname}")
+      IF(NOT libfn)
+        IF("${ARGN}" STREQUAL "OPTIONAL")
+          MESSAGE(WARNING "Library \"sharemind_${libname}\" not found!")
+        ELSE()
+          MESSAGE(FATAL_ERROR "Required library \"sharemind_${libname}\" not found!")
+        ENDIF()
+      ELSE()
+        SET(libs)
+        GET_FILENAME_COMPONENT(libpath "${libfn}" PATH)
+        LIST(APPEND libs "-L${libpath}")
+        LIST(APPEND libs "sharemind_${libname}")
+        SET(SHAREMIND_TARGETLIB_${libname} "${libs}" PARENT_SCOPE)
+      ENDIF()
     ENDIF()
-    SET(libs)
-    GET_FILENAME_COMPONENT(libpath "${libfn}" PATH)
-    LIST(APPEND libs "-L${libpath}")
-    LIST(APPEND libs "sharemind_${libname}")
-    SET(SHAREMIND_LIBAS_TARGETLIB_${libname} "${libs}" PARENT_SCOPE)
   ENDIF()
 ENDFUNCTION()
 
-SHAREMIND_LIBAS_TARGETLIB("executable")
-SHAREMIND_LIBAS_TARGETLIB("vmi")
+SHAREMIND_FIND_TARGETLIB("executable")
+SHAREMIND_FIND_TARGETLIB("vmi")
 
 FIND_PACKAGE(Boost REQUIRED)
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
@@ -62,8 +69,8 @@ SET_TARGET_PROPERTIES("libas" PROPERTIES
                       VERSION "0.1.0.0"
                       SOVERSION "0.1")
 
-TARGET_LINK_LIBRARIES("libas" ${SHAREMIND_LIBAS_TARGETLIB_executable}
-                              ${SHAREMIND_LIBAS_TARGETLIB_vmi})
+TARGET_LINK_LIBRARIES("libas" ${SHAREMIND_TARGETLIB_executable}
+                              ${SHAREMIND_TARGETLIB_vmi})
 
 INSTALL(TARGETS "libas"
         LIBRARY DESTINATION "lib"
