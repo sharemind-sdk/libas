@@ -1,12 +1,12 @@
 [submodule "ext/libexecutable"]
 	path = ext/libexecutable
-	url = gitosis@sharemind.cyber.ee:sharemind/libexecutable
+	url = ssh://intranet.cyber.ee/export/samba/dokumendipuu/teadus/sevilla/repo/platform/libexecutable.git
 [submodule "ext/vm_globals"]
 	path = ext/vm_globals
-	url = gitosis@sharemind.cyber.ee:sharemind/vm_globals
+	url = ssh://intranet.cyber.ee/export/samba/dokumendipuu/teadus/sevilla/repo/platform/vm_globals.git
 [submodule "ext/vm_m4"]
 	path = ext/vm_m4
-	url = gitosis@sharemind.cyber.ee:sharemind/vm_m4
+	url = ssh://intranet.cyber.ee/export/samba/dokumendipuu/teadus/sevilla/repo/platform/vm_m4.git
 [submodule "ext/libvmi"]
 	path = ext/libvmi
-	url = gitosis@sharemind.cyber.ee:sharemind/libvmi
+	url = ssh://intranet.cyber.ee/export/samba/dokumendipuu/teadus/sevilla/repo/platform/libvmi.git
