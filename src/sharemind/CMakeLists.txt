@@ -46,7 +46,8 @@ INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
 
 
 SET(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -O2 -fstrict-aliasing -Wstrict-aliasing=1 -fwrapv -Wabi -Wbad-function-cast -Wc++-compat -Wformat -Wswitch-default -Wunused -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wconversion -Wsign-conversion -Wlogical-op -Wunused-macros")
-ADD_DEFINITIONS("-D_XOPEN_SOURCE=500" "-D__STDC_LIMIT_MACROS")
+SET(LIBAS_INSTALL_DEFINITIONS "-D__STDC_LIMIT_MACROS")
+ADD_DEFINITIONS("${LIBAS_INSTALL_DEFINITIONS}")
 
 ################################################################################
 #  Libas:                                                                      #
@@ -63,10 +64,12 @@ ADD_LIBRARY("libas" ${SHAREMIND_LIBAS_LINKING_MODE}
             "libas/stdion.c"
             "libas/tokenizer.c"
             "libas/tokens.c")
+
+SET(LIBAS_VERSION "0.1.0.0")
 SET_TARGET_PROPERTIES("libas" PROPERTIES
                       OUTPUT_NAME "sharemind_as"
                       LIBRARY_OUTPUT_DIRECTORY "${SHAREMIND_LIB_DIR}"
-                      VERSION "0.1.0.0"
+                      VERSION "${LIBAS_VERSION}"
                       SOVERSION "0.1")
 
 TARGET_LINK_LIBRARIES("libas" ${SHAREMIND_TARGETLIB_executable}
@@ -79,3 +82,17 @@ INSTALL(DIRECTORY "libas/"
         DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libas"
         FILES_MATCHING PATTERN "stdion.h" EXCLUDE
                        PATTERN "*.h")
+
+# Install cmake files:
+FILE(GLOB_RECURSE sharemind_libas_in_files "${CMAKE_CURRENT_SOURCE_DIR}/*.in")
+ADD_CUSTOM_TARGET("include_sharemind_libas_in_files_in_IDE" SOURCES ${sharemind_libas_in_files})
+SET(LIBAS_INSTALL_LINK_LIBRARIES "-L${CMAKE_INSTALL_PREFIX}/lib" "-lsharemind_as")
+SET(LIBAS_INSTALL_INCLUDE_DIRS "${CMAKE_INSTALL_PREFIX}/include")
+
+CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/SharemindLibasConfig.cmake.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/SharemindLibasConfig.cmake" @ONLY)
+CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/SharemindLibasConfigVersion.cmake.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/SharemindLibasConfigVersion.cmake" @ONLY)
+INSTALL(FILES "${CMAKE_CURRENT_BINARY_DIR}/SharemindLibasConfig.cmake"
+              "${CMAKE_CURRENT_BINARY_DIR}/SharemindLibasConfigVersion.cmake"
+        DESTINATION "lib/SharemindLibas")

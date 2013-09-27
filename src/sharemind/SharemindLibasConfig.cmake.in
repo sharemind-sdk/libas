@@ -1,0 +1,17 @@
+#
+# Copyright (C) Cybernetica AS
+#
+# All rights are reserved. Reproduction in whole or part is prohibited
+# without the written consent of the copyright owner. The usage of this
+# code is subject to the appropriate license agreement.
+#
+
+# This file defines the following variables:
+#   SharemindLibas_INCLUDE_DIRS - include directories
+#   SharemindLibas_LIBRARIES    - libraries to link against
+#   SharemindLibas_DEFINITIONS  - required compiler definitions
+
+
+SET(SharemindLibas_INCLUDE_DIRS @LIBAS_INSTALL_INCLUDE_DIRS@)
+SET(SharemindLibas_LIBRARIES @LIBAS_INSTALL_LINK_LIBRARIES@)
+SET(SharemindLibas_DEFINITIONS @LIBAS_INSTALL_DEFINITIONS@)
