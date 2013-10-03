@@ -79,7 +79,7 @@ INSTALL(TARGETS "libas"
         LIBRARY DESTINATION "lib"
         ARCHIVE DESTINATION "lib")
 INSTALL(DIRECTORY "libas/"
-        DESTINATION "${SHAREMIND_INCLUDE_DESTINATION}/libas"
+        DESTINATION "include/sharemind/libas"
         FILES_MATCHING PATTERN "stdion.h" EXCLUDE
                        PATTERN "*.h")
 
