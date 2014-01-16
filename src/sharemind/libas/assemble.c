@@ -441,10 +441,10 @@ assemble_newline:
             size_t jmpOffset;
             int doJumpLabel;
             {
-                union { uint64_t code; char c[8]; } x;
-                x.code = i->code;
-                if (x.c[0] == 0x04     /* Check for jump namespace */
-                    && x.c[2] == 0x01) /* and imm first argument OLB */
+                char c[sizeof(i->code)];
+                memcpy(c, &(i->code), sizeof(i->code));
+                if (c[0u] == 0x04     /* Check for jump namespace */
+                    && c[2u] == 0x01) /* and imm first argument OLB */
                 {
                     jmpOffset = lu->sections[section_index].length;
                     doJumpLabel = 1;
