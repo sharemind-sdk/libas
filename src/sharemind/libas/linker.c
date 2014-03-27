@@ -13,6 +13,7 @@
 #include <sharemind/codeblock.h>
 #include <sharemind/libexecutable/libexecutable.h>
 #include <sharemind/libexecutable/libexecutable_0x0.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 
@@ -53,7 +54,7 @@ void * sharemind_assembler_link(uint16_t version, SharemindAssemblerLinkingUnits
 
 static const size_t extraPadding[8] = { 0u, 7u, 6u, 5u, 4u, 3u, 2u, 1u };
 
-static int calculateLinkingUnitSize_0x0(SharemindAssemblerLinkingUnit * lu, size_t * s) {
+static bool calculateLinkingUnitSize_0x0(SharemindAssemblerLinkingUnit * lu, size_t * s) {
     for (unsigned i = 0u; i < SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT_0x0; i++)
         if (lu->sections[i].length > 0u && (lu->sections[i].data != NULL || i == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS)) {
             *s += sizeof(SharemindExecutableSectionHeader0x0);
@@ -65,7 +66,7 @@ static int calculateLinkingUnitSize_0x0(SharemindAssemblerLinkingUnit * lu, size
                 }
             }
         }
-    return 1;
+    return true;
 }
 
 static int writeSection_0x0(SharemindAssemblerSection * s, uint8_t ** pos, SHAREMIND_EXECUTABLE_SECTION_TYPE type) {
@@ -101,7 +102,7 @@ static int writeSection_0x0(SharemindAssemblerSection * s, uint8_t ** pos, SHARE
     return 1;
 }
 
-static int writeLinkingUnit_0x0(SharemindAssemblerLinkingUnit * lu, uint8_t ** pos) {
+static bool writeLinkingUnit_0x0(SharemindAssemblerLinkingUnit * lu, uint8_t ** pos) {
     /* Calculate number of sections: */
     uint8_t sections = 0u;
     for (unsigned i = 0u; i < SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT_0x0; i++)
@@ -118,9 +119,9 @@ static int writeLinkingUnit_0x0(SharemindAssemblerLinkingUnit * lu, uint8_t ** p
     for (int i = 0; i < SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT_0x0; i++)
         if (lu->sections[i].length > 0u && (lu->sections[i].data != NULL || i == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS))
             if (!writeSection_0x0(&lu->sections[i], pos, (SHAREMIND_EXECUTABLE_SECTION_TYPE) i))
-                return 0;
+                return false;
 
-    return 1;
+    return true;
 }
 
 static int sharemind_assembler_link_0x0(SharemindExecutableCommonHeader ** data, SharemindAssemblerLinkingUnits * lus, size_t * length, uint8_t activeLinkingUnit) {

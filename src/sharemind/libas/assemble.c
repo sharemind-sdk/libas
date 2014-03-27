@@ -13,6 +13,7 @@
 #include <sharemind/libvmi/instr.h>
 #include <sharemind/likely.h>
 #include <sharemind/trie.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -79,12 +80,12 @@ typedef struct {
     const SharemindAssemblerToken * token; /* NULL if this slot is already filled */
 } SharemindAssemblerLabelSlot;
 
-static int SharemindAssemblerLabelSlot_filled(SharemindAssemblerLabelSlot * s, SharemindAssemblerLabelSlot ** d) {
+static bool SharemindAssemblerLabelSlot_filled(SharemindAssemblerLabelSlot * s, SharemindAssemblerLabelSlot ** d) {
     assert(s);
     if (s->token == NULL)
-        return 1;
+        return true;
     (*d) = s;
-    return 0;
+    return false;
 }
 
 SHAREMIND_VECTOR_DECLARE(SharemindAssemblerLabelSlots,SharemindAssemblerLabelSlot,,)
@@ -94,7 +95,7 @@ SHAREMIND_VECTOR_DEFINE_FOREACH_WITH(SharemindAssemblerLabelSlots,SharemindAssem
 SHAREMIND_VECTOR_DECLARE_FOREACH_WITH(SharemindAssemblerLabelSlots,SharemindAssemblerLabelSlot,labelSlotPointerPointer,SharemindAssemblerLabelSlot **,)
 SHAREMIND_VECTOR_DEFINE_FOREACH_WITH(SharemindAssemblerLabelSlots,SharemindAssemblerLabelSlot,labelSlotPointerPointer,SharemindAssemblerLabelSlot **,SharemindAssemblerLabelSlot ** p,p,)
 
-static int SharemindAssemblerLabelSlots_all_slots_filled(SharemindAssemblerLabelSlots * ss, SharemindAssemblerLabelSlot ** d) {
+static bool SharemindAssemblerLabelSlots_all_slots_filled(SharemindAssemblerLabelSlots * ss, SharemindAssemblerLabelSlot ** d) {
     return SharemindAssemblerLabelSlots_foreach_with_labelSlotPointerPointer(ss, &SharemindAssemblerLabelSlot_filled, d);
 }
 
@@ -103,7 +104,7 @@ SHAREMIND_TRIE_DEFINE(SharemindAssemblerLabelSlotsTrie,SharemindAssemblerLabelSl
 SHAREMIND_TRIE_DECLARE_FOREACH_WITH(SharemindAssemblerLabelSlotsTrie,SharemindAssemblerLabelSlots,labelSlotPointerPointer,SharemindAssemblerLabelSlot **,SharemindAssemblerLabelSlot ** p,)
 SHAREMIND_TRIE_DEFINE_FOREACH_WITH(SharemindAssemblerLabelSlotsTrie,SharemindAssemblerLabelSlots,labelSlotPointerPointer,SharemindAssemblerLabelSlot **,SharemindAssemblerLabelSlot ** p,p,)
 
-static int SharemindAssemblerLabelSlot_fill(SharemindAssemblerLabelSlot * s, SharemindAssemblerLabelLocation * l) {
+static bool SharemindAssemblerLabelSlot_fill(SharemindAssemblerLabelSlot * s, SharemindAssemblerLabelLocation * l) {
     assert(s);
     assert(s->token);
     assert(l);
@@ -127,11 +128,11 @@ static int SharemindAssemblerLabelSlot_fill(SharemindAssemblerLabelSlot * s, Sha
         /** \todo Maybe check whether there's really an instruction there */
     }
     s->token = NULL;
-    return 1;
+    return true;
 
 fill_error:
     /** \todo Provide better diagnostics */
-    return 0;
+    return false;
 }
 
 SHAREMIND_ENUM_CUSTOM_DEFINE_TOSTRING(SharemindAssemblerError, SHAREMIND_ASSEMBLER_ERROR_ENUM);
@@ -239,7 +240,7 @@ assemble_newline:
             if (unlikely(!label))
                 goto assemble_out_of_memory;
 
-            int newValue;
+            bool newValue;
             SharemindAssemblerLabelLocation * l = SharemindAssemblerLabelLocations_get_or_insert(&ll, label, &newValue);
             if (unlikely(!l)) {
                 free(label);
@@ -536,7 +537,7 @@ assemble_newline:
                             instr->uint64[0] = absTarget;
                         }
                     } else {
-                        int newValue;
+                        bool newValue;
                         SharemindAssemblerLabelSlots * slots = SharemindAssemblerLabelSlotsTrie_get_or_insert(&lst, label, &newValue);
                         free(label);
                         if (unlikely(!slots))
