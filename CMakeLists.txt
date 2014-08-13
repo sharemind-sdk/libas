@@ -11,10 +11,17 @@ CMAKE_MINIMUM_REQUIRED(VERSION "2.8.12")
 CMAKE_POLICY(SET CMP0015 NEW)
 PROJECT("SHAREMIND_LIBAS" "C")
 
-FOREACH(dir IN LISTS CMAKE_PREFIX_PATH)
-  INCLUDE_DIRECTORIES(BEFORE SYSTEM "${dir}/include")
-ENDFOREACH()
-INCLUDE_DIRECTORIES(BEFORE SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/../")
+FIND_PACKAGE(Boost REQUIRED)
+FIND_PACKAGE(SharemindLibexecutable REQUIRED)
+FIND_PACKAGE(SharemindLibvmi REQUIRED)
+FIND_PACKAGE(SharemindVmGlobals REQUIRED)
+
+INCLUDE_DIRECTORIES(
+    ${Boost_INCLUDE_DIRS}
+    ${SharemindLibexecutable_INCLUDE_DIRS}
+    ${SharemindLibvmi_INCLUDE_DIRS}
+    ${SharemindVmGlobals_INCLUDE_DIRS}
+)
 
 ADD_COMPILE_OPTIONS(
   "-std=c99" "-O2" "-fwrapv" "-Wall" "-Wextra" "-Wunused" "-Wabi"
@@ -38,37 +45,11 @@ ENDFUNCTION()
 CHECK_ADD_COMPILER_FLAG("-Weverything")
 CHECK_ADD_COMPILER_FLAG("-Wlogical-op")
 
-FUNCTION(SHAREMIND_FIND_TARGETLIB libname)
-  IF(NOT DEFINED SHAREMIND_TARGETLIB_${libname})
-    IF(TARGET "lib${libname}")
-      SET(SHAREMIND_TARGETLIB_${libname} "lib${libname}" PARENT_SCOPE)
-    ELSE()
-      FIND_LIBRARY(libfn "sharemind_${libname}")
-      IF(NOT libfn)
-        IF("${ARGN}" STREQUAL "OPTIONAL")
-          MESSAGE(WARNING "Library \"sharemind_${libname}\" not found!")
-        ELSE()
-          MESSAGE(FATAL_ERROR "Required library \"sharemind_${libname}\" not found!")
-        ENDIF()
-      ELSE()
-        SET(libs)
-        GET_FILENAME_COMPONENT(libpath "${libfn}" PATH)
-        LIST(APPEND libs "-L${libpath}")
-        LIST(APPEND libs "sharemind_${libname}")
-        SET(SHAREMIND_TARGETLIB_${libname} "${libs}" PARENT_SCOPE)
-      ENDIF()
-    ENDIF()
-  ENDIF()
-ENDFUNCTION()
-
-SHAREMIND_FIND_TARGETLIB("executable")
-SHAREMIND_FIND_TARGETLIB("vmi")
-
-FIND_PACKAGE(Boost REQUIRED)
-INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
-
 SET(LIBAS_INSTALL_DEFINITIONS "-D__STDC_LIMIT_MACROS")
-ADD_DEFINITIONS("${LIBAS_INSTALL_DEFINITIONS}")
+ADD_DEFINITIONS(${SharemindVmGlobals_DEFINITIONS}
+                ${SharemindLibvmi_DEFINITIONS}
+                ${SharemindLibexecutable_DEFINITIONS}
+                ${LIBAS_INSTALL_DEFINITIONS})
 
 ################################################################################
 #  Libas:                                                                      #
