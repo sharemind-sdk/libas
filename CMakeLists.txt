@@ -88,15 +88,19 @@ INSTALL(DIRECTORY "libas/"
                        PATTERN "*.h")
 
 # Install cmake files:
-FILE(GLOB_RECURSE sharemind_libas_in_files "${CMAKE_CURRENT_SOURCE_DIR}/*.in")
-ADD_CUSTOM_TARGET("include_sharemind_libas_in_files_in_IDE" SOURCES ${sharemind_libas_in_files})
-SET(LIBAS_INSTALL_LINK_LIBRARIES "-L${CMAKE_INSTALL_PREFIX}/lib" "-lsharemind_as")
+FILE(GLOB_RECURSE sharemind_libas_in_files
+                  "${CMAKE_CURRENT_SOURCE_DIR}/*.in")
+ADD_CUSTOM_TARGET("include_sharemind_libas_in_files_in_IDE"
+                  SOURCES ${sharemind_libas_in_files})
+SET(LIBAS_INSTALL_LINK_LIBRARIES "-L${CMAKE_INSTALL_PREFIX}/lib"
+                                 "-lsharemind_as")
 SET(LIBAS_INSTALL_INCLUDE_DIRS "${CMAKE_INSTALL_PREFIX}/include")
 
 CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/SharemindLibasConfig.cmake.in"
                "${CMAKE_CURRENT_BINARY_DIR}/SharemindLibasConfig.cmake" @ONLY)
-CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/SharemindLibasConfigVersion.cmake.in"
-               "${CMAKE_CURRENT_BINARY_DIR}/SharemindLibasConfigVersion.cmake" @ONLY)
+CONFIGURE_FILE(
+    "${CMAKE_CURRENT_SOURCE_DIR}/SharemindLibasConfigVersion.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/SharemindLibasConfigVersion.cmake" @ONLY)
 INSTALL(FILES "${CMAKE_CURRENT_BINARY_DIR}/SharemindLibasConfig.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/SharemindLibasConfigVersion.cmake"
         DESTINATION "lib/SharemindLibas")
