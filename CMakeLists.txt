@@ -17,12 +17,26 @@ ENDFOREACH()
 INCLUDE_DIRECTORIES(BEFORE SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/../")
 
 ADD_COMPILE_OPTIONS(
-  "-O2"
+  "-std=c99" "-O2" "-fwrapv" "-Wall" "-Wextra" "-Wunused" "-Wabi"
+  "-Wstrict-aliasing=1" "-Wbad-function-cast" "-Wformat" "-Wswitch-default"
+  "-Wfloat-equal" "-Wshadow" "-Wpointer-arith" "-Wcast-qual"
+  "-Wstrict-prototypes" "-Wconversion" "-Wsign-conversion" "-Wunused-macros"
   "$<$<NOT:$<STREQUAL:$<CONFIGURATION>,Release>>:-ggdb>"
   "$<$<NOT:$<STREQUAL:$<CONFIGURATION>,Release>>:-fno-omit-frame-pointer>"
   "$<$<STREQUAL:$<CONFIGURATION>,Release>:-DNDEBUG>"
   "$<$<STREQUAL:$<CONFIGURATION>,Release>:-fomit-frame-pointer>"
 )
+
+INCLUDE(CheckCCompilerFlag)
+FUNCTION(CHECK_ADD_COMPILER_FLAG flag)
+    STRING(SUBSTRING "${flag}" 1 -1 FlagName)
+    CHECK_C_COMPILER_FLAG("${flag}" C_COMPILER_HAS_${FlagName}_FLAG)
+    IF(C_COMPILER_HAS_${FlagName}_FLAG)
+        ADD_COMPILE_OPTIONS("${flag}")
+    ENDIF()
+ENDFUNCTION()
+CHECK_ADD_COMPILER_FLAG("-Weverything")
+CHECK_ADD_COMPILER_FLAG("-Wlogical-op")
 
 FUNCTION(SHAREMIND_FIND_TARGETLIB libname)
   IF(NOT DEFINED SHAREMIND_TARGETLIB_${libname})
@@ -53,8 +67,6 @@ SHAREMIND_FIND_TARGETLIB("vmi")
 FIND_PACKAGE(Boost REQUIRED)
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
 
-
-SET(CMAKE_C_FLAGS "-std=c99 -Wall -Wextra -fstrict-aliasing -Wstrict-aliasing=1 -fwrapv -Wabi -Wbad-function-cast -Wformat -Wswitch-default -Wunused -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-qual -Wstrict-prototypes -Wconversion -Wsign-conversion -Wlogical-op -Wunused-macros")
 SET(LIBAS_INSTALL_DEFINITIONS "-D__STDC_LIMIT_MACROS")
 ADD_DEFINITIONS("${LIBAS_INSTALL_DEFINITIONS}")
 
