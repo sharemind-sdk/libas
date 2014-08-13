@@ -76,8 +76,8 @@ SET_TARGET_PROPERTIES("libas" PROPERTIES
                       VERSION "${LIBAS_VERSION}"
                       SOVERSION "0.1")
 
-TARGET_LINK_LIBRARIES("libas" ${SHAREMIND_TARGETLIB_executable}
-                              ${SHAREMIND_TARGETLIB_vmi})
+TARGET_LINK_LIBRARIES("libas" ${SharemindLibexecutable_LIBRARIES}
+                              ${SharemindLibvmi_LIBRARIES})
 
 INSTALL(TARGETS "libas"
         LIBRARY DESTINATION "lib"
