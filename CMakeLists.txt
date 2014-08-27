@@ -61,13 +61,13 @@ IF(NOT SHAREMIND_LIBAS_LINKING_MODE)
     SET(SHAREMIND_LIBAS_LINKING_MODE SHARED)
 ENDIF()
 
-ADD_LIBRARY("libas" ${SHAREMIND_LIBAS_LINKING_MODE}
-            "src/assemble.c"
-            "src/linker.c"
-            "src/linkingunits.c"
-            "src/stdion.c"
-            "src/tokenizer.c"
-            "src/tokens.c")
+FILE(GLOB_RECURSE libas_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
+FILE(GLOB_RECURSE libas_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h")
+ADD_LIBRARY("libas" ${SHAREMIND_LIBAS_LINKING_MODE} ${libas_SOURCES} ${libas_HEADERS})
+SET(libas_HEADERS_P "${CMAKE_CURRENT_SOURCE_DIR}/src/stdion.h")
+FOREACH(h IN LISTS libas_HEADERS_P)
+  LIST(REMOVE_ITEM libas_HEADERS "${h}")
+ENDFOREACH()
 
 SET(LIBAS_VERSION "0.1.0.0")
 SET_TARGET_PROPERTIES("libas" PROPERTIES
@@ -82,10 +82,7 @@ TARGET_LINK_LIBRARIES("libas" ${SharemindLibexecutable_LIBRARIES}
 INSTALL(TARGETS "libas"
         LIBRARY DESTINATION "lib"
         ARCHIVE DESTINATION "lib")
-INSTALL(DIRECTORY "libas/"
-        DESTINATION "include/sharemind/libas"
-        FILES_MATCHING PATTERN "stdion.h" EXCLUDE
-                       PATTERN "*.h")
+INSTALL(FILES ${libas_HEADERS} DESTINATION "include/sharemind/libas")
 
 # Install cmake files:
 FILE(GLOB_RECURSE sharemind_libas_in_files
