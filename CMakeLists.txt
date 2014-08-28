@@ -18,12 +18,41 @@ FIND_PACKAGE(SharemindLibexecutable REQUIRED)
 FIND_PACKAGE(SharemindLibvmi REQUIRED)
 FIND_PACKAGE(SharemindVmGlobals REQUIRED)
 
-INCLUDE_DIRECTORIES(
+SET(LIBAS_EXTERNAL_INCLUDE_DIRS
     ${Boost_INCLUDE_DIRS}
     ${SharemindLibexecutable_INCLUDE_DIRS}
     ${SharemindLibvmi_INCLUDE_DIRS}
     ${SharemindVmGlobals_INCLUDE_DIRS}
 )
+LIST(REMOVE_DUPLICATES LIBAS_EXTERNAL_INCLUDE_DIRS)
+INCLUDE_DIRECTORIES(${LIBAS_EXTERNAL_INCLUDE_DIRS})
+SET(LIBAS_INSTALL_INCLUDE_DIRS ${LIBAS_EXTERNAL_INCLUDE_DIRS}
+                               "${CMAKE_INSTALL_PREFIX}/include")
+LIST(REMOVE_DUPLICATES LIBAS_INSTALL_INCLUDE_DIRS)
+
+SET(LIBAS_EXTERNAL_LIBRARIES
+    ${Boost_LIBRARIES}
+    ${SharemindLibexecutable_LIBRARIES}
+    ${SharemindLibvmi_LIBRARIES}
+    ${SharemindVmGlobals_LIBRARIES}
+)
+LIST(REMOVE_DUPLICATES LIBAS_EXTERNAL_LIBRARIES)
+SET(LIBAS_INSTALL_LINK_LIBRARIES ${LIBAS_EXTERNAL_LIBRARIES}
+                                 "-L${CMAKE_INSTALL_PREFIX}/lib"
+                                 "-lsharemind_as")
+LIST(REMOVE_DUPLICATES LIBAS_INSTALL_LINK_LIBRARIES)
+
+SET(LIBAS_EXTERNAL_DEFINITIONS
+    ${Boost_DEFINITIONS}
+    ${SharemindLibexecutable_DEFINITIONS}
+    ${SharemindLibvmi_DEFINITIONS}
+    ${SharemindVmGlobals_DEFINITIONS}
+)
+LIST(REMOVE_DUPLICATES LIBAS_EXTERNAL_DEFINITIONS)
+SET(LIBAS_INSTALL_DEFINITIONS ${LIBAS_EXTERNAL_DEFINITIONS}
+                              "-D__STDC_LIMIT_MACROS")
+LIST(REMOVE_DUPLICATES LIBAS_INSTALL_DEFINITIONS)
+ADD_DEFINITIONS(${LIBAS_INSTALL_DEFINITIONS})
 
 ADD_COMPILE_OPTIONS(
   "-std=c99" "-O2" "-fwrapv" "-Wall" "-Wextra" "-Wunused" "-Wabi"
@@ -46,12 +75,6 @@ FUNCTION(CHECK_ADD_COMPILER_FLAG flag)
 ENDFUNCTION()
 CHECK_ADD_COMPILER_FLAG("-Weverything")
 CHECK_ADD_COMPILER_FLAG("-Wlogical-op")
-
-SET(LIBAS_INSTALL_DEFINITIONS "-D__STDC_LIMIT_MACROS")
-ADD_DEFINITIONS(${SharemindVmGlobals_DEFINITIONS}
-                ${SharemindLibvmi_DEFINITIONS}
-                ${SharemindLibexecutable_DEFINITIONS}
-                ${LIBAS_INSTALL_DEFINITIONS})
 
 ################################################################################
 #  Libas:                                                                      #
@@ -76,9 +99,7 @@ SET_TARGET_PROPERTIES("libas" PROPERTIES
                       LIBRARY_OUTPUT_DIRECTORY "${SHAREMIND_LIB_DIR}"
                       VERSION "${LIBAS_VERSION}"
                       SOVERSION "0.1")
-
-TARGET_LINK_LIBRARIES("libas" ${SharemindLibexecutable_LIBRARIES}
-                              ${SharemindLibvmi_LIBRARIES})
+TARGET_LINK_LIBRARIES("libas" ${LIBAS_EXTERNAL_LIBRARIES})
 
 INSTALL(TARGETS "libas"
         LIBRARY DESTINATION "lib"
@@ -90,9 +111,6 @@ FILE(GLOB_RECURSE sharemind_libas_in_files
                   "${CMAKE_CURRENT_SOURCE_DIR}/*.in")
 ADD_CUSTOM_TARGET("include_sharemind_libas_in_files_in_IDE"
                   SOURCES ${sharemind_libas_in_files})
-SET(LIBAS_INSTALL_LINK_LIBRARIES "-L${CMAKE_INSTALL_PREFIX}/lib"
-                                 "-lsharemind_as")
-SET(LIBAS_INSTALL_INCLUDE_DIRS "${CMAKE_INSTALL_PREFIX}/include")
 
 CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/SharemindLibasConfig.cmake.in"
                "${CMAKE_CURRENT_BINARY_DIR}/SharemindLibasConfig.cmake" @ONLY)
