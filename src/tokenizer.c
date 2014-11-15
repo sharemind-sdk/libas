@@ -108,7 +108,6 @@ tokenize_begin2:
         default:
             goto tokenize_error;
     }
-    goto tokenize_error;
 
 tokenize_comment:
 
