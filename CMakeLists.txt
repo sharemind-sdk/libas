@@ -75,6 +75,8 @@ FUNCTION(CHECK_ADD_COMPILER_FLAG flag)
 ENDFUNCTION()
 CHECK_ADD_COMPILER_FLAG("-Weverything")
 CHECK_ADD_COMPILER_FLAG("-Wlogical-op")
+CHECK_ADD_COMPILER_FLAG("-Wno-padded")
+CHECK_ADD_COMPILER_FLAG("-Wno-gnu-case-range")
 
 ################################################################################
 #  Libas:                                                                      #
