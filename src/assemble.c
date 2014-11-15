@@ -10,6 +10,7 @@
 #include "assemble.h"
 
 #include <assert.h>
+#include <sharemind/comma.h>
 #include <sharemind/libvmi/instr.h>
 #include <sharemind/likely.h>
 #include <sharemind/trie.h>
@@ -18,44 +19,49 @@
 #include <stdlib.h>
 
 
-static inline int sharemind_assembler_assign_add_sizet_int64(size_t * lhs, const int64_t rhs) {
+static inline bool assign_add_sizet_int64(size_t * const lhs, const int64_t rhs)
+{
     if (rhs > 0) {
         if (((uint64_t) rhs) > SIZE_MAX - (*lhs))
-            return 0;
+            return false;
         (*lhs) += (uint64_t) rhs;
     } else if (rhs < 0) {
         if (rhs == INT64_MIN) {
             if ((*lhs) <= (uint64_t) INT64_MAX)
-                return 0;
+                return false;
             (*lhs)--;
             (*lhs) -= (uint64_t) INT64_MAX;
         } else {
             if ((*lhs) < (uint64_t) -rhs)
-              return 0;
+              return false;
             (*lhs) -= (uint64_t) -rhs;
         }
     }
-    return 1;
+    return true;
 }
 
-static inline int sharemind_assembler_substract_sizet_sizet_to_int64(int64_t *dest, const size_t lhs, const size_t rhs) {
+static inline bool substract_2sizet_to_int64(
+        int64_t * const dest,
+        const size_t lhs,
+        const size_t rhs)
+{
     if (lhs >= rhs) {
         size_t r = lhs - rhs;
         if (r > INT64_MAX)
-            return 0;
+            return false;
         (*dest) = (int64_t) r;
     } else {
         size_t mr = rhs - lhs;
         assert(mr > 0);
         if (mr - 1 > (uint64_t) INT64_MAX) {
-            return 0;
+            return false;
         } else if (mr - 1 == (uint64_t) INT64_MAX) {
             (*dest) = INT64_MIN;
         } else {
             (*dest) = -((int64_t) mr);
         }
     }
-    return 1;
+    return true;
 }
 
 
@@ -65,98 +71,152 @@ typedef struct {
     size_t offset;
 } SharemindAssemblerLabelLocation;
 
-SHAREMIND_TRIE_DECLARE(SharemindAssemblerLabelLocations,SharemindAssemblerLabelLocation,)
-SHAREMIND_TRIE_DEFINE(SharemindAssemblerLabelLocations,SharemindAssemblerLabelLocation,malloc,free,)
+SHAREMIND_TRIE_DECLARE(SharemindAssemblerLabelLocations,
+                       SharemindAssemblerLabelLocation,)
+SHAREMIND_TRIE_DEFINE(SharemindAssemblerLabelLocations,
+                      SharemindAssemblerLabelLocation,
+                      malloc,
+                      free,)
 
 
 typedef struct {
     size_t linkingUnit;
     int section;
     int64_t extraOffset;
-    int doJumpLabel;
+    bool doJumpLabel;
     size_t jmpOffset;
     void ** data;
     size_t cbdata_index;
-    const SharemindAssemblerToken * token; /* NULL if this slot is already filled */
+
+    /* NULL if this slot is already filled: */
+    const SharemindAssemblerToken * token;
 } SharemindAssemblerLabelSlot;
 
-static bool SharemindAssemblerLabelSlot_filled(SharemindAssemblerLabelSlot * s, SharemindAssemblerLabelSlot ** d) {
-    assert(s);
-    if (s->token == NULL)
+SHAREMIND_VECTOR_DEFINE_BODY(SharemindAssemblerLabelSlots,
+                             SharemindAssemblerLabelSlot,)
+SHAREMIND_VECTOR_DECLARE_INIT(SharemindAssemblerLabelSlots,static,)
+SHAREMIND_VECTOR_DEFINE_INIT(SharemindAssemblerLabelSlots,static)
+SHAREMIND_VECTOR_DECLARE_DESTROY(SharemindAssemblerLabelSlots,static,)
+SHAREMIND_VECTOR_DEFINE_DESTROY(SharemindAssemblerLabelSlots,static,free)
+SHAREMIND_VECTOR_DECLARE_FORCE_RESIZE(SharemindAssemblerLabelSlots,static,)
+SHAREMIND_VECTOR_DEFINE_FORCE_RESIZE(SharemindAssemblerLabelSlots,
+                                     static,
+                                     SharemindAssemblerLabelSlot,
+                                     realloc)
+SHAREMIND_VECTOR_DECLARE_PUSH(SharemindAssemblerLabelSlots,
+                              static,
+                              SharemindAssemblerLabelSlot,)
+SHAREMIND_VECTOR_DEFINE_PUSH(SharemindAssemblerLabelSlots,
+                             static,
+                             SharemindAssemblerLabelSlot)
+SHAREMIND_VECTOR_DECLARE_FOREACH(SharemindAssemblerLabelSlots,
+                                 firstUndefinedSlot,
+                                 static SharemindAssemblerLabelSlot *,
+                                 const,,)
+SHAREMIND_VECTOR_DEFINE_FOREACH(
+        SharemindAssemblerLabelSlots,
+        firstUndefinedSlot,
+        static SharemindAssemblerLabelSlot *,
+        const,
+        SharemindAssemblerLabelSlot,,,
+        NULL,
+        if (value->token != NULL)
+            return value;)
+SHAREMIND_VECTOR_DECLARE_FOREACH(
+        SharemindAssemblerLabelSlots,
+        fillSlots,
+        static bool,,
+        SHAREMIND_COMMA SharemindAssemblerLabelLocation *,)
+SHAREMIND_VECTOR_DEFINE_FOREACH(
+        SharemindAssemblerLabelSlots,
+        fillSlots,
+        static bool,,
+        SharemindAssemblerLabelSlot,
+        SHAREMIND_COMMA SharemindAssemblerLabelLocation * l,,
+        true,
+        assert(value);
+        assert(value->token);
+        assert(l);
+
+        size_t absTarget = l->offset;
+        if (!assign_add_sizet_int64(&absTarget, value->extraOffset))
+            return false; /**< \todo Provide better diagnostics */
+
+        if (!value->doJumpLabel) { /* Normal absolute label */
+            ((SharemindCodeBlock *) *value->data)[value->cbdata_index].uint64[0]
+                    = absTarget;
+        } else { /* Relative jump label */
+            if (value->section != l->section
+                || value->linkingUnit != l->linkingUnit)
+                return false; /**< \todo Provide better diagnostics */
+
+            assert(value->section == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT);
+            assert(value->jmpOffset < l->offset); /* Because we're one-pass. */
+
+            if (!substract_2sizet_to_int64(
+                    &((SharemindCodeBlock *) *value->data)[value->cbdata_index]
+                            .int64[0],
+                    absTarget,
+                    value->jmpOffset))
+                return false; /**< \todo Provide better diagnostics */
+
+            /** \todo Maybe check whether there's really an instruction there */
+        }
+        value->token = NULL;)
+
+static bool SharemindAssemblerLabelSlots_all_slots_filled(
+        SharemindAssemblerLabelSlots * ss,
+        SharemindAssemblerLabelSlot ** d)
+{
+    SharemindAssemblerLabelSlot * const undefinedSlot =
+            SharemindAssemblerLabelSlots_firstUndefinedSlot(ss);
+    if (!undefinedSlot)
         return true;
-    (*d) = s;
+    (*d) = undefinedSlot;
     return false;
 }
 
-SHAREMIND_VECTOR_DECLARE(SharemindAssemblerLabelSlots,SharemindAssemblerLabelSlot,,)
-SHAREMIND_VECTOR_DEFINE(SharemindAssemblerLabelSlots,SharemindAssemblerLabelSlot,malloc,free,realloc,)
-SHAREMIND_VECTOR_DECLARE_FOREACH_WITH(SharemindAssemblerLabelSlots,SharemindAssemblerLabelSlot,labelLocationPointer,SharemindAssemblerLabelLocation *,)
-SHAREMIND_VECTOR_DEFINE_FOREACH_WITH(SharemindAssemblerLabelSlots,SharemindAssemblerLabelSlot,labelLocationPointer,SharemindAssemblerLabelLocation *,SharemindAssemblerLabelLocation * p,p,)
-SHAREMIND_VECTOR_DECLARE_FOREACH_WITH(SharemindAssemblerLabelSlots,SharemindAssemblerLabelSlot,labelSlotPointerPointer,SharemindAssemblerLabelSlot **,)
-SHAREMIND_VECTOR_DEFINE_FOREACH_WITH(SharemindAssemblerLabelSlots,SharemindAssemblerLabelSlot,labelSlotPointerPointer,SharemindAssemblerLabelSlot **,SharemindAssemblerLabelSlot ** p,p,)
+SHAREMIND_TRIE_DECLARE(SharemindAssemblerLabelSlotsTrie,
+                       SharemindAssemblerLabelSlots,)
+SHAREMIND_TRIE_DEFINE(SharemindAssemblerLabelSlotsTrie,
+                      SharemindAssemblerLabelSlots,
+                      malloc,
+                      free,)
+SHAREMIND_TRIE_DECLARE_FOREACH_WITH(SharemindAssemblerLabelSlotsTrie,
+                                    SharemindAssemblerLabelSlots,
+                                    lblSltPtrPtr,
+                                    SharemindAssemblerLabelSlot **,
+                                    SharemindAssemblerLabelSlot ** p,)
+SHAREMIND_TRIE_DEFINE_FOREACH_WITH(SharemindAssemblerLabelSlotsTrie,
+                                   SharemindAssemblerLabelSlots,
+                                   lblSltPtrPtr,
+                                   SharemindAssemblerLabelSlot **,
+                                   SharemindAssemblerLabelSlot ** p,
+                                   p,)
 
-static bool SharemindAssemblerLabelSlots_all_slots_filled(SharemindAssemblerLabelSlots * ss, SharemindAssemblerLabelSlot ** d) {
-    return SharemindAssemblerLabelSlots_foreach_with_labelSlotPointerPointer(ss, &SharemindAssemblerLabelSlot_filled, d);
-}
+SHAREMIND_ENUM_CUSTOM_DEFINE_TOSTRING(SharemindAssemblerError,
+                                      SHAREMIND_ASSEMBLER_ERROR_ENUM)
 
-SHAREMIND_TRIE_DECLARE(SharemindAssemblerLabelSlotsTrie,SharemindAssemblerLabelSlots,)
-SHAREMIND_TRIE_DEFINE(SharemindAssemblerLabelSlotsTrie,SharemindAssemblerLabelSlots,malloc,free,)
-SHAREMIND_TRIE_DECLARE_FOREACH_WITH(SharemindAssemblerLabelSlotsTrie,SharemindAssemblerLabelSlots,labelSlotPointerPointer,SharemindAssemblerLabelSlot **,SharemindAssemblerLabelSlot ** p,)
-SHAREMIND_TRIE_DEFINE_FOREACH_WITH(SharemindAssemblerLabelSlotsTrie,SharemindAssemblerLabelSlots,labelSlotPointerPointer,SharemindAssemblerLabelSlot **,SharemindAssemblerLabelSlot ** p,p,)
+#define EOF_TEST     (unlikely(  t >= e))
+#define INC_EOF_TEST (unlikely(++t >= e))
 
-static bool SharemindAssemblerLabelSlot_fill(SharemindAssemblerLabelSlot * s, SharemindAssemblerLabelLocation * l) {
-    assert(s);
-    assert(s->token);
-    assert(l);
-
-    size_t absTarget = l->offset;
-    if (!sharemind_assembler_assign_add_sizet_int64(&absTarget, s->extraOffset))
-        goto fill_error;
-
-    if (!s->doJumpLabel) { /* Normal absolute label */
-        ((SharemindCodeBlock *) *s->data)[s->cbdata_index].uint64[0] = absTarget;
-    } else { /* Relative jump label */
-        if (s->section != l->section || s->linkingUnit != l->linkingUnit)
-            goto fill_error;
-
-        assert(s->section == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT);
-        assert(s->jmpOffset < l->offset); /* Because we're one-pass. */
-
-        if (!sharemind_assembler_substract_sizet_sizet_to_int64(&((SharemindCodeBlock *) *s->data)[s->cbdata_index].int64[0], absTarget, s->jmpOffset))
-            goto fill_error;
-
-        /** \todo Maybe check whether there's really an instruction there */
-    }
-    s->token = NULL;
-    return true;
-
-fill_error:
-    /** \todo Provide better diagnostics */
-    return false;
-}
-
-SHAREMIND_ENUM_CUSTOM_DEFINE_TOSTRING(SharemindAssemblerError, SHAREMIND_ASSEMBLER_ERROR_ENUM);
-
-#define SHAREMIND_ASSEMBLER_ASSEMBLE_EOF_TEST     (unlikely(  t >= e))
-#define SHAREMIND_ASSEMBLER_ASSEMBLE_INC_EOF_TEST (unlikely(++t >= e))
-
-#define SHAREMIND_ASSEMBLER_ASSEMBLE_INC_CHECK_EOF(eof) \
-    if (SHAREMIND_ASSEMBLER_ASSEMBLE_INC_EOF_TEST) { \
+#define INC_CHECK_EOF(eof) \
+    if (INC_EOF_TEST) { \
         goto eof; \
     } else (void) 0
 
-#define SHAREMIND_ASSEMBLER_ASSEMBLE_DO_EOL(eof,noexpect) \
+#define DO_EOL(eof,noexpect) \
     if (1) { \
-        if (SHAREMIND_ASSEMBLER_ASSEMBLE_EOF_TEST) \
+        if (EOF_TEST) \
             goto eof; \
         if (unlikely(t->type != SHAREMIND_ASSEMBLER_TOKEN_NEWLINE)) \
             goto noexpect; \
     } else (void) 0
 
-#define SHAREMIND_ASSEMBLER_ASSEMBLE_INC_DO_EOL(eof,noexpect) \
+#define INC_DO_EOL(eof,noexpect) \
     if (1) { \
         t++; \
-        SHAREMIND_ASSEMBLER_ASSEMBLE_DO_EOL(eof,noexpect); \
+        DO_EOL(eof,noexpect); \
     } else (void) 0
 
 SharemindAssemblerError sharemind_assembler_assemble(
@@ -197,7 +257,10 @@ SharemindAssemblerError sharemind_assembler_assemble(
     SharemindAssemblerLabelSlotsTrie_init(&lst);
 
     {
-        SharemindAssemblerLabelLocation * l = SharemindAssemblerLabelLocations_get_or_insert(&ll, "RODATA", NULL);
+        SharemindAssemblerLabelLocation * l =
+                SharemindAssemblerLabelLocations_get_or_insert(&ll,
+                                                               "RODATA",
+                                                               NULL);
         if (unlikely(!l))
             goto assemble_out_of_memory;
         /* l->linkingUnit = SIZE_MAX; */ /* Not used. */
@@ -241,7 +304,10 @@ assemble_newline:
                 goto assemble_out_of_memory;
 
             bool newValue;
-            SharemindAssemblerLabelLocation * l = SharemindAssemblerLabelLocations_get_or_insert(&ll, label, &newValue);
+            SharemindAssemblerLabelLocation * l =
+                    SharemindAssemblerLabelLocations_get_or_insert(&ll,
+                                                                   label,
+                                                                   &newValue);
             if (unlikely(!l)) {
                 free(label);
                 goto assemble_out_of_memory;
@@ -257,24 +323,28 @@ assemble_newline:
             l->section = section_index;
             if (section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND) {
                 l->offset = numBindings;
-            } else if (section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND) {
+            } else if (section_index
+                       == SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND)
+            {
                 l->offset = numPdBindings;
             } else {
                 l->offset = lu->sections[section_index].length;
             }
 
             /* Fill pending label slots: */
-            SharemindAssemblerLabelSlots * slots = SharemindAssemblerLabelSlotsTrie_find(&lst, label);
+            SharemindAssemblerLabelSlots * const slots =
+                    SharemindAssemblerLabelSlotsTrie_find(&lst, label);
             free(label);
-            if (slots) {
-                if (!SharemindAssemblerLabelSlots_foreach_with_labelLocationPointer(slots, &SharemindAssemblerLabelSlot_fill, l))
-                    goto assemble_invalid_label_t;
-            }
+            if (slots && !SharemindAssemblerLabelSlots_fillSlots(slots, l))
+                goto assemble_invalid_label_t;
             break;
         }
         case SHAREMIND_ASSEMBLER_TOKEN_DIRECTIVE:
-            if (t->length == 13u && strncmp(t->text, ".linking_unit", 13u) == 0) {
-                SHAREMIND_ASSEMBLER_ASSEMBLE_INC_CHECK_EOF(assemble_unexpected_eof);
+#define TOKEN_MATCH(name) \
+    ((t->length = sizeof(name) - 1u) \
+     && strncmp(t->text, name, sizeof(name) - 1u) == 0)
+            if (TOKEN_MATCH(".linking_unit")) {
+                INC_CHECK_EOF(assemble_unexpected_eof);
                 if (unlikely(t->type != SHAREMIND_ASSEMBLER_TOKEN_UHEX))
                     goto assemble_invalid_parameter_t;
 
@@ -291,46 +361,50 @@ assemble_newline:
                             goto assemble_out_of_memory;
                         SharemindAssemblerLinkingUnit_init(lu);
                     } else {
-                        lu = SharemindAssemblerLinkingUnits_get_pointer(lus, v);
+                        lu = &lus->data[v];
                     }
                     lu_index = v;
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
                 }
-            } else if (t->length == 8u && strncmp(t->text, ".section", 8u) == 0) {
-                SHAREMIND_ASSEMBLER_ASSEMBLE_INC_CHECK_EOF(assemble_unexpected_eof);
+            } else if (TOKEN_MATCH(".section")) {
+                INC_CHECK_EOF(assemble_unexpected_eof);
                 if (unlikely(t->type != SHAREMIND_ASSEMBLER_TOKEN_KEYWORD))
                     goto assemble_invalid_parameter_t;
 
-                if (t->length == 4u && strncmp(t->text, "TEXT", 4u) == 0) {
+                if (TOKEN_MATCH("TEXT")) {
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
-                } else if (t->length == 6u && strncmp(t->text, "RODATA", 6u) == 0) {
+                } else if (TOKEN_MATCH("RODATA")) {
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_RODATA;
-                } else if (t->length == 4u && strncmp(t->text, "DATA", 4u) == 0) {
+                } else if (TOKEN_MATCH("DATA")) {
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_DATA;
-                } else if (t->length == 3u && strncmp(t->text, "BSS", 3u) == 0) {
+                } else if (TOKEN_MATCH("BSS")) {
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS;
-                } else if (t->length == 4u && strncmp(t->text, "BIND", 4u) == 0) {
+                } else if (TOKEN_MATCH("BIND")) {
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND;
-                } else if (t->length == 6u && strncmp(t->text, "PDBIND", 6u) == 0) {
+                } else if (TOKEN_MATCH("PDBIND")) {
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND;
-                } else if (t->length == 5u && strncmp(t->text, "DEBUG", 5u) == 0) {
+                } else if (TOKEN_MATCH("DEBUG")) {
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_DEBUG;
                 } else {
                     goto assemble_invalid_parameter_t;
                 }
-            } else if (t->length == 5u && strncmp(t->text, ".data", 5u) == 0) {
-                if (unlikely(section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT))
+            } else if (TOKEN_MATCH(".data")) {
+                if (unlikely(section_index
+                             == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT))
                     goto assemble_unexpected_token_t;
 
                 multiplier = 1u;
                 goto assemble_data_or_fill;
-            } else if (t->length == 5u && strncmp(t->text, ".fill", 5u) == 0) {
-                if (unlikely(section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT
-                             || section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND
-                             || section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND))
+            } else if (TOKEN_MATCH(".fill")) {
+                if (unlikely((section_index
+                              == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT)
+                             || (section_index
+                                 == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND)
+                             || (section_index
+                                 == SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND)))
                     goto assemble_unexpected_token_t;
 
-                SHAREMIND_ASSEMBLER_ASSEMBLE_INC_CHECK_EOF(assemble_unexpected_eof);
+                INC_CHECK_EOF(assemble_unexpected_eof);
 
                 if (unlikely(t->type != SHAREMIND_ASSEMBLER_TOKEN_UHEX))
                     goto assemble_invalid_parameter_t;
@@ -340,23 +414,28 @@ assemble_newline:
                     goto assemble_invalid_parameter_t;
 
                 goto assemble_data_or_fill;
-            } else if (likely(t->length == 5u && strncmp(t->text, ".bind", 5u) == 0)) {
-                if (unlikely(section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND && section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND))
+            } else if (likely(TOKEN_MATCH(".bind"))) {
+                if (unlikely((section_index
+                              != SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND)
+                             && (section_index
+                                 != SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND)))
                     goto assemble_unexpected_token_t;
 
-                SHAREMIND_ASSEMBLER_ASSEMBLE_INC_CHECK_EOF(assemble_unexpected_eof);
+                INC_CHECK_EOF(assemble_unexpected_eof);
 
                 if (unlikely(t->type != SHAREMIND_ASSEMBLER_TOKEN_STRING))
                     goto assemble_invalid_parameter_t;
 
                 size_t syscallSigLen;
-                char * syscallSig = SharemindAssemblerToken_string_value(t, &syscallSigLen);
+                char * const syscallSig =
+                        SharemindAssemblerToken_string_value(t, &syscallSigLen);
                 if (!syscallSig)
                     goto assemble_out_of_memory;
 
                 const size_t oldLen = lu->sections[section_index].length;
                 const size_t newLen = oldLen + syscallSigLen + 1;
-                void * newData = realloc(lu->sections[section_index].data, newLen);
+                void * newData =
+                        realloc(lu->sections[section_index].data, newLen);
                 if (unlikely(!newData)) {
                     free(syscallSig);
                     goto assemble_out_of_memory;
@@ -364,7 +443,7 @@ assemble_newline:
                 lu->sections[section_index].data = newData;
                 lu->sections[section_index].length = newLen;
 
-                memcpy(((uint8_t *) lu->sections[section_index].data) + oldLen,
+                memcpy(((char *) lu->sections[section_index].data) + oldLen,
                        syscallSig, syscallSigLen + 1);
 
                 if (section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND) {
@@ -378,11 +457,12 @@ assemble_newline:
                 goto assemble_unknown_directive_t;
             }
 
-            SHAREMIND_ASSEMBLER_ASSEMBLE_INC_DO_EOL(assemble_check_labels,assemble_unexpected_token_t);
+            INC_DO_EOL(assemble_check_labels, assemble_unexpected_token_t);
             goto assemble_newline;
         case SHAREMIND_ASSEMBLER_TOKEN_KEYWORD:
         {
-            if (unlikely(section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT))
+            if (unlikely(section_index
+                         != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT))
                 goto assemble_unexpected_token_t;
 
             size_t args = 0u;
@@ -395,15 +475,17 @@ assemble_newline:
             const SharemindAssemblerToken * ot = t;
             /* Collect instruction name and count arguments: */
             for (;;) {
-                if (SHAREMIND_ASSEMBLER_ASSEMBLE_INC_EOF_TEST)
+                if (INC_EOF_TEST)
                     break;
                 if (t->type == SHAREMIND_ASSEMBLER_TOKEN_NEWLINE) {
                     break;
                 } else if (t->type == SHAREMIND_ASSEMBLER_TOKEN_KEYWORD) {
-                    size_t newSize = l + t->length + 1u;
+                    size_t const newSize = l + t->length + 1u;
                     if (unlikely(newSize < l))
                         goto assemble_invalid_parameter_t;
-                    char * newName = (char *) realloc(name, sizeof(char) * (newSize + 1u));
+                    char * const newName =
+                            (char *) realloc(name,
+                                             sizeof(char) * (newSize + 1u));
                     if (unlikely(!newName)) {
                         free(name);
                         goto assemble_out_of_memory;
@@ -412,7 +494,13 @@ assemble_newline:
                     name[l] = '_';
                     strncpy(name + l + 1u, t->text, t->length);
                     l = newSize;
-                } else if (likely(t->type == SHAREMIND_ASSEMBLER_TOKEN_UHEX || t->type == SHAREMIND_ASSEMBLER_TOKEN_HEX || t->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL || t->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL_O)) {
+                } else if (likely((t->type == SHAREMIND_ASSEMBLER_TOKEN_UHEX)
+                                  || (t->type == SHAREMIND_ASSEMBLER_TOKEN_HEX)
+                                  || (t->type
+                                      == SHAREMIND_ASSEMBLER_TOKEN_LABEL)
+                                  || (t->type
+                                      == SHAREMIND_ASSEMBLER_TOKEN_LABEL_O)))
+                {
                     args++;
                 } else {
                     goto assemble_invalid_parameter_t;
@@ -421,7 +509,8 @@ assemble_newline:
             name[l] = '\0';
 
             /* Detect and check instruction: */
-            const SharemindVmInstruction * i = sharemind_vm_instruction_from_name(name);
+            const SharemindVmInstruction * const i =
+                    sharemind_vm_instruction_from_name(name);
             if (unlikely(!i)) {
                 if (errorToken)
                     *errorToken = ot;
@@ -440,7 +529,7 @@ assemble_newline:
 
             /* Detect offset for jump instructions */
             size_t jmpOffset;
-            int doJumpLabel;
+            bool doJumpLabel;
             {
                 char c[sizeof(i->code)];
                 memcpy(c, &(i->code), sizeof(i->code));
@@ -448,20 +537,26 @@ assemble_newline:
                     && c[2u] == 0x01) /* and imm first argument OLB */
                 {
                     jmpOffset = lu->sections[section_index].length;
-                    doJumpLabel = 1;
+                    doJumpLabel = true;
                 } else {
                     jmpOffset = 0u;
-                    doJumpLabel = 0;
+                    doJumpLabel = false;
                 }
             }
 
             /* Allocate whole instruction: */
-            char * newData = (char *) realloc((void *) lu->sections[section_index].data, sizeof(SharemindCodeBlock) * (lu->sections[section_index].length + args + 1));
+            char * newData =
+                    (char *) realloc(lu->sections[section_index].data,
+                                     sizeof(SharemindCodeBlock)
+                                     * (lu->sections[section_index].length
+                                        + args + 1u));
             if (unlikely(!newData))
                 goto assemble_out_of_memory;
             lu->sections[section_index].data = newData;
-            SharemindCodeBlock * cbdata = (SharemindCodeBlock *) lu->sections[section_index].data;
-            SharemindCodeBlock * instr = &cbdata[lu->sections[section_index].length];
+            SharemindCodeBlock * cbdata =
+                    (SharemindCodeBlock *) lu->sections[section_index].data;
+            SharemindCodeBlock * instr =
+                    &cbdata[lu->sections[section_index].length];
             lu->sections[section_index].length += args + 1;
 
             /* Write instruction code */
@@ -472,21 +567,26 @@ assemble_newline:
                 if (++ot == t)
                     break;
                 if (ot->type == SHAREMIND_ASSEMBLER_TOKEN_UHEX) {
-                    doJumpLabel = 0; /* Past first argument */
+                    doJumpLabel = false; /* Past first argument */
                     instr++;
                     instr->uint64[0] = SharemindAssemblerToken_uhex_value(ot);
                 } else if (ot->type == SHAREMIND_ASSEMBLER_TOKEN_HEX) {
-                    doJumpLabel = 0; /* Past first argument */
+                    doJumpLabel = false; /* Past first argument */
                     instr++;
                     instr->int64[0] = SharemindAssemblerToken_hex_value(ot);
-                } else if (likely(ot->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL || ot->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL_O)) {
+                } else if (likely((ot->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL)
+                                  || (ot->type
+                                      == SHAREMIND_ASSEMBLER_TOKEN_LABEL_O)))
+                {
                     instr++;
-                    char * label = SharemindAssemblerToken_label_to_new_string(ot);
+                    char * const label =
+                            SharemindAssemblerToken_label_to_new_string(ot);
                     if (unlikely(!label))
                         goto assemble_out_of_memory;
 
                     /* Check whether label is defined: */
-                    SharemindAssemblerLabelLocation * loc = SharemindAssemblerLabelLocations_find(&ll, label);
+                    SharemindAssemblerLabelLocation * const loc =
+                            SharemindAssemblerLabelLocations_find(&ll, label);
                     if (loc) {
                         free(label);
 
@@ -495,40 +595,53 @@ assemble_newline:
                             if (loc->section < 0)
                                 goto assemble_invalid_label;
 
-                            assert(jmpOffset >= loc->offset); /* Because we're one-pass. */
+                            /* Because we're one-pass: */
+                            assert(jmpOffset >= loc->offset);
 
-                            /* Check whether the label is defined in the same linking unit: */
+                            /* Check whether the label is defined in the same
+                               linking unit: */
                             if (loc->linkingUnit != lu_index) {
                                 if (errorToken)
                                     *errorToken = ot;
                                 goto assemble_invalid_label;
                             }
 
-                            /* Verify that the label is defined in a TEXT section: */
-                            assert(section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT);
-                            if (loc->section != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT) {
+                            /* Verify that the label is defined in a TEXT
+                               section: */
+                            assert(section_index
+                                   == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT);
+                            if (loc->section
+                                    != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT)
+                            {
                                 if (errorToken)
                                     *errorToken = ot;
                                 goto assemble_invalid_label;
                             }
 
                             size_t absTarget = loc->offset;
-                            if (!sharemind_assembler_assign_add_sizet_int64(&absTarget, SharemindAssemblerToken_label_offset(ot))
-                                || !sharemind_assembler_substract_sizet_sizet_to_int64(&instr->int64[0], absTarget, jmpOffset))
+                            if (!assign_add_sizet_int64(
+                                    &absTarget,
+                                    SharemindAssemblerToken_label_offset(ot))
+                                || !substract_2sizet_to_int64(&instr->int64[0],
+                                                              absTarget,
+                                                              jmpOffset))
                             {
                                 if (errorToken)
                                     *errorToken = ot;
                                 goto assemble_invalid_label_offset;
                             }
-                            /** \todo Maybe check whether there's really an instruction there */
+                            /** \todo Maybe check whether there's really an
+                                      instruction there. */
                         } else {
                             size_t absTarget = loc->offset;
-                            int64_t offset = SharemindAssemblerToken_label_offset(ot);
+                            int64_t const offset =
+                                    SharemindAssemblerToken_label_offset(ot);
                             if (loc->section < 0) {
                                 if (offset != 0)
                                     goto assemble_invalid_label_offset;
                             } else {
-                                if (!sharemind_assembler_assign_add_sizet_int64(&absTarget, offset)) {
+                                if (!assign_add_sizet_int64(&absTarget, offset))
+                                {
                                     if (errorToken)
                                         *errorToken = ot;
                                     goto assemble_invalid_label_offset;
@@ -538,7 +651,11 @@ assemble_newline:
                         }
                     } else {
                         bool newValue;
-                        SharemindAssemblerLabelSlots * slots = SharemindAssemblerLabelSlotsTrie_get_or_insert(&lst, label, &newValue);
+                        SharemindAssemblerLabelSlots * const slots =
+                                SharemindAssemblerLabelSlotsTrie_get_or_insert(
+                                    &lst,
+                                    label,
+                                    &newValue);
                         free(label);
                         if (unlikely(!slots))
                             goto assemble_out_of_memory;
@@ -546,36 +663,43 @@ assemble_newline:
                         if (newValue)
                             SharemindAssemblerLabelSlots_init(slots);
 
-                        SharemindAssemblerLabelSlot * slot = SharemindAssemblerLabelSlots_push(slots);
+                        SharemindAssemblerLabelSlot * const slot =
+                                SharemindAssemblerLabelSlots_push(slots);
                         if (unlikely(!slot))
                             goto assemble_out_of_memory;
 
                         slot->linkingUnit = lu_index;
                         slot->section = section_index;
-                        slot->extraOffset = SharemindAssemblerToken_label_offset(ot);
-                        slot->doJumpLabel = doJumpLabel; /* Signal a relative jump label */
+                        slot->extraOffset =
+                                SharemindAssemblerToken_label_offset(ot);
+                        /* Signal a relative jump label: */
+                        slot->doJumpLabel = doJumpLabel;
                         slot->jmpOffset = jmpOffset;
                         slot->data = &lu->sections[section_index].data;
-                        assert(instr > (SharemindCodeBlock *) lu->sections[section_index].data);
-                        assert(((uintmax_t) (instr - (SharemindCodeBlock *) lu->sections[section_index].data)) <= SIZE_MAX);
-                        slot->cbdata_index = (size_t) (instr - (SharemindCodeBlock *) lu->sections[section_index].data);
+                        SharemindCodeBlock * const cbData =
+                                (SharemindCodeBlock *)
+                                    lu->sections[section_index].data;
+                        assert(instr > cbData);
+                        assert(((uintmax_t) (instr - cbData)) <= SIZE_MAX);
+                        slot->cbdata_index = (size_t) (instr - cbData);
                         slot->token = ot;
                     }
-                    doJumpLabel = 0; /* Past first argument */
+                    doJumpLabel = false; /* Past first argument */
                 } else {
-                    /* Skip keywords, because they're already included in the instruction code. */
+                    /* Skip keywords, because they're already included in the
+                       instruction code. */
                     assert(ot->type == SHAREMIND_ASSEMBLER_TOKEN_KEYWORD);
                 }
             }
 
-            SHAREMIND_ASSEMBLER_ASSEMBLE_DO_EOL(assemble_check_labels,assemble_unexpected_token_t);
+            DO_EOL(assemble_check_labels, assemble_unexpected_token_t);
             goto assemble_newline;
         }
         default:
             goto assemble_unexpected_token_t;
     } /* switch */
 
-    if (!SHAREMIND_ASSEMBLER_ASSEMBLE_INC_EOF_TEST)
+    if (!INC_EOF_TEST)
         goto assemble_newline;
 
 assemble_check_labels:
@@ -583,7 +707,10 @@ assemble_check_labels:
     /* Check for undefined labels: */
     {
         SharemindAssemblerLabelSlot * undefinedSlot;
-        if (likely(SharemindAssemblerLabelSlotsTrie_foreach_with_labelSlotPointerPointer(&lst, &SharemindAssemblerLabelSlots_all_slots_filled, &undefinedSlot)))
+        if (likely(SharemindAssemblerLabelSlotsTrie_foreach_with_lblSltPtrPtr(
+                       &lst,
+                       &SharemindAssemblerLabelSlots_all_slots_filled,
+                       &undefinedSlot)))
             goto assemble_ok;
 
         assert(undefinedSlot);
@@ -594,28 +721,28 @@ assemble_check_labels:
 
 assemble_data_or_fill:
 
-    SHAREMIND_ASSEMBLER_ASSEMBLE_INC_CHECK_EOF(assemble_unexpected_eof);
+    INC_CHECK_EOF(assemble_unexpected_eof);
 
     if (unlikely(t->type != SHAREMIND_ASSEMBLER_TOKEN_KEYWORD))
         goto assemble_invalid_parameter_t;
 
-    if (t->length == 5u && strncmp(t->text, "uint8", t->length) == 0) {
+    if (TOKEN_MATCH("uint8")) {
         type = 0u;
-    } else if (t->length == 6u && strncmp(t->text, "uint16", t->length) == 0) {
+    } else if (TOKEN_MATCH("uint16")) {
         type = 1u;
-    } else if (t->length == 6u && strncmp(t->text, "uint32", t->length) == 0) {
+    } else if (TOKEN_MATCH("uint32")) {
         type = 2u;
-    } else if (t->length == 6u && strncmp(t->text, "uint64", t->length) == 0) {
+    } else if (TOKEN_MATCH("uint64")) {
         type = 3u;
-    } else if (t->length == 4u && strncmp(t->text, "int8", t->length) == 0) {
+    } else if (TOKEN_MATCH("int8")) {
         type = 4u;
-    } else if (t->length == 5u && strncmp(t->text, "int16", t->length) == 0) {
+    } else if (TOKEN_MATCH("int16")) {
         type = 5u;
-    } else if (t->length == 5u && strncmp(t->text, "int32", t->length) == 0) {
+    } else if (TOKEN_MATCH("int32")) {
         type = 6u;
-    } else if (t->length == 5u && strncmp(t->text, "int64", t->length) == 0) {
+    } else if (TOKEN_MATCH("int64")) {
         type = 7u;
-    } else if (t->length == 6u && strncmp(t->text, "string", t->length) == 0) {
+    } else if (TOKEN_MATCH("string")) {
         type = 8u;
     } else {
         goto assemble_invalid_parameter_t;
@@ -628,7 +755,7 @@ assemble_data_or_fill:
         dataToWriteLength = 0u;
     }
 
-    SHAREMIND_ASSEMBLER_ASSEMBLE_INC_DO_EOL(assemble_data_write,assemble_data_opt_param);
+    INC_DO_EOL(assemble_data_write, assemble_data_opt_param);
     goto assemble_data_write;
 
 assemble_data_opt_param:
@@ -719,7 +846,8 @@ assemble_data_opt_param:
             goto assemble_out_of_memory;
         memcpy(dataToWrite, &v, dataToWriteLength);
     } else if (t->type == SHAREMIND_ASSEMBLER_TOKEN_STRING && type == 8u) {
-        dataToWrite = SharemindAssemblerToken_string_value(t, &dataToWriteLength);
+        dataToWrite =
+                SharemindAssemblerToken_string_value(t, &dataToWriteLength);
         if (!dataToWrite)
             goto assemble_out_of_memory;
     } else {
@@ -727,13 +855,14 @@ assemble_data_opt_param:
     }
     assert(dataToWrite);
 
-    SHAREMIND_ASSEMBLER_ASSEMBLE_INC_DO_EOL(assemble_data_write,assemble_unexpected_token_t);
+    INC_DO_EOL(assemble_data_write, assemble_unexpected_token_t);
 
 assemble_data_write:
 
     assert(section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT);
     if (section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
-        lu->sections[SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS].length += (multiplier * dataToWriteLength);
+        lu->sections[SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS].length +=
+                (multiplier * dataToWriteLength);
     } else {
         const size_t oldLen = lu->sections[section_index].length;
         const size_t newLen = oldLen + (multiplier * dataToWriteLength);
@@ -829,7 +958,9 @@ assemble_invalid_label_offset:
     goto assemble_free_and_return;
 
 assemble_free_and_return:
-    SharemindAssemblerLabelSlotsTrie_destroy_with(&lst, &SharemindAssemblerLabelSlots_destroy);
+    SharemindAssemblerLabelSlotsTrie_destroy_with(
+                &lst,
+                &SharemindAssemblerLabelSlots_destroy);
     SharemindAssemblerLabelLocations_destroy(&ll);
     return returnStatus;
 }
