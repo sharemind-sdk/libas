@@ -17,7 +17,8 @@
 #include "stdion.h"
 
 
-SHAREMIND_ENUM_DEFINE_TOSTRING(SharemindAssemblerTokenType, SHAREMIND_ASSEMBLER_TOKEN_TYPE_ENUM);
+SHAREMIND_ENUM_DEFINE_TOSTRING(SharemindAssemblerTokenType,
+                               SHAREMIND_ASSEMBLER_TOKEN_TYPE_ENUM)
 
 uint64_t sharemind_assembler_read_hex(const char * c, size_t l) {
     assert(c);
