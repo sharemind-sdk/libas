@@ -40,8 +40,8 @@ static inline bool writeSection_0x0(SharemindAssemblerSection * s,
 
     {
         SharemindExecutableSectionHeader0x0 h;
-        __builtin_memcpy(&h, *pos, sizeof(h));
         SharemindExecutableSectionHeader0x0_init(&h, type, l);
+        __builtin_memcpy(&h, *pos, sizeof(h));
         (*pos) += sizeof(h);
     }
 
