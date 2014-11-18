@@ -17,6 +17,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include <stdio.h>
 
 /* COMMON */
 static const size_t extraPadding[8] = { 0u, 7u, 6u, 5u, 4u, 3u, 2u, 1u };
@@ -41,7 +42,7 @@ static inline bool writeSection_0x0(SharemindAssemblerSection * s,
     {
         SharemindExecutableSectionHeader0x0 h;
         SharemindExecutableSectionHeader0x0_init(&h, type, l);
-        __builtin_memcpy(&h, *pos, sizeof(h));
+        __builtin_memcpy(*pos, &h, sizeof(h));
         (*pos) += sizeof(h);
     }
 
