@@ -39,27 +39,28 @@ static inline bool writeSection_0x0(SharemindAssemblerSection * s,
         return false;
     const uint32_t l = (uint32_t) s->length;
 
+    char * p = *pos;
     {
         SharemindExecutableSectionHeader0x0 h;
         SharemindExecutableSectionHeader0x0_init(&h, type, l);
-        __builtin_memcpy(*pos, &h, sizeof(h));
-        (*pos) += sizeof(h);
+        __builtin_memcpy(p, &h, sizeof(h));
+        p += sizeof(h);
     }
 
     if (type == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT) {
         /* Write section data */
-        __builtin_memcpy(*pos, s->data, l * 8);
-        (*pos) += l * 8;
+        __builtin_memcpy(p, s->data, l * 8);
+        p += l * 8;
     } else if (type != SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
         /* Write section data */
-        __builtin_memcpy(*pos, s->data, l);
-        (*pos) += l;
+        __builtin_memcpy(p, s->data, l);
+        p += l;
 
         /* Extra padding: */
-        __builtin_bzero(*pos, extraPadding[l % 8]);
-        (*pos) += extraPadding[l % 8];
+        __builtin_bzero(p, extraPadding[l % 8]);
+        p += extraPadding[l % 8];
     }
-
+    (*pos) = p;
     return true;
 }
 
