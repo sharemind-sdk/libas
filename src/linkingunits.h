@@ -52,8 +52,9 @@ void SharemindAssemblerLinkingUnit_init(SharemindAssemblerLinkingUnit * lu)
 void SharemindAssemblerLinkingUnit_destroy(SharemindAssemblerLinkingUnit * lu)
         __attribute__ ((nonnull(1)));
 
-SHAREMIND_VECTOR_DEFINE_BODY(SharemindAssemblerLinkingUnits,
-                             SharemindAssemblerLinkingUnit,)
+SHAREMIND_VECTOR_DECLARE_BODY(SharemindAssemblerLinkingUnits,
+                             SharemindAssemblerLinkingUnit)
+SHAREMIND_VECTOR_DEFINE_BODY(SharemindAssemblerLinkingUnits,)
 SHAREMIND_VECTOR_DECLARE_INIT(SharemindAssemblerLinkingUnits,
                               inline,
                               SHAREMIND_COMMA visibility("internal"))
@@ -63,8 +64,7 @@ SHAREMIND_VECTOR_DECLARE_DESTROY(SharemindAssemblerLinkingUnits,
                                  SHAREMIND_COMMA visibility("internal"))
 SHAREMIND_VECTOR_DEFINE_DESTROY_WITH(
         SharemindAssemblerLinkingUnits,
-        inline,
-        SharemindAssemblerLinkingUnit,,
+        inline,,
         free,
         SharemindAssemblerLinkingUnit_destroy(value);)
 SHAREMIND_VECTOR_DECLARE_FORCE_RESIZE(SharemindAssemblerLinkingUnits,
@@ -72,15 +72,11 @@ SHAREMIND_VECTOR_DECLARE_FORCE_RESIZE(SharemindAssemblerLinkingUnits,
                                       SHAREMIND_COMMA visibility("internal"))
 SHAREMIND_VECTOR_DEFINE_FORCE_RESIZE(SharemindAssemblerLinkingUnits,
                                      inline,
-                                     SharemindAssemblerLinkingUnit,
                                      realloc)
 SHAREMIND_VECTOR_DECLARE_PUSH(SharemindAssemblerLinkingUnits,
                               inline,
-                              SharemindAssemblerLinkingUnit,
                               SHAREMIND_COMMA visibility("internal"))
-SHAREMIND_VECTOR_DEFINE_PUSH(SharemindAssemblerLinkingUnits,
-                             inline,
-                             SharemindAssemblerLinkingUnit)
+SHAREMIND_VECTOR_DEFINE_PUSH(SharemindAssemblerLinkingUnits, inline)
 
 SHAREMIND_EXTERN_C_END
 

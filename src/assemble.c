@@ -102,8 +102,9 @@ typedef struct {
     const SharemindAssemblerToken * token;
 } SharemindAssemblerLabelSlot;
 
-SHAREMIND_VECTOR_DEFINE_BODY(SharemindAssemblerLabelSlots,
-                             SharemindAssemblerLabelSlot,)
+SHAREMIND_VECTOR_DECLARE_BODY(SharemindAssemblerLabelSlots,
+                             SharemindAssemblerLabelSlot)
+SHAREMIND_VECTOR_DEFINE_BODY(SharemindAssemblerLabelSlots,)
 SHAREMIND_VECTOR_DECLARE_INIT(SharemindAssemblerLabelSlots,static,)
 SHAREMIND_VECTOR_DEFINE_INIT(SharemindAssemblerLabelSlots,static)
 SHAREMIND_VECTOR_DECLARE_DESTROY(SharemindAssemblerLabelSlots,static,)
@@ -111,14 +112,9 @@ SHAREMIND_VECTOR_DEFINE_DESTROY(SharemindAssemblerLabelSlots,static,free)
 SHAREMIND_VECTOR_DECLARE_FORCE_RESIZE(SharemindAssemblerLabelSlots,static,)
 SHAREMIND_VECTOR_DEFINE_FORCE_RESIZE(SharemindAssemblerLabelSlots,
                                      static,
-                                     SharemindAssemblerLabelSlot,
                                      realloc)
-SHAREMIND_VECTOR_DECLARE_PUSH(SharemindAssemblerLabelSlots,
-                              static,
-                              SharemindAssemblerLabelSlot,)
-SHAREMIND_VECTOR_DEFINE_PUSH(SharemindAssemblerLabelSlots,
-                             static,
-                             SharemindAssemblerLabelSlot)
+SHAREMIND_VECTOR_DECLARE_PUSH(SharemindAssemblerLabelSlots, static,)
+SHAREMIND_VECTOR_DEFINE_PUSH(SharemindAssemblerLabelSlots, static)
 SHAREMIND_VECTOR_DECLARE_FOREACH(SharemindAssemblerLabelSlots,
                                  firstUndefinedSlot,
                                  static SharemindAssemblerLabelSlot *,
@@ -127,8 +123,7 @@ SHAREMIND_VECTOR_DEFINE_FOREACH(
         SharemindAssemblerLabelSlots,
         firstUndefinedSlot,
         static SharemindAssemblerLabelSlot *,
-        const,
-        SharemindAssemblerLabelSlot,,,
+        const,,,
         NULL,
         if (value->token != NULL)
             return value;)
@@ -141,7 +136,6 @@ SHAREMIND_VECTOR_DEFINE_FOREACH(
         SharemindAssemblerLabelSlots,
         fillSlots,
         static bool,,
-        SharemindAssemblerLabelSlot,
         SHAREMIND_COMMA SharemindAssemblerLabelLocation * l,,
         true,
         assert(value);

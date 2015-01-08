@@ -83,8 +83,7 @@ SHAREMIND_VECTOR_DEFINE_FOREACH(
         SharemindAssemblerLinkingUnits,
         totalSize,
         static inline size_t,
-        const,
-        SharemindAssemblerLinkingUnit,,
+        const,,
         size_t totalSize = 0u;,
         totalSize,
         for (size_t i = 0u; i < SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT_0x0;i++)
@@ -114,7 +113,6 @@ SHAREMIND_VECTOR_DEFINE_FOREACH(
         writeTo,
         static inline bool,
         const,
-        SharemindAssemblerLinkingUnit,
         SHAREMIND_COMMA char ** pos,
         char * p = (*pos);,
         ((*pos) = p SHAREMIND_COMMA true),
