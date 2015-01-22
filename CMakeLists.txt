@@ -132,3 +132,16 @@ CONFIGURE_FILE(
 INSTALL(FILES "${CMAKE_CURRENT_BINARY_DIR}/SharemindLibasConfig.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/SharemindLibasConfigVersion.cmake"
         DESTINATION "lib/SharemindLibas")
+
+
+################################################################################
+# Misc. files
+################################################################################
+
+FILE(GLOB MD_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.md")
+FILE(GLOB_RECURSE DOC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/doc/*")
+FILE(GLOB LICENSE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE*")
+FILE(GLOB_RECURSE ALL_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*")
+ADD_CUSTOM_TARGET("include_MISC_FILES_in_IDE" SOURCES
+    ${MD_FILES} ${DOC_FILES} ${LICENSE_FILES} ${ALL_SOURCE_FILES}
+)
