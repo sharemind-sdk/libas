@@ -596,31 +596,17 @@ assemble_newline:
 
                         /* Is this a jump instruction location? */
                         if (doJumpLabel) {
-                            if (loc->section < 0)
-                                goto assemble_invalid_label;
-
-                            /* Because we're one-pass: */
-                            assert(jmpOffset >= loc->offset);
-
-                            /* Check whether the label is defined in the same
-                               linking unit: */
-                            if (loc->linkingUnit != lu_index) {
-                                if (errorToken)
-                                    *errorToken = ot;
-                                goto assemble_invalid_label;
-                            }
-
-                            /* Verify that the label is defined in a TEXT
-                               section: */
-                            assert(section_index
-                                   == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT);
-                            if (loc->section
+                            if ((loc->section
                                     != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT)
+                                || (loc->linkingUnit != lu_index))
                             {
                                 if (errorToken)
                                     *errorToken = ot;
                                 goto assemble_invalid_label;
                             }
+
+                            /* Because the label was defined & we're one-pass:*/
+                            assert(jmpOffset >= loc->offset);
 
                             size_t absTarget = loc->offset;
                             if (!assign_add_sizet_int64(
