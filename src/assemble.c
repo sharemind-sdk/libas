@@ -230,8 +230,8 @@ SharemindAssemblerError sharemind_assembler_assemble(
         char ** errorString)
 {
     SharemindAssemblerError returnStatus;
-    SharemindAssemblerToken * t;
-    SharemindAssemblerToken * e;
+    SharemindAssemblerToken const * t;
+    SharemindAssemblerToken const * e;
     SharemindAssemblerLinkingUnit * lu;
     size_t lu_index = 0u;
     int section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
