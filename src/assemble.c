@@ -345,7 +345,7 @@ assemble_newline:
         }
         case SHAREMIND_ASSEMBLER_TOKEN_DIRECTIVE:
 #define TOKEN_MATCH(name) \
-    ((t->length = sizeof(name) - 1u) \
+    ((t->length == sizeof(name) - 1u) \
      && strncmp(t->text, name, sizeof(name) - 1u) == 0)
             if (TOKEN_MATCH(".linking_unit")) {
                 INC_CHECK_EOF(assemble_unexpected_eof);
