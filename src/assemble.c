@@ -210,18 +210,18 @@ SHAREMIND_ENUM_CUSTOM_DEFINE_TOSTRING(SharemindAssemblerError,
     } else (void) 0
 
 #define DO_EOL(eof,noexpect) \
-    if (1) { \
+    do { \
         if (EOF_TEST) \
             goto eof; \
         if (unlikely(t->type != SHAREMIND_ASSEMBLER_TOKEN_NEWLINE)) \
             goto noexpect; \
-    } else (void) 0
+    } while ((0))
 
 #define INC_DO_EOL(eof,noexpect) \
-    if (1) { \
+    do { \
         t++; \
         DO_EOL(eof,noexpect); \
-    } else (void) 0
+    } while ((0))
 
 SharemindAssemblerError sharemind_assembler_assemble(
         const SharemindAssemblerTokens * ts,
