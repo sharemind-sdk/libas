@@ -20,6 +20,7 @@
 #include "tokens.h"
 
 #include <assert.h>
+#include <sharemind/abort.h>
 #include <sharemind/likely.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -238,8 +239,14 @@ void SharemindAssemblerTokens_print(const SharemindAssemblerTokens * ts) {
                 sharemind_assembler_nputs(t->text, t->length);
                 putchar(')');
                 break;
-            default:
-                break;
+            #ifdef __clang__
+            #pragma GCC diagnostic push
+            #pragma GCC diagnostic ignored "-Wcovered-switch-default"
+            #endif
+            default: SHAREMIND_ABORT("lATp %d\n", (int) t->type);
+            #ifdef __clang__
+            #pragma GCC diagnostic pop
+            #endif
         }
     }
     printf("\n");

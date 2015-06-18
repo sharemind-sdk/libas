@@ -20,6 +20,7 @@
 #include "assemble.h"
 
 #include <assert.h>
+#include <sharemind/abort.h>
 #include <sharemind/comma.h>
 #include <sharemind/libvmi/instr.h>
 #include <sharemind/likely.h>
@@ -685,8 +686,19 @@ assemble_newline:
             DO_EOL(assemble_check_labels, assemble_unexpected_token_t);
             goto assemble_newline;
         }
-        default:
+        case SHAREMIND_ASSEMBLER_TOKEN_HEX:
+        case SHAREMIND_ASSEMBLER_TOKEN_UHEX:
+        case SHAREMIND_ASSEMBLER_TOKEN_STRING:
+        case SHAREMIND_ASSEMBLER_TOKEN_LABEL_O:
             goto assemble_unexpected_token_t;
+        #ifdef __clang__
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wcovered-switch-default"
+        #endif
+        default: SHAREMIND_ABORT("lAa %d\n", (int) t->type);
+        #ifdef __clang__
+        #pragma GCC diagnostic pop
+        #endif
     } /* switch */
 
     if (!INC_EOF_TEST)
