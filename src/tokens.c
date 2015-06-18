@@ -228,6 +228,7 @@ void SharemindAssemblerTokens_print(const SharemindAssemblerTokens * ts) {
                 newLine = 1;
                 break;
             case SHAREMIND_ASSEMBLER_TOKEN_DIRECTIVE:
+            case SHAREMIND_ASSEMBLER_TOKEN_UHEX:
             case SHAREMIND_ASSEMBLER_TOKEN_HEX:
             case SHAREMIND_ASSEMBLER_TOKEN_STRING:
             case SHAREMIND_ASSEMBLER_TOKEN_LABEL_O:
