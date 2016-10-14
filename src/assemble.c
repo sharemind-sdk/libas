@@ -83,7 +83,7 @@ typedef struct {
 } SharemindAssemblerLabelLocation;
 
 SHAREMIND_TRIE_DECLARE(SharemindAssemblerLabelLocations,
-                       SharemindAssemblerLabelLocation,)
+                       SharemindAssemblerLabelLocation,,)
 SHAREMIND_TRIE_DEFINE(SharemindAssemblerLabelLocations,
                       SharemindAssemblerLabelLocation,
                       malloc,
@@ -182,7 +182,7 @@ static bool SharemindAssemblerLabelSlots_all_slots_filled(
 }
 
 SHAREMIND_TRIE_DECLARE(SharemindAssemblerLabelSlotsTrie,
-                       SharemindAssemblerLabelSlots,)
+                       SharemindAssemblerLabelSlots,,)
 SHAREMIND_TRIE_DEFINE(SharemindAssemblerLabelSlotsTrie,
                       SharemindAssemblerLabelSlots,
                       malloc,
@@ -191,7 +191,7 @@ SHAREMIND_TRIE_DECLARE_FOREACH_WITH(SharemindAssemblerLabelSlotsTrie,
                                     SharemindAssemblerLabelSlots,
                                     lblSltPtrPtr,
                                     SharemindAssemblerLabelSlot **,
-                                    SharemindAssemblerLabelSlot ** p,)
+                                    SharemindAssemblerLabelSlot ** p,,)
 SHAREMIND_TRIE_DEFINE_FOREACH_WITH(SharemindAssemblerLabelSlotsTrie,
                                    SharemindAssemblerLabelSlots,
                                    lblSltPtrPtr,
