@@ -44,3 +44,12 @@ void SharemindAssemblerLinkingUnit_destroy(SharemindAssemblerLinkingUnit * lu) {
     for (size_t i = 0u; i < SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT; i++)
         SharemindAssemblerSection_destroy(&lu->sections[i]);
 }
+
+SHAREMIND_VECTOR_DEFINE_INIT(SharemindAssemblerLinkingUnits,)
+SHAREMIND_VECTOR_DEFINE_DESTROY_WITH(
+        SharemindAssemblerLinkingUnits,,,
+        free,
+        SharemindAssemblerLinkingUnit_destroy(value);)
+SHAREMIND_VECTOR_DEFINE_FORCE_RESIZE(SharemindAssemblerLinkingUnits,,
+                                     realloc)
+SHAREMIND_VECTOR_DEFINE_PUSH(SharemindAssemblerLinkingUnits,)

@@ -55,28 +55,14 @@ void SharemindAssemblerLinkingUnit_destroy(SharemindAssemblerLinkingUnit * lu)
 SHAREMIND_VECTOR_DECLARE_BODY(SharemindAssemblerLinkingUnits,
                              SharemindAssemblerLinkingUnit)
 SHAREMIND_VECTOR_DEFINE_BODY(SharemindAssemblerLinkingUnits,)
-SHAREMIND_VECTOR_DECLARE_INIT(SharemindAssemblerLinkingUnits,
-                              inline,
+SHAREMIND_VECTOR_DECLARE_INIT(SharemindAssemblerLinkingUnits,,
                               SHAREMIND_COMMA visibility("internal"))
-SHAREMIND_VECTOR_DEFINE_INIT(SharemindAssemblerLinkingUnits, inline)
-SHAREMIND_VECTOR_DECLARE_DESTROY(SharemindAssemblerLinkingUnits,
-                                 inline,,
+SHAREMIND_VECTOR_DECLARE_DESTROY(SharemindAssemblerLinkingUnits,,,
                                  SHAREMIND_COMMA visibility("internal"))
-SHAREMIND_VECTOR_DEFINE_DESTROY_WITH(
-        SharemindAssemblerLinkingUnits,
-        inline,,
-        free,
-        SharemindAssemblerLinkingUnit_destroy(value);)
-SHAREMIND_VECTOR_DECLARE_FORCE_RESIZE(SharemindAssemblerLinkingUnits,
-                                      inline,
+SHAREMIND_VECTOR_DECLARE_FORCE_RESIZE(SharemindAssemblerLinkingUnits,,
                                       SHAREMIND_COMMA visibility("internal"))
-SHAREMIND_VECTOR_DEFINE_FORCE_RESIZE(SharemindAssemblerLinkingUnits,
-                                     inline,
-                                     realloc)
-SHAREMIND_VECTOR_DECLARE_PUSH(SharemindAssemblerLinkingUnits,
-                              inline,
+SHAREMIND_VECTOR_DECLARE_PUSH(SharemindAssemblerLinkingUnits,,
                               SHAREMIND_COMMA visibility("internal"))
-SHAREMIND_VECTOR_DEFINE_PUSH(SharemindAssemblerLinkingUnits, inline)
 
 SHAREMIND_EXTERN_C_END
 
