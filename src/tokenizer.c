@@ -87,6 +87,7 @@ tokenize_begin2:
                 NEWTOKEN(lastToken, SHAREMIND_ASSEMBLER_TOKEN_NEWLINE, c, sl, sc);
                 lastToken->length = 1u;
             }
+            /* FALLTHROUGH */
         case ' ': case '\t': case '\r': case '\v': case '\f':
             TOKENIZE_INC_CHECK_EOF(tokenize_ok);
             goto tokenize_begin2;
@@ -102,6 +103,7 @@ tokenize_begin2:
             if (*c != '0')
                 goto tokenize_error;
             hexmin = 1u;
+            /* FALLTHROUGH */
         case '0':
             TOKENIZE_INC_CHECK_EOF(tokenize_error);
             if (unlikely(*c != 'x'))
