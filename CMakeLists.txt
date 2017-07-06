@@ -20,8 +20,12 @@
 CMAKE_MINIMUM_REQUIRED(VERSION "2.8.12")
 PROJECT("SHAREMIND_LIBAS" "C")
 
-SET(LIBAS_SOVERSION "0.1")
-SET(LIBAS_VERSION "${LIBAS_SOVERSION}.0")
+SET(CPACK_PACKAGE_VERSION_MAJOR "0")
+SET(CPACK_PACKAGE_VERSION_MINOR "1")
+SET(CPACK_PACKAGE_VERSION_PATCH "0")
+SET(LIBAS_SOVERSION
+    "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}")
+SET(LIBAS_VERSION "${LIBAS_SOVERSION}.${CPACK_PACKAGE_VERSION_PATCH}")
 
 INCLUDE("${CMAKE_CURRENT_SOURCE_DIR}/config.local" OPTIONAL)
 INCLUDE("${CMAKE_CURRENT_BINARY_DIR}/config.local" OPTIONAL)
@@ -116,9 +120,12 @@ SET_TARGET_PROPERTIES("libas" PROPERTIES
 TARGET_LINK_LIBRARIES("libas" ${LIBAS_EXTERNAL_LIBRARIES})
 
 INSTALL(TARGETS "libas"
+        COMPONENT lib
         LIBRARY DESTINATION "lib"
         ARCHIVE DESTINATION "lib")
-INSTALL(FILES ${libas_HEADERS} DESTINATION "include/sharemind/libas")
+INSTALL(FILES ${libas_HEADERS}
+        DESTINATION "include/sharemind/libas"
+        COMPONENT dev)
 
 # Install cmake files:
 FILE(GLOB_RECURSE sharemind_libas_in_files
@@ -133,7 +140,8 @@ CONFIGURE_FILE(
     "${CMAKE_CURRENT_BINARY_DIR}/SharemindLibasConfigVersion.cmake" @ONLY)
 INSTALL(FILES "${CMAKE_CURRENT_BINARY_DIR}/SharemindLibasConfig.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/SharemindLibasConfigVersion.cmake"
-        DESTINATION "lib/SharemindLibas")
+        DESTINATION "lib/SharemindLibas"
+        COMPONENT dev)
 
 
 ################################################################################
@@ -147,3 +155,28 @@ FILE(GLOB_RECURSE ALL_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*")
 ADD_CUSTOM_TARGET("include_MISC_FILES_in_IDE" SOURCES
     ${MD_FILES} ${DOC_FILES} ${LICENSE_FILES} ${ALL_SOURCE_FILES}
 )
+
+
+################################################################################
+# Packaging
+################################################################################
+
+SET(CPACK_PACKAGE_VENDOR "Cybernetica AS")
+SET(CPACK_PACKAGE_CONTACT "Sharemind packaging <sharemind-packaging@cyber.ee>")
+SET(CPACK_GENERATOR "DEB")
+SET(CPACK_DEBIAN_PACKAGE_NAME "libsharemind-as")
+SET(CPACK_DEBIAN_PACKAGE_RELEASE "cyber1")
+SET(CPACK_DEBIAN_COMPRESSION_TYPE "xz")
+SET(CPACK_DEB_COMPONENT_INSTALL "ON")
+SET(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
+
+SET(CPACK_DEBIAN_LIB_PACKAGE_NAME "libsharemind-as")
+SET(CPACK_COMPONENT_DEV_DESCRIPTION
+    "Sharemind Assembler library development headers")
+SET(CPACK_COMPONENT_LIB_DESCRIPTION "Sharemind Assembler library")
+SET(CPACK_DEBIAN_DEV_PACKAGE_DEPENDS "libsharemind-as (= ${LIBAS_VERSION}), libsharemind-executable-dev (>= 0.1.0), libsharemind-cheaders-dev (>= 0.1.0), libc6-dev (>= 2.19)")
+SET(CPACK_DEBIAN_LIB_PACKAGE_DEPENDS "libsharemind-executable (>= 0.1.0), libsharemind-vmi (>= 0.1.0), libc6 (>= 2.19)")
+SET(CPACK_DEBIAN_DEV_PACKAGE_SECTION "libdevel")
+SET(CPACK_DEBIAN_LIB_PACKAGE_SECTION "libs")
+SET(CPACK_DEBIAN_DEV_PACKAGE_ARCHITECTURE "any")
+INCLUDE(CPack)
