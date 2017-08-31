@@ -17,12 +17,19 @@
 # For further information, please contact us at sharemind@cyber.ee.
 #
 
-# This file defines the following variables:
-#   SharemindLibas_INCLUDE_DIRS - include directories
-#   SharemindLibas_LIBRARIES    - libraries to link against
-#   SharemindLibas_DEFINITIONS  - required compiler definitions
+SET(PACKAGE_VERSION "@SharemindLibAs_VERSION@")
+IF(NOT SharemindLibas_QUIET)
+    MESSAGE(STATUS "Sharemind libas version: ${PACKAGE_VERSION}")
+ENDIF()
 
+IF("${PACKAGE_VERSION}" VERSION_LESS "${PACKAGE_FIND_VERSION}")
+  SET(PACKAGE_VERSION_COMPATIBLE FALSE)
+  SET(PACKAGE_VERSION_EXACT FALSE)
+ELSEIF("${PACKAGE_VERSION}" VERSION_GREATER "${PACKAGE_FIND_VERSION}")
+  SET(PACKAGE_VERSION_COMPATIBLE TRUE)
+  SET(PACKAGE_VERSION_EXACT FALSE)
+ELSE()
+  SET(PACKAGE_VERSION_COMPATIBLE TRUE)
+  SET(PACKAGE_VERSION_EXACT TRUE)
+ENDIF()
 
-SET(SharemindLibas_INCLUDE_DIRS @LIBAS_INSTALL_INCLUDE_DIRS@)
-SET(SharemindLibas_LIBRARIES @LIBAS_INSTALL_LINK_LIBRARIES@)
-SET(SharemindLibas_DEFINITIONS @LIBAS_INSTALL_DEFINITIONS@)

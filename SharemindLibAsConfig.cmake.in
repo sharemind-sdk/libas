@@ -17,19 +17,12 @@
 # For further information, please contact us at sharemind@cyber.ee.
 #
 
-SET(PACKAGE_VERSION "@LIBAS_VERSION@")
-IF(NOT SharemindLibas_QUIET)
-    MESSAGE(STATUS "Sharemind libas version: ${PACKAGE_VERSION}")
-ENDIF()
+# This file defines the following variables:
+#   SharemindLibAs_INCLUDE_DIRS - include directories
+#   SharemindLibAs_LIBRARIES    - libraries to link against
+#   SharemindLibAs_DEFINITIONS  - required compiler definitions
 
-IF("${PACKAGE_VERSION}" VERSION_LESS "${PACKAGE_FIND_VERSION}")
-  SET(PACKAGE_VERSION_COMPATIBLE FALSE)
-  SET(PACKAGE_VERSION_EXACT FALSE)
-ELSEIF("${PACKAGE_VERSION}" VERSION_GREATER "${PACKAGE_FIND_VERSION}")
-  SET(PACKAGE_VERSION_COMPATIBLE TRUE)
-  SET(PACKAGE_VERSION_EXACT FALSE)
-ELSE()
-  SET(PACKAGE_VERSION_COMPATIBLE TRUE)
-  SET(PACKAGE_VERSION_EXACT TRUE)
-ENDIF()
 
+SET(SharemindLibAs_INCLUDE_DIRS @SharemindLibAs_INSTALL_INCLUDE_DIRS@)
+SET(SharemindLibAs_LIBRARIES @SharemindLibAs_INSTALL_LINK_LIBRARIES@)
+SET(SharemindLibAs_DEFINITIONS @SharemindLibAs_INSTALL_DEFINITIONS@)
