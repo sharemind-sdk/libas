@@ -25,6 +25,8 @@ INCLUDE("${CMAKE_CURRENT_BINARY_DIR}/config.local" OPTIONAL)
 
 FIND_PACKAGE(SharemindCMakeHelpers REQUIRED)
 
+SharemindSetProjectVersion()
+
 
 FIND_PACKAGE(Boost REQUIRED)
 FIND_PACKAGE(SharemindCHeaders REQUIRED)
