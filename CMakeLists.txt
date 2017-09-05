@@ -84,20 +84,18 @@ SharemindAddSharedLibrary("libas"
 
 
 # Install cmake files:
-SharemindNewUniqueList(SharemindLibAs_INSTALL_INCLUDE_DIRS
-    ${LIBAS_EXTERNAL_INCLUDE_DIRS}
-    "${CMAKE_INSTALL_PREFIX}/include"
+SharemindCreateCMakeFindFiles(
+    INCLUDE_DIRS
+        "${CMAKE_INSTALL_PREFIX}/include"
+        ${LIBAS_EXTERNAL_INCLUDE_DIRS}
+    DEFINITIONS
+        ${LIBAS_EXTERNAL_DEFINITIONS}
+        "-D__STDC_LIMIT_MACROS"
+    LIBRARIES
+        ${LIBAS_EXTERNAL_LIBRARIES}
+        "-L${CMAKE_INSTALL_PREFIX}/lib"
+        "-lsharemind_as"
 )
-SharemindNewUniqueList(SharemindLibAs_INSTALL_LINK_LIBRARIES
-    ${LIBAS_EXTERNAL_LIBRARIES}
-    "-L${CMAKE_INSTALL_PREFIX}/lib"
-    "-lsharemind_as"
-)
-SharemindNewUniqueList(SharemindLibAs_INSTALL_DEFINITIONS
-    ${LIBAS_EXTERNAL_DEFINITIONS}
-    "-D__STDC_LIMIT_MACROS"
-)
-SharemindUseCMakeFindFiles()
 
 
 # Misc. files
