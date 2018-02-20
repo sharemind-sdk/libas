@@ -25,21 +25,11 @@
 #include "linkingunits.h"
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
 void * sharemind_assembler_link(
         uint16_t version,
         SharemindAssemblerLinkingUnits * lus,
         size_t * length,
         uint8_t activeLinkingUnit)
     __attribute__ ((nonnull(2, 3), warn_unused_result));
-
-
-#ifdef __cplusplus
-} /* extern "C" { */
-#endif
 
 #endif /* SHAREMIND_LIBAS_LINKER_H */

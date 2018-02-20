@@ -25,11 +25,6 @@
 #include <sharemind/preprocessor.h>
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
 uint64_t sharemind_assembler_read_hex(const char * c, size_t l) __attribute__ ((nonnull(1)));
 
 #define SHAREMIND_ASSEMBLER_TOKEN_TYPE_ENUM \
@@ -79,10 +74,5 @@ SharemindAssemblerToken * SharemindAssemblerTokens_append(
     __attribute__ ((nonnull(1, 3)));
 
 void SharemindAssemblerTokens_pop_back_newlines(SharemindAssemblerTokens * ts) __attribute__ ((nonnull(1)));
-
-
-#ifdef __cplusplus
-} /* extern "C" { */
-#endif
 
 #endif /* SHAREMIND_LIBAS_TOKENS_H */

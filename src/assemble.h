@@ -25,11 +25,6 @@
 #include "tokens.h"
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
 #define SHAREMIND_ASSEMBLER_ERROR_ENUM \
     ((SHAREMIND_ASSEMBLE_OK, = 0)) \
     ((SHAREMIND_ASSEMBLE_OUT_OF_MEMORY,)) \
@@ -52,10 +47,5 @@ SharemindAssemblerError sharemind_assembler_assemble(
         const SharemindAssemblerToken ** errorToken,
         char ** errorString)
     __attribute__ ((nonnull(1, 2), warn_unused_result));
-
-
-#ifdef __cplusplus
-} /* extern "C" { */
-#endif
 
 #endif /* SHAREMIND_LIBAS_ASSEMBLE_H */
