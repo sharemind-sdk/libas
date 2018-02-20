@@ -25,7 +25,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "stdion.h"
 
 
 SHAREMIND_ENUM_DEFINE_TOSTRING(SharemindAssemblerTokenType,
@@ -236,7 +235,13 @@ void SharemindAssemblerTokens_print(const SharemindAssemblerTokens * ts) {
             case SHAREMIND_ASSEMBLER_TOKEN_LABEL:
             case SHAREMIND_ASSEMBLER_TOKEN_KEYWORD:
                 putchar('(');
-                sharemind_assembler_nputs(t->text, t->length);
+                {
+                    size_t len = t->length;
+                    if (len)
+                        for (char const * s = t->text;; ++s)
+                            if ((putchar(*s) == EOF) || !--len)
+                                break;
+                }
                 putchar(')');
                 break;
             #ifdef __clang__
