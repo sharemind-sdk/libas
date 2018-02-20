@@ -62,7 +62,6 @@ SharemindNewUniqueList(LIBAS_EXTERNAL_DEFINITIONS
     ${SharemindLibVmi_DEFINITIONS}
 )
 FILE(GLOB_RECURSE SharemindLibAs_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
-LIST(REMOVE_ITEM SharemindLibAs_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/as.c")
 SharemindAddSharedLibrary("libas"
     OUTPUT_NAME "sharemind_as"
     SOURCES
