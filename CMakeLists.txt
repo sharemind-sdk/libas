@@ -18,7 +18,7 @@
 #
 
 CMAKE_MINIMUM_REQUIRED(VERSION "3.0")
-PROJECT(SharemindLibAs VERSION "0.2.0" LANGUAGES "C")
+PROJECT(SharemindLibAs VERSION "0.2.0" LANGUAGES "CXX")
 
 INCLUDE("${CMAKE_CURRENT_SOURCE_DIR}/config.local" OPTIONAL)
 INCLUDE("${CMAKE_CURRENT_BINARY_DIR}/config.local" OPTIONAL)
@@ -42,7 +42,7 @@ INSTALL(FILES ${SharemindLibAs_HEADERS}
 
 
 # The library:
-SharemindSetC99CompileOptions(COMPILE_FLAGS "-fwrapv")
+SharemindSetCxx11CompileOptions(COMPILE_FLAGS "-fwrapv")
 SharemindNewUniqueList(LIBAS_EXTERNAL_INCLUDE_DIRS
     ${Boost_INCLUDE_DIRS}
     ${SharemindCHeaders_INCLUDE_DIRS}
@@ -61,7 +61,8 @@ SharemindNewUniqueList(LIBAS_EXTERNAL_DEFINITIONS
     ${SharemindLibExecutable_DEFINITIONS}
     ${SharemindLibVmi_DEFINITIONS}
 )
-FILE(GLOB_RECURSE SharemindLibAs_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
+FILE(GLOB_RECURSE SharemindLibAs_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 SharemindAddSharedLibrary("libas"
     OUTPUT_NAME "sharemind_as"
     SOURCES
