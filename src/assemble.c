@@ -24,6 +24,7 @@
 #include <sharemind/comma.h>
 #include <sharemind/libvmi/instr.h>
 #include <sharemind/likely.h>
+#include <sharemind/null.h>
 #include <sharemind/stringmap.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -130,8 +131,8 @@ SHAREMIND_VECTOR_DEFINE_FOREACH(
         firstUndefinedSlot,
         static SharemindAssemblerLabelSlot *,
         const,,,
-        NULL,
-        if (value->token != NULL)
+        SHAREMIND_NULL,
+        if (value->token != SHAREMIND_NULL)
             return value;)
 SHAREMIND_VECTOR_DECLARE_FOREACH(
         SharemindAssemblerLabelSlots,
@@ -172,7 +173,7 @@ SHAREMIND_VECTOR_DEFINE_FOREACH(
 
             /** \todo Maybe check whether there's really an instruction there */
         }
-        value->token = NULL;)
+        value->token = SHAREMIND_NULL;)
 
 static bool SharemindAssemblerLabelSlots_all_slots_filled(
         SharemindAssemblerLabelSlots * ss,
@@ -215,7 +216,7 @@ SmAsLabelSlotsMap_getOrInsertNew(
 
     record = SmAsLabelSlotsMap_insertNew(lst, label);
     if (! record)
-        return NULL;
+        return SHAREMIND_NULL;
 
     SharemindAssemblerLabelSlots_init(&record->value);
     return &record->value;
@@ -274,7 +275,7 @@ SharemindAssemblerError sharemind_assembler_assemble(
     int section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
     size_t numBindings = 0u;
     size_t numPdBindings = 0u;
-    void * dataToWrite = NULL;
+    void * dataToWrite = SHAREMIND_NULL;
     size_t dataToWriteLength = 0u;
 
     /* for .data and .fill: */
@@ -287,9 +288,9 @@ SharemindAssemblerError sharemind_assembler_assemble(
     assert(lus->size == 0u);
 
     if (errorToken)
-        *errorToken = NULL;
+        *errorToken = SHAREMIND_NULL;
     if (errorString)
-        *errorString = NULL;
+        *errorString = SHAREMIND_NULL;
 
     SmAsLabelLocationMap ll;
     SmAsLabelLocationMap_init(&ll);
@@ -924,7 +925,7 @@ assemble_data_write:
 
     if (dataToWrite)
         free(dataToWrite);
-    dataToWrite = NULL;
+    dataToWrite = SHAREMIND_NULL;
     goto assemble_newline;
 
 assemble_ok:

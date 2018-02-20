@@ -21,6 +21,7 @@
 
 #include <assert.h>
 #include <sharemind/likely.h>
+#include <sharemind/null.h>
 #include <stdlib.h>
 
 #define CASE_DECIMAL_DIGIT \
@@ -84,9 +85,9 @@ SharemindAssemblerTokens * sharemind_assembler_tokenize(
 
     SharemindAssemblerTokens * ts = SharemindAssemblerTokens_new();
     if (unlikely(!ts))
-        return NULL;
+        return SHAREMIND_NULL;
     ts->numTokens = 0u;
-    SharemindAssemblerToken * lastToken = NULL;
+    SharemindAssemblerToken * lastToken = SHAREMIND_NULL;
 
     size_t hexmin = 0u;
     size_t hexstart = 0u;
@@ -334,5 +335,5 @@ tokenize_error_oom:
 
     SharemindAssemblerTokens_free(ts);
 
-    return NULL;
+    return SHAREMIND_NULL;
 }

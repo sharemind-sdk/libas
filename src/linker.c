@@ -24,6 +24,7 @@
 #include <sharemind/comma.h>
 #include <sharemind/libexecutable/libexecutable.h>
 #include <sharemind/libexecutable/libexecutable_0x0.h>
+#include <sharemind/null.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -88,7 +89,7 @@ SHAREMIND_VECTOR_DEFINE_FOREACH(
         totalSize,
         for (size_t i = 0u; i < SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT_0x0;i++)
             if (value->sections[i].length > 0u
-                && (value->sections[i].data != NULL
+                && (value->sections[i].data != SHAREMIND_NULL
                     || i == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS))
             {
                 totalSize += sizeof(SharemindExecutableSectionHeader0x0);
@@ -192,11 +193,11 @@ void * sharemind_assembler_link(uint16_t version,
     assert(length);
 
     if (version > 0u)
-        return NULL;
+        return SHAREMIND_NULL;
 
     char * data = (char *) malloc(sizeof(SharemindExecutableCommonHeader));
     if (!data)
-        return NULL;
+        return SHAREMIND_NULL;
     {
         SharemindExecutableCommonHeader h;
         SharemindExecutableCommonHeader_init(&h, version);
@@ -208,6 +209,6 @@ void * sharemind_assembler_link(uint16_t version,
         return data;
     } else {
         free(data);
-        return NULL;
+        return SHAREMIND_NULL;
     }
 }

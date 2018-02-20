@@ -19,13 +19,14 @@
 
 #include "linkingunits.h"
 
+#include <sharemind/null.h>
 #include <stdlib.h>
 
 
 void SharemindAssemblerSection_init(SharemindAssemblerSection * s) {
     assert(s);
     s->length = 0u;
-    s->data = NULL;
+    s->data = SHAREMIND_NULL;
 }
 
 void SharemindAssemblerSection_destroy(SharemindAssemblerSection * s) {

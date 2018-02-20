@@ -22,6 +22,7 @@
 #include <assert.h>
 #include <sharemind/abort.h>
 #include <sharemind/likely.h>
+#include <sharemind/null.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -112,7 +113,7 @@ char * SharemindAssemblerToken_string_value(const SharemindAssemblerToken * t, s
 
     char * s = (char *) malloc(sizeof(char) * (l + 1));
     if (unlikely(!s))
-        return NULL;
+        return SHAREMIND_NULL;
 
     char * op = s;
     const char * ip = &t->text[1];
@@ -164,7 +165,7 @@ char * SharemindAssemblerToken_label_to_new_string(const SharemindAssemblerToken
 
     char * c = (char *) malloc(l);
     if (!c)
-        return NULL;
+        return SHAREMIND_NULL;
 
     l--;
     strncpy(c, t->text + 1, l);
@@ -200,9 +201,9 @@ int64_t SharemindAssemblerToken_label_offset(const SharemindAssemblerToken * t) 
 SharemindAssemblerTokens * SharemindAssemblerTokens_new(void) {
     SharemindAssemblerTokens * ts = (SharemindAssemblerTokens *) malloc(sizeof(SharemindAssemblerTokens));
     if (unlikely(!ts))
-        return NULL;
+        return SHAREMIND_NULL;
     ts->numTokens = 0u;
-    ts->array = NULL;
+    ts->array = SHAREMIND_NULL;
     return ts;
 }
 
@@ -223,7 +224,7 @@ SharemindAssemblerToken * SharemindAssemblerTokens_append(
     assert(ts);
     SharemindAssemblerToken * nts = (SharemindAssemblerToken *) realloc(ts->array, sizeof(SharemindAssemblerToken) * (ts->numTokens + 1));
     if (unlikely(!nts))
-        return NULL;
+        return SHAREMIND_NULL;
     ts->array = nts;
 
     SharemindAssemblerToken * nt = &nts[ts->numTokens];
