@@ -22,19 +22,6 @@
 #include <assert.h>
 
 
-int sharemind_assembler_fnputs(const char * s, size_t len, FILE * stream) {
-    assert(s);
-    assert(stream);
-
-    int r = 0;
-    for (; len; s++, len--) {
-        r = fputc(*s, stream);
-        if (r < 0)
-            break;
-    }
-    return r;
-}
-
 int sharemind_assembler_nputs(const char * s, size_t len) {
     assert(s);
 

@@ -28,8 +28,6 @@ extern "C" {
 #endif
 
 
-int sharemind_assembler_fnputs(const char * s, size_t len, FILE * stream) __attribute__ ((nonnull(1, 3)));
-
 int sharemind_assembler_nputs(const char * s, size_t len) __attribute__ ((nonnull(1)));
 
 
