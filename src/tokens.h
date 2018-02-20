@@ -70,8 +70,6 @@ SharemindAssemblerTokens * SharemindAssemblerTokens_new(void) __attribute__ ((wa
 
 void SharemindAssemblerTokens_free(SharemindAssemblerTokens * ts) __attribute__ ((nonnull(1)));
 
-void SharemindAssemblerTokens_print(const SharemindAssemblerTokens * ts) __attribute__ ((nonnull(1)));
-
 SharemindAssemblerToken * SharemindAssemblerTokens_append(
         SharemindAssemblerTokens * ts,
         SharemindAssemblerTokenType type,

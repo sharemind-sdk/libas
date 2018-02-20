@@ -208,55 +208,6 @@ void SharemindAssemblerTokens_free(SharemindAssemblerTokens * ts) {
     free(ts);
 }
 
-void SharemindAssemblerTokens_print(const SharemindAssemblerTokens * ts) {
-    assert(ts);
-
-    int newLine = 1;
-    for (size_t i = 0; i < ts->numTokens; i++) {
-        SharemindAssemblerToken * t = &ts->array[i];
-        if (!newLine)
-            putchar(' ');
-        else
-            newLine = 0;
-
-        const char * tokenStr = SharemindAssemblerTokenType_toString(t->type);
-        assert(tokenStr);
-        printf("%s", tokenStr + 10u);
-        switch (t->type) {
-            case SHAREMIND_ASSEMBLER_TOKEN_NEWLINE:
-                putchar('\n');
-                newLine = 1;
-                break;
-            case SHAREMIND_ASSEMBLER_TOKEN_DIRECTIVE:
-            case SHAREMIND_ASSEMBLER_TOKEN_UHEX:
-            case SHAREMIND_ASSEMBLER_TOKEN_HEX:
-            case SHAREMIND_ASSEMBLER_TOKEN_STRING:
-            case SHAREMIND_ASSEMBLER_TOKEN_LABEL_O:
-            case SHAREMIND_ASSEMBLER_TOKEN_LABEL:
-            case SHAREMIND_ASSEMBLER_TOKEN_KEYWORD:
-                putchar('(');
-                {
-                    size_t len = t->length;
-                    if (len)
-                        for (char const * s = t->text;; ++s)
-                            if ((putchar(*s) == EOF) || !--len)
-                                break;
-                }
-                putchar(')');
-                break;
-            #ifdef __clang__
-            #pragma GCC diagnostic push
-            #pragma GCC diagnostic ignored "-Wcovered-switch-default"
-            #endif
-            default: SHAREMIND_ABORT("lATp %d\n", (int) t->type);
-            #ifdef __clang__
-            #pragma GCC diagnostic pop
-            #endif
-        }
-    }
-    printf("\n");
-}
-
 SharemindAssemblerToken * SharemindAssemblerTokens_append(
         SharemindAssemblerTokens * ts,
         SharemindAssemblerTokenType type,
