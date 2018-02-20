@@ -23,6 +23,32 @@
 #include <sharemind/likely.h>
 #include <stdlib.h>
 
+#define CASE_DECIMAL_DIGIT \
+    case '0': case '1': case '2': case '3': case '4': \
+    case '5': case '6': case '7': case '8': case '9'
+
+#define CASE_HEXADECIMAL_DIGIT \
+    CASE_DECIMAL_DIGIT: \
+    case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': \
+    case 'A': case 'B': case 'C': case 'D': case 'E': case 'F'
+
+#define CASE_ASCII_LOWERCASE_LETTER \
+    case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g': \
+    case 'h': case 'i': case 'j': case 'k': case 'l': case 'm': case 'n': \
+    case 'o': case 'p': case 'q': case 'r': case 's': case 't': case 'u': \
+    case 'v': case 'w': case 'x': case 'y': case 'z'
+
+#define CASE_ASCII_UPPERCASE_LETTER \
+    case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': case 'G': \
+    case 'H': case 'I': case 'J': case 'K': case 'L': case 'M': case 'N': \
+    case 'O': case 'P': case 'Q': case 'R': case 'S': case 'T': case 'U': \
+    case 'V': case 'W': case 'X': case 'Y': case 'Z'
+
+#define CASE_ASCII_LETTER \
+    CASE_ASCII_LOWERCASE_LETTER: CASE_ASCII_UPPERCASE_LETTER
+
+#define CASE_ID_HEAD CASE_ASCII_LETTER: case '_'
+#define CASE_ID_TAIL CASE_ASCII_LETTER: CASE_DECIMAL_DIGIT: case '_'
 
 #define TOKENIZE_INC_CHECK_EOF(eof) \
     do { \
@@ -115,7 +141,7 @@ tokenize_begin2:
         case ':':
             TOKENIZE_INC_CHECK_EOF(tokenize_error);
             goto tokenize_label;
-        case 'a' ... 'z': case 'A' ... 'Z': case '_':
+        CASE_ID_HEAD:
             goto tokenize_keyword;
         default:
             goto tokenize_error;
@@ -131,7 +157,7 @@ tokenize_comment:
 tokenize_directive:
 
     switch (*c) {
-        case 'a' ... 'z': case 'A' ... 'Z': case '_':
+        CASE_ID_HEAD:
             break;
         default:
             goto tokenize_error;
@@ -143,7 +169,7 @@ tokenize_directive:
 tokenize_hex:
 
     switch (*c) {
-        case '0' ... '9': case 'a' ... 'f': case 'A' ... 'F':
+        CASE_HEXADECIMAL_DIGIT:
             break;
         default:
             goto tokenize_error;
@@ -157,7 +183,7 @@ tokenize_hex2:
 
     TOKENIZE_INC_CHECK_EOF(tokenize_ok);
     switch (*c) {
-        case '0' ... '9': case 'a' ... 'f': case 'A' ... 'F':
+        CASE_HEXADECIMAL_DIGIT:
             if (lastToken->text[hexstart] == '-' || lastToken->text[hexstart] == '+') {
                 if (lastToken->length > 18u)
                     goto tokenize_error;
@@ -205,7 +231,7 @@ tokenize_string:
 tokenize_label:
 
     switch (*c) {
-        case 'a' ... 'z': case 'A' ... 'Z': case '_':
+        CASE_ID_HEAD:
             break;
         default:
             goto tokenize_error;
@@ -217,7 +243,7 @@ tokenize_label2:
 
     TOKENIZE_INC_CHECK_EOF(tokenize_ok);
     switch (*c) {
-        case '0' ... '9': case 'a' ... 'z': case 'A' ... 'Z': case '_':
+        CASE_ID_TAIL:
             lastToken->length++;
             break;
         case ' ': case '\t': case '\r': case '\v': case '\f':
@@ -227,7 +253,7 @@ tokenize_label2:
         case '.':
             TOKENIZE_INC_CHECK_EOF(tokenize_error);
             switch (*c) {
-                case 'a' ... 'z': case 'A' ... 'Z': case '_':
+                CASE_ID_HEAD:
                     break;
                 default:
                     goto tokenize_error;
@@ -252,7 +278,7 @@ tokenize_label3:
         goto tokenize_error;
     TOKENIZE_INC_CHECK_EOF(tokenize_error);
     switch (*c) {
-        case '0' ... '9': case 'a' ... 'f': case 'A' ... 'F':
+        CASE_HEXADECIMAL_DIGIT:
             break;
         default:
             goto tokenize_error;
@@ -271,7 +297,7 @@ tokenize_keyword2:
 
     TOKENIZE_INC_CHECK_EOF(tokenize_ok);
     switch (*c) {
-        case '0' ... '9': case 'a' ... 'z': case 'A' ... 'Z': case '_':
+        CASE_ID_TAIL:
             lastToken->length++;
             break;
         case ' ': case '\t': case '\r': case '\v': case '\f':
@@ -281,7 +307,7 @@ tokenize_keyword2:
         case '.':
             TOKENIZE_INC_CHECK_EOF(tokenize_error);
             switch (*c) {
-                case 'a' ... 'z': case 'A' ... 'Z': case '_':
+                CASE_ID_HEAD:
                     break;
                 default:
                     goto tokenize_error;
