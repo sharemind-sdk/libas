@@ -42,10 +42,10 @@ SHAREMIND_ENUM_CUSTOM_DEFINE(SharemindAssemblerError, SHAREMIND_ASSEMBLER_ERROR_
 SHAREMIND_ENUM_DECLARE_TOSTRING(SharemindAssemblerError);
 
 SharemindAssemblerError sharemind_assembler_assemble(
-        const SharemindAssemblerTokens * ts,
+        sharemind::AssemblerTokens const & ts,
         SharemindAssemblerLinkingUnits * lus,
-        const SharemindAssemblerToken ** errorToken,
+        sharemind::AssemblerTokens::const_iterator * errorToken,
         char ** errorString)
-    __attribute__ ((nonnull(1, 2), warn_unused_result));
+    __attribute__ ((nonnull(2), warn_unused_result));
 
 #endif /* SHAREMIND_LIBAS_ASSEMBLE_H */

@@ -30,6 +30,7 @@ SharemindSetProjectVersion()
 
 FIND_PACKAGE(Boost REQUIRED)
 FIND_PACKAGE(SharemindCHeaders REQUIRED)
+FIND_PACKAGE(SharemindCxxHeaders REQUIRED)
 FIND_PACKAGE(SharemindLibExecutable REQUIRED)
 FIND_PACKAGE(SharemindLibVmi REQUIRED)
 
@@ -46,18 +47,21 @@ SharemindSetCxx11CompileOptions(COMPILE_FLAGS "-fwrapv")
 SharemindNewUniqueList(LIBAS_EXTERNAL_INCLUDE_DIRS
     ${Boost_INCLUDE_DIRS}
     ${SharemindCHeaders_INCLUDE_DIRS}
+    ${SharemindCxxHeaders_INCLUDE_DIRS}
     ${SharemindLibExecutable_INCLUDE_DIRS}
     ${SharemindLibVmi_INCLUDE_DIRS}
 )
 SharemindNewUniqueList(LIBAS_EXTERNAL_LIBRARIES
     ${Boost_LIBRARIES}
     ${SharemindCHeaders_LIBRARIES}
+    ${SharemindCxxHeaders_LIBRARIES}
     ${SharemindLibExecutable_LIBRARIES}
     ${SharemindLibVmi_LIBRARIES}
 )
 SharemindNewUniqueList(LIBAS_EXTERNAL_DEFINITIONS
     ${Boost_DEFINITIONS}
     ${SharemindCHeaders_DEFINITIONS}
+    ${SharemindCxxHeaders_DEFINITIONS}
     ${SharemindLibExecutable_DEFINITIONS}
     ${SharemindLibVmi_DEFINITIONS}
 )

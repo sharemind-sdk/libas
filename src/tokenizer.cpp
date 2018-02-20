@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <sharemind/likely.h>
 #include <sharemind/null.h>
+#include <sharemind/MakeUnique.h>
 
 
 #define CASE_DECIMAL_DIGIT \
@@ -63,18 +64,17 @@
             goto eof; \
     } while (0)
 
-#define NEWTOKEN(d,type,text,sl,sc) \
+#define NEWTOKEN(d,type,text,len,sl,sc) \
     do { \
-        d = SharemindAssemblerTokens_append(ts, (type), (text), (sl), (sc)); \
-        if (!d) \
-            goto tokenize_error_oom; \
+        ts->emplace_back((type), (text), (len), (sl), (sc)); \
+        d = &ts->back(); \
     } while (0)
 
-SharemindAssemblerTokens * sharemind_assembler_tokenize(
-        const char * program,
-        size_t length,
-        size_t * errorSl,
-        size_t *errorSc)
+std::unique_ptr<sharemind::AssemblerTokens> sharemind_assembler_tokenize(
+        char const * program,
+        std::size_t length,
+        std::size_t * errorSl,
+        std::size_t *errorSc)
 {
     assert(program);
 
@@ -84,11 +84,8 @@ SharemindAssemblerTokens * sharemind_assembler_tokenize(
 
     size_t sl = 1u, sc = 1u;
 
-    SharemindAssemblerTokens * ts = SharemindAssemblerTokens_new();
-    if (unlikely(!ts))
-        return SHAREMIND_NULL;
-    ts->numTokens = 0u;
-    SharemindAssemblerToken * lastToken = SHAREMIND_NULL;
+    auto ts(sharemind::makeUnique<sharemind::AssemblerTokens>());
+    sharemind::AssemblerToken * lastToken = nullptr;
 
     size_t hexmin = 0u;
     size_t hexstart = 0u;
@@ -107,14 +104,19 @@ SharemindAssemblerTokens * sharemind_assembler_tokenize(
         TOKENIZE_INC_CHECK_EOF(tokenize_ok);
     }
 
+    using sharemind::AssemblerToken;
+
 tokenize_begin2:
 
     switch (*c) {
         case '\n':
-            if (lastToken && lastToken->type != SHAREMIND_ASSEMBLER_TOKEN_NEWLINE) {
-                NEWTOKEN(lastToken, SHAREMIND_ASSEMBLER_TOKEN_NEWLINE, c, sl, sc);
-                lastToken->length = 1u;
-            }
+            if (lastToken && lastToken->type != AssemblerToken::Type::NEWLINE)
+                NEWTOKEN(lastToken,
+                         AssemblerToken::Type::NEWLINE,
+                         c,
+                         1u,
+                         sl,
+                         sc);
             /* FALLTHROUGH */
         case ' ': case '\t': case '\r': case '\v': case '\f':
             TOKENIZE_INC_CHECK_EOF(tokenize_ok);
@@ -164,8 +166,7 @@ tokenize_directive:
         default:
             goto tokenize_error;
     }
-    NEWTOKEN(lastToken, SHAREMIND_ASSEMBLER_TOKEN_DIRECTIVE, c - 1, sl, sc);
-    lastToken->length = 2u;
+    NEWTOKEN(lastToken, AssemblerToken::Type::DIRECTIVE, c - 1, 2u, sl, sc);
     goto tokenize_keyword2;
 
 tokenize_hex:
@@ -176,8 +177,12 @@ tokenize_hex:
         default:
             goto tokenize_error;
     }
-    NEWTOKEN(lastToken, hexmin ? SHAREMIND_ASSEMBLER_TOKEN_HEX : SHAREMIND_ASSEMBLER_TOKEN_UHEX, c - 2 - hexmin, sl, sc);
-    lastToken->length = 3u + hexmin;
+    NEWTOKEN(lastToken,
+             hexmin ? AssemblerToken::Type::HEX : AssemblerToken::Type::UHEX,
+             c - 2 - hexmin,
+             3u + hexmin,
+             sl,
+             sc);
     hexmin = 0u;
     hexstart = 0u;
 
@@ -190,9 +195,9 @@ tokenize_hex2:
                 if (lastToken->length > 18u)
                     goto tokenize_error;
                 if (lastToken->length == 18u) {
-                    if (lastToken->text[hexstart] == '-' && sharemind_assembler_read_hex(lastToken->text + 3, 18u) > ((uint64_t) -(INT64_MIN + 1)) + 1u)
+                    if (lastToken->text[hexstart] == '-' && sharemind::assembler_read_hex(lastToken->text + 3, 18u) > ((uint64_t) -(INT64_MIN + 1)) + 1u)
                         goto tokenize_error;
-                    if (lastToken->text[hexstart] == '+' && sharemind_assembler_read_hex(lastToken->text + 3, 18u) > (uint64_t) INT64_MAX)
+                    if (lastToken->text[hexstart] == '+' && sharemind::assembler_read_hex(lastToken->text + 3, 18u) > (uint64_t) INT64_MAX)
                         goto tokenize_error;
                 }
             } else {
@@ -223,9 +228,13 @@ tokenize_string:
         if (unlikely(*c == '"'))
             break;
     }
-    NEWTOKEN(lastToken, SHAREMIND_ASSEMBLER_TOKEN_STRING, t, sl, sc);
     assert(t < c);
-    lastToken->length = (size_t) (c - t + 1u);
+    NEWTOKEN(lastToken,
+             AssemblerToken::Type::STRING,
+             t,
+             static_cast<std::size_t>(c - t + 1u),
+             sl,
+             sc);
     TOKENIZE_INC_CHECK_EOF(tokenize_ok);
     goto tokenize_begin2;
 
@@ -238,8 +247,7 @@ tokenize_label:
         default:
             goto tokenize_error;
     }
-    NEWTOKEN(lastToken, SHAREMIND_ASSEMBLER_TOKEN_LABEL, c - 1, sl, sc);
-    lastToken->length = 2u;
+    NEWTOKEN(lastToken, AssemblerToken::Type::LABEL, c - 1, 2u, sl, sc);
 
 tokenize_label2:
 
@@ -286,13 +294,12 @@ tokenize_label3:
             goto tokenize_error;
     }
     lastToken->length += 4u;
-    lastToken->type = SHAREMIND_ASSEMBLER_TOKEN_LABEL_O;
+    lastToken->type = AssemblerToken::Type::LABEL_O;
     goto tokenize_hex2;
 
 tokenize_keyword:
 
-    NEWTOKEN(lastToken, SHAREMIND_ASSEMBLER_TOKEN_KEYWORD, c, sl, sc);
-    lastToken->length = 1u;
+    NEWTOKEN(lastToken, AssemblerToken::Type::KEYWORD, c, 1u, sl, sc);
     goto tokenize_keyword2;
 
 tokenize_keyword2:
@@ -322,7 +329,7 @@ tokenize_keyword2:
     goto tokenize_keyword2;
 
 tokenize_ok:
-    SharemindAssemblerTokens_pop_back_newlines(ts);
+    ts->popBackNewlines();
     return ts;
 
 tokenize_error:
@@ -331,10 +338,5 @@ tokenize_error:
         *errorSl = sl;
     if (errorSc)
         *errorSc = sc;
-
-tokenize_error_oom:
-
-    SharemindAssemblerTokens_free(ts);
-
     return SHAREMIND_NULL;
 }

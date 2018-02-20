@@ -21,58 +21,82 @@
 #define SHAREMIND_LIBAS_TOKENS_H
 
 #include <cstdint>
-#include <cstring>
-#include <sharemind/preprocessor.h>
+#include <ostream>
+#include <string>
+#include <vector>
 
 
-uint64_t sharemind_assembler_read_hex(const char * c, size_t l) __attribute__ ((nonnull(1)));
+namespace sharemind {
 
-#define SHAREMIND_ASSEMBLER_TOKEN_TYPE_ENUM \
-    (SHAREMIND_ASSEMBLER_TOKEN_NEWLINE) \
-    (SHAREMIND_ASSEMBLER_TOKEN_DIRECTIVE) \
-    (SHAREMIND_ASSEMBLER_TOKEN_HEX) \
-    (SHAREMIND_ASSEMBLER_TOKEN_UHEX) \
-    (SHAREMIND_ASSEMBLER_TOKEN_STRING) \
-    (SHAREMIND_ASSEMBLER_TOKEN_LABEL_O) \
-    (SHAREMIND_ASSEMBLER_TOKEN_LABEL) \
-    (SHAREMIND_ASSEMBLER_TOKEN_KEYWORD)
-SHAREMIND_ENUM_DEFINE(SharemindAssemblerTokenType, SHAREMIND_ASSEMBLER_TOKEN_TYPE_ENUM);
-SHAREMIND_ENUM_DECLARE_TOSTRING(SharemindAssemblerTokenType);
+std::uint64_t assembler_read_hex(const char * c, size_t l)
+        __attribute__ ((nonnull(1)));
 
-typedef struct {
-    SharemindAssemblerTokenType type;
-    const char * text;
-    size_t start_line;
-    size_t start_column;
-    size_t length;
-} SharemindAssemblerToken;
+struct AssemblerToken {
 
-int64_t SharemindAssemblerToken_hex_value(const SharemindAssemblerToken * t) __attribute__ ((nonnull(1)));
-uint64_t SharemindAssemblerToken_uhex_value(const SharemindAssemblerToken * t) __attribute__ ((nonnull(1)));
+    enum class Type {
+        NEWLINE,
+        DIRECTIVE,
+        HEX,
+        UHEX,
+        STRING,
+        LABEL_O,
+        LABEL,
+        KEYWORD
+    };
 
-size_t SharemindAssemblerToken_string_length(const SharemindAssemblerToken * t) __attribute__ ((nonnull(1)));
-char * SharemindAssemblerToken_string_value(const SharemindAssemblerToken * t, size_t * length) __attribute__ ((nonnull(1)));
+/* Methods: */
 
-char * SharemindAssemblerToken_label_to_new_string(const SharemindAssemblerToken * t) __attribute__ ((nonnull(1), warn_unused_result));
-int64_t SharemindAssemblerToken_label_offset(const SharemindAssemblerToken * t) __attribute__ ((nonnull(1)));
+    AssemblerToken(Type type_,
+                   char const * text_,
+                   std::size_t length_,
+                   std::size_t startLine_,
+                   std::size_t startColumn_) noexcept
+        : type(type_)
+        , text(text_)
+        , length(length_)
+        , start_line(startLine_)
+        , start_column(startColumn_)
+    {}
 
-typedef struct {
-    size_t numTokens;
-    SharemindAssemblerToken * array;
-} SharemindAssemblerTokens;
+    AssemblerToken(AssemblerToken &&) noexcept = default;
+    AssemblerToken(AssemblerToken const &) noexcept = default;
 
-SharemindAssemblerTokens * SharemindAssemblerTokens_new(void) __attribute__ ((warn_unused_result));
+    AssemblerToken & operator=(AssemblerToken &&) noexcept = default;
+    AssemblerToken & operator=(AssemblerToken const &) noexcept = default;
 
-void SharemindAssemblerTokens_free(SharemindAssemblerTokens * ts) __attribute__ ((nonnull(1)));
+    std::int64_t hexValue() const;
+    std::uint64_t uhexValue() const;
 
-SharemindAssemblerToken * SharemindAssemblerTokens_append(
-        SharemindAssemblerTokens * ts,
-        SharemindAssemblerTokenType type,
-        const char * start,
-        size_t start_line,
-        size_t start_column)
-    __attribute__ ((nonnull(1, 3)));
+    std::size_t stringLength() const;
+    std::string stringValue() const;
 
-void SharemindAssemblerTokens_pop_back_newlines(SharemindAssemblerTokens * ts) __attribute__ ((nonnull(1)));
+    std::string labelToString() const;
+    std::int64_t labelOffset() const;
+
+/* Fields: */
+
+    Type type;
+    char const * text;
+    std::size_t length;
+    std::size_t start_line;
+    std::size_t start_column;
+
+};
+
+std::ostream & operator<<(std::ostream & os, AssemblerToken::Type const type);
+std::ostream & operator<<(std::ostream & os, AssemblerToken const & token);
+
+class AssemblerTokens: public std::vector<AssemblerToken> {
+
+public: /* Methods: */
+
+    using std::vector<AssemblerToken>::vector;
+    using std::vector<AssemblerToken>::operator=;
+
+    void popBackNewlines() noexcept;
+
+};
+
+} // namespace sharemind {
 
 #endif /* SHAREMIND_LIBAS_TOKENS_H */

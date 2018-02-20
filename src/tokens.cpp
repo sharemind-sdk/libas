@@ -23,21 +23,31 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <sharemind/abort.h>
+#include <sharemind/IntegralComparisons.h>
+#include <sharemind/SignedToUnsigned.h>
 #include <sharemind/likely.h>
 #include <sharemind/null.h>
 
 
-SHAREMIND_ENUM_DEFINE_TOSTRING(SharemindAssemblerTokenType,
-                               SHAREMIND_ASSEMBLER_TOKEN_TYPE_ENUM)
+namespace sharemind {
 
-uint64_t sharemind_assembler_read_hex(const char * c, size_t l) {
+namespace {
+
+constexpr auto const int64Min = std::numeric_limits<std::int64_t>::min();
+constexpr auto const int64Max = std::numeric_limits<std::int64_t>::max();
+constexpr auto const absInt64Min = signedToUnsigned(-(int64Min + 1)) + 1u;
+
+} // anonymous namespace
+
+std::uint64_t assembler_read_hex(char const * c, std::size_t l) {
     assert(c);
 
-    const char * e = c + l;
-    uint64_t v = 0u;
+    auto * const e = c + l;
+    std::uint64_t v = 0u;
     do {
-        uint64_t digit;
+        std::uint64_t digit;
         switch (*c) {
             #define C(c,v) case c : digit = v; break
             C('0', 0u); C('1', 1u); C('2', 2u); C('3', 3u); C('4', 4u);
@@ -48,202 +58,167 @@ uint64_t sharemind_assembler_read_hex(const char * c, size_t l) {
                 C('F', 15u);
             #undef C
             default:
-                abort();
+                std::abort();
         }
         v = (v * 16u) + digit;
     } while (++c < e);
     return v;
 }
 
-int64_t SharemindAssemblerToken_hex_value(const SharemindAssemblerToken * t) {
-    assert(t);
-    assert(t->type == SHAREMIND_ASSEMBLER_TOKEN_HEX);
-    assert(t->length >= 4u);
-    assert(t->length <= 19u);
-    assert(t->text[0u] == '-' || t->text[0u] == '+');
-    assert(t->text[1u] == '0');
-    assert(t->text[2u] == 'x');
+std::int64_t AssemblerToken::hexValue() const {
+    assert(type == Type::HEX);
+    assert(length >= 4u);
+    assert(length <= 19u);
+    assert(text[0u] == '-' || text[0u] == '+');
+    assert(text[1u] == '0');
+    assert(text[2u] == 'x');
 
-    uint64_t v = sharemind_assembler_read_hex(t->text + 3u, t->length - 3u);
+    auto v = assembler_read_hex(text + 3u, length - 3u);
 
-    if (t->text[0] == '-') {
-        assert(v <= ((uint64_t) (INT64_MIN + 1)) + 1u);
-        return (int64_t) -v;
+    if (text[0] == '-') {
+        assert(v <= absInt64Min);
+        return -static_cast<std::int64_t>(v);
     } else {
-        assert(t->text[0] == '+');
-        assert(v <= (uint64_t) INT64_MAX);
-        return (int64_t) v;
+        assert(text[0] == '+');
+        assert(integralLessEqual(v, int64Max));
+        return static_cast<std::int64_t>(v);
     }
 }
 
-uint64_t SharemindAssemblerToken_uhex_value(const SharemindAssemblerToken * t) {
-    assert(t);
-    assert(t->type == SHAREMIND_ASSEMBLER_TOKEN_UHEX);
-    assert(t->length >= 3u);
-    assert(t->length <= 18u);
-    assert(t->text[0u] == '0');
-    assert(t->text[1u] == 'x');
+std::uint64_t AssemblerToken::uhexValue() const {
+    assert(type == Type::UHEX);
+    assert(length >= 3u);
+    assert(length <= 18u);
+    assert(text[0u] == '0');
+    assert(text[1u] == 'x');
 
-    return sharemind_assembler_read_hex(t->text + 2u, t->length - 2u);
+    return assembler_read_hex(text + 2u, length - 2u);
 }
 
-size_t SharemindAssemblerToken_string_length(const SharemindAssemblerToken * t) {
-    assert(t);
-    assert(t->type == SHAREMIND_ASSEMBLER_TOKEN_STRING);
-    assert(t->length >= 2u);
-    size_t l = 0u;
-    for (size_t i = 1u; i < t->length - 1; i++) {
+std::size_t AssemblerToken::stringLength() const {
+    assert(type == Type::STRING);
+    assert(length >= 2u);
+    std::size_t l = 0u;
+    for (std::size_t i = 1u; i < length - 1; i++) {
         l++;
-        if (t->text[i] == '\\') {
+        if (text[i] == '\\') {
             /** \todo \xFFFF.. and \377 syntax. */
             i++;
-            assert(i < t->length);
+            assert(i < length);
         }
     }
     return l;
 }
 
-char * SharemindAssemblerToken_string_value(const SharemindAssemblerToken * t, size_t * length) {
-    assert(t);
-    assert(t->type == SHAREMIND_ASSEMBLER_TOKEN_STRING);
-    assert(t->length >= 2u);
-    size_t l = SharemindAssemblerToken_string_length(t);
-    if (length)
-        *length = l;
+std::string AssemblerToken::stringValue() const{
+    assert(type == Type::STRING);
+    auto const l = stringLength();
+    std::string r;
+    r.reserve(l);
 
-    char * s = (char *) malloc(sizeof(char) * (l + 1));
-    if (unlikely(!s))
-        return SHAREMIND_NULL;
-
-    char * op = s;
-    const char * ip = &t->text[1];
-    const char * ip_end = &t->text[t->length - 1u];
+    auto * ip = &text[1];
+    auto * const ip_end = &text[length - 1u];
 
     while (ip != ip_end) {
         if (*ip != '\\') {
-            *op = *ip;
+            r.push_back(*ip);
         } else {
             ip++;
             assert(ip != ip_end);
             switch (*ip) {
-                case 'n':  *op = '\n'; break;
-                case 'r':  *op = '\r'; break;
-                case 't':  *op = '\t'; break;
-                case 'v':  *op = '\v'; break;
-                case 'b':  *op = '\b'; break;
-                case 'f':  *op = '\f'; break;
-                case 'a':  *op = '\a'; break;
-                case '0':  *op = '\0'; break; /**< \todo proper \xFFFF.. and \377 syntax. */
+                case 'n':  r.push_back('\n'); break;
+                case 'r':  r.push_back('\r'); break;
+                case 't':  r.push_back('\t'); break;
+                case 'v':  r.push_back('\v'); break;
+                case 'b':  r.push_back('\b'); break;
+                case 'f':  r.push_back('\f'); break;
+                case 'a':  r.push_back('\a'); break;
+                case '0':  r.push_back('\0'); break; /**< \todo proper \xFFFF.. and \377 syntax. */
                 case '\'': /* *op = '\''; break; */
                 case '"':  /* *op = '"';  break; */
                 case '?':  /* *op = '?';  break; */
                 case '\\': /* *op = '\\'; break; */
-                default:   *op = *ip;  break;
+                default:   r.push_back(*ip);  break;
             }
         }
         ip++;
-        op++;
     }
-
-    s[l] = '\0';
-    return s;
+    return r;
 }
 
-char * SharemindAssemblerToken_label_to_new_string(const SharemindAssemblerToken * t) {
-    assert(t);
-    assert(t->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL || t->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL_O);
-    size_t l;
-    if (t->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL) {
-        assert(t->length >= 2u);
-        l = t->length;
+std::string AssemblerToken::labelToString() const {
+    if (type == Type::LABEL) {
+        assert(length >= 2u);
+        return {text + 1u, length - 1u};
     } else {
-        assert(t->length >= 6u);
-        for (l = 2; t->text[l] != '+' && t->text[l] != '-'; l++) /* Do nothing */;
-        assert(t->text[l + 1] == '0');
-        assert(t->text[l + 2] == 'x');
+        assert(type == Type::LABEL_O);
+        assert(length >= 6u);
+        std::size_t l;
+        for (l = 2; text[l] != '+' && text[l] != '-'; l++) /* Do nothing */;
+        assert(text[l + 1] == '0');
+        assert(text[l + 2] == 'x');
+        return {text + 1u, l - 1u};
     }
-
-    char * c = (char *) malloc(l);
-    if (!c)
-        return SHAREMIND_NULL;
-
-    l--;
-    strncpy(c, t->text + 1, l);
-    c[l] = '\x00';
-    return c;
 }
 
-int64_t SharemindAssemblerToken_label_offset(const SharemindAssemblerToken * t) {
-    assert(t);
-    assert(t->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL || t->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL_O);
-    assert(t->text[0] == ':');
-    if (t->type == SHAREMIND_ASSEMBLER_TOKEN_LABEL) {
-        assert(t->length >= 2u);
+std::int64_t AssemblerToken::labelOffset() const {
+    if (type == Type::LABEL) {
+        assert(text[0u] == ':');
+        assert(length >= 2u);
         return 0u;
     }
-    assert(t->length >= 6u);
-    const char * h = t->text + 2;
-    while (*h != '+' && *h != '-')
-        h++;
-    int neg = (*h == '-');
+    assert(type == Type::LABEL_O);
+    assert(text[0u] == ':');
+    assert(length >= 6u);
+    char const * h = text + 2;
+    while ((*h != '+') && (*h != '-'))
+        ++h;
+    bool const neg = (*h == '-');
     h += 3;
-    uint64_t v = sharemind_assembler_read_hex(h, t->length - (size_t) (h - t->text));
+    auto v = assembler_read_hex(h, length - static_cast<std::size_t>(h - text));
 
     if (neg) {
-        assert(v <= ((uint64_t) (INT64_MIN + 1)) + 1u);
-        return (int64_t) -v;
+        assert(v <= absInt64Min);
+        return -static_cast<std::int64_t>(v);
     } else {
-        assert(v <= (uint64_t) INT64_MAX);
-        return (int64_t) v;
+        assert(integralLessEqual(v, int64Max));
+        return static_cast<std::int64_t>(v);
     }
 }
 
-SharemindAssemblerTokens * SharemindAssemblerTokens_new(void) {
-    SharemindAssemblerTokens * ts = (SharemindAssemblerTokens *) malloc(sizeof(SharemindAssemblerTokens));
-    if (unlikely(!ts))
-        return SHAREMIND_NULL;
-    ts->numTokens = 0u;
-    ts->array = SHAREMIND_NULL;
-    return ts;
+std::ostream & operator<<(std::ostream & os, AssemblerToken::Type const type) {
+    #define SHAREMIND_LIBAS_TOKENS_T(v) \
+            case AssemblerToken::Type::v: os << #v; break
+    switch (type) {
+        SHAREMIND_LIBAS_TOKENS_T(NEWLINE);
+        SHAREMIND_LIBAS_TOKENS_T(DIRECTIVE);
+        SHAREMIND_LIBAS_TOKENS_T(HEX);
+        SHAREMIND_LIBAS_TOKENS_T(UHEX);
+        SHAREMIND_LIBAS_TOKENS_T(STRING);
+        SHAREMIND_LIBAS_TOKENS_T(LABEL_O);
+        SHAREMIND_LIBAS_TOKENS_T(LABEL);
+        SHAREMIND_LIBAS_TOKENS_T(KEYWORD);
+    }
+    #undef SHAREMIND_LIBAS_TOKENS_T
+    return os;
 }
 
-void SharemindAssemblerTokens_free(SharemindAssemblerTokens * ts) {
-    assert(ts);
-
-    free(ts->array);
-    free(ts);
+std::ostream & operator<<(std::ostream & os, AssemblerToken const & token) {
+    if (token.type == AssemblerToken::Type::NEWLINE)
+        return os << token.type;
+    os << token.type << '(';
+    /// \todo Optimize this:
+    for (std::size_t i = 0u; i < token.length; ++i)
+        os << token.text[i];
+    return os << ")@" << token.start_line << ':' << token.start_column;
 }
 
-SharemindAssemblerToken * SharemindAssemblerTokens_append(
-        SharemindAssemblerTokens * ts,
-        SharemindAssemblerTokenType type,
-        const char * start,
-        size_t start_line,
-        size_t start_column)
-{
-    assert(ts);
-    SharemindAssemblerToken * nts = (SharemindAssemblerToken *) realloc(ts->array, sizeof(SharemindAssemblerToken) * (ts->numTokens + 1));
-    if (unlikely(!nts))
-        return SHAREMIND_NULL;
-    ts->array = nts;
-
-    SharemindAssemblerToken * nt = &nts[ts->numTokens];
-    ts->numTokens++;
-    nt->type = type;
-    nt->text = start;
-    nt->start_line = start_line;
-    nt->start_column = start_column;
-    return nt;
+void AssemblerTokens::popBackNewlines() noexcept {
+    while (!empty()) {
+        if (back().type != AssemblerToken::Type::NEWLINE)
+            return;
+        pop_back();
+    }
 }
 
-void SharemindAssemblerTokens_pop_back_newlines(SharemindAssemblerTokens * ts) {
-    assert(ts);
-
-    if (ts->array[ts->numTokens - 1].type != SHAREMIND_ASSEMBLER_TOKEN_NEWLINE)
-        return;
-
-    ts->numTokens--;
-    SharemindAssemblerToken * nts = (SharemindAssemblerToken *) realloc(ts->array, sizeof(SharemindAssemblerToken) * ts->numTokens);
-    if (likely(nts))
-        ts->array = nts;
-}
+} // namespace sharemind {

@@ -21,13 +21,15 @@
 #define SHAREMIND_LIBAS_TOKENIZER_H
 
 #include <cstring>
+#include <memory>
 #include "tokens.h"
 
 
-SharemindAssemblerTokens * sharemind_assembler_tokenize(const char * program,
-                            size_t length,
-                            size_t * errorSl,
-                            size_t *errorSc)
+std::unique_ptr<sharemind::AssemblerTokens> sharemind_assembler_tokenize(
+        char const * program,
+        std::size_t length,
+        std::size_t * errorSl,
+        std::size_t *errorSc)
     __attribute__ ((nonnull(1), warn_unused_result));
 
 #endif /* SHAREMIND_LIBAS_TOKENIZER_H */
