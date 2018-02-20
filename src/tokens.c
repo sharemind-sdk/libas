@@ -36,15 +36,20 @@ uint64_t sharemind_assembler_read_hex(const char * c, size_t l) {
     const char * e = c + l;
     uint64_t v = 0u;
     do {
-        char base;
+        uint64_t digit;
         switch (*c) {
-            case '0' ... '9': base = '0'; break;
-            case 'a' ... 'f': base = 'a' - 10; break;
-            case 'A' ... 'F': base = 'A' - 10; break;
+            #define C(c,v) case c : digit = v; break
+            C('0', 0u); C('1', 1u); C('2', 2u); C('3', 3u); C('4', 4u);
+            C('5', 5u); C('6', 6u); C('7', 7u); C('8', 8u); C('9', 9u);
+            C('a', 10u); C('b', 11u); C('c', 12u); C('d', 13u); C('e', 14u);
+                C('f', 15u);
+            C('A', 10u); C('B', 11u); C('C', 12u); C('D', 13u); C('E', 14u);
+                C('F', 15u);
+            #undef C
             default:
                 abort();
         }
-        v = (v * 16u) + (uint64_t) (*c - base);
+        v = (v * 16u) + digit;
     } while (++c < e);
     return v;
 }
