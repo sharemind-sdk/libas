@@ -36,12 +36,6 @@ FIND_PACKAGE(SharemindLibVmi REQUIRED)
 
 # Headers:
 FILE(GLOB_RECURSE SharemindLibAs_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h")
-SharemindNewUniqueList(SharemindLibAs_HEADERS_P
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/stdion.h"
-)
-FOREACH(h IN LISTS SharemindLibAs_HEADERS_P)
-    LIST(REMOVE_ITEM SharemindLibAs_HEADERS "${h}")
-ENDFOREACH()
 INSTALL(FILES ${SharemindLibAs_HEADERS}
         DESTINATION "include/sharemind/libas"
         COMPONENT "dev")
