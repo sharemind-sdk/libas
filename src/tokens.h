@@ -20,9 +20,9 @@
 #ifndef SHAREMIND_LIBAS_TOKENS_H
 #define SHAREMIND_LIBAS_TOKENS_H
 
+#include <cstdint>
+#include <cstring>
 #include <sharemind/preprocessor.h>
-#include <stdint.h>
-#include <string.h>
 
 
 #ifdef __cplusplus

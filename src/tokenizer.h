@@ -20,7 +20,7 @@
 #ifndef SHAREMIND_LIBAS_TOKENIZER_H
 #define SHAREMIND_LIBAS_TOKENIZER_H
 
-#include <string.h>
+#include <cstring>
 #include "tokens.h"
 
 

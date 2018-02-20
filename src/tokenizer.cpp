@@ -19,10 +19,11 @@
 
 #include "tokenizer.h"
 
-#include <assert.h>
+#include <cassert>
+#include <cstdlib>
 #include <sharemind/likely.h>
 #include <sharemind/null.h>
-#include <stdlib.h>
+
 
 #define CASE_DECIMAL_DIGIT \
     case '0': case '1': case '2': case '3': case '4': \

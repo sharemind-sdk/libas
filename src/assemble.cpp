@@ -19,16 +19,15 @@
 
 #include "assemble.h"
 
-#include <assert.h>
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
 #include <sharemind/abort.h>
 #include <sharemind/comma.h>
 #include <sharemind/libvmi/instr.h>
 #include <sharemind/likely.h>
 #include <sharemind/null.h>
 #include <sharemind/stringmap.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 
 static inline bool assign_add_sizet_int64(size_t * const lhs, const int64_t rhs)

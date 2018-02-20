@@ -20,7 +20,6 @@
 #include "linkingunits.h"
 
 #include <sharemind/null.h>
-#include <stdlib.h>
 
 
 void SharemindAssemblerSection_init(SharemindAssemblerSection * s) {

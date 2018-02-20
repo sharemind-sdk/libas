@@ -19,16 +19,15 @@
 
 #include "linker.h"
 
-#include <assert.h>
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
 #include <sharemind/codeblock.h>
 #include <sharemind/comma.h>
 #include <sharemind/libexecutable/libexecutable.h>
 #include <sharemind/libexecutable/libexecutable_0x0.h>
 #include <sharemind/null.h>
-#include <stdbool.h>
-#include <stdlib.h>
 
-#include <stdio.h>
 
 /* COMMON */
 static const size_t extraPadding[8] = { 0u, 7u, 6u, 5u, 4u, 3u, 2u, 1u };

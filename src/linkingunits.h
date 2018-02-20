@@ -20,14 +20,14 @@
 #ifndef SHAREMIND_LIBAS_LINKINGUNITS_H
 #define SHAREMIND_LIBAS_LINKINGUNITS_H
 
+#include <cstddef>
+#include <cstdlib>
 #include <sharemind/codeblock.h>
 #include <sharemind/comma.h>
 #include <sharemind/extern_c.h>
 #include <sharemind/libexecutable/libexecutable_0x0.h>
 #include <sharemind/libexecutable/sharemind_executable_section_type.h>
 #include <sharemind/vector.h>
-#include <stddef.h>
-#include <stdlib.h>
 
 
 SHAREMIND_EXTERN_C_BEGIN

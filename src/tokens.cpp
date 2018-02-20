@@ -19,13 +19,13 @@
 
 #include "tokens.h"
 
-#include <assert.h>
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <sharemind/abort.h>
 #include <sharemind/likely.h>
 #include <sharemind/null.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 
 SHAREMIND_ENUM_DEFINE_TOSTRING(SharemindAssemblerTokenType,
