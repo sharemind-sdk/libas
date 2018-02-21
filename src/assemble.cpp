@@ -32,44 +32,46 @@
 
 namespace {
 
-inline bool assign_add_sizet_int64(size_t * const lhs, const int64_t rhs) {
+inline bool assign_add_sizet_int64(std::size_t * const lhs,
+                                   std::int64_t const rhs)
+{
     if (rhs > 0) {
-        if (((uint64_t) rhs) > SIZE_MAX - (*lhs))
+        if (((std::uint64_t) rhs) > SIZE_MAX - (*lhs))
             return false;
-        (*lhs) += (uint64_t) rhs;
+        (*lhs) += (std::uint64_t) rhs;
     } else if (rhs < 0) {
         if (rhs == INT64_MIN) {
-            if ((*lhs) <= (uint64_t) INT64_MAX)
+            if ((*lhs) <= (std::uint64_t) INT64_MAX)
                 return false;
             (*lhs)--;
-            (*lhs) -= (uint64_t) INT64_MAX;
+            (*lhs) -= (std::uint64_t) INT64_MAX;
         } else {
-            if ((*lhs) < (uint64_t) -rhs)
+            if ((*lhs) < (std::uint64_t) -rhs)
               return false;
-            (*lhs) -= (uint64_t) -rhs;
+            (*lhs) -= (std::uint64_t) -rhs;
         }
     }
     return true;
 }
 
-inline bool substract_2sizet_to_int64(int64_t * const dest,
-                                      const size_t lhs,
-                                      const size_t rhs)
+inline bool substract_2sizet_to_int64(std::int64_t * const dest,
+                                      std::size_t const lhs,
+                                      std::size_t const rhs)
 {
     if (lhs >= rhs) {
-        size_t r = lhs - rhs;
+        std::size_t r = lhs - rhs;
         if (r > INT64_MAX)
             return false;
-        (*dest) = (int64_t) r;
+        (*dest) = (std::int64_t) r;
     } else {
-        size_t mr = rhs - lhs;
+        std::size_t mr = rhs - lhs;
         assert(mr > 0);
-        if (mr - 1 > (uint64_t) INT64_MAX) {
+        if (mr - 1 > (std::uint64_t) INT64_MAX) {
             return false;
-        } else if (mr - 1 == (uint64_t) INT64_MAX) {
+        } else if (mr - 1 == (std::uint64_t) INT64_MAX) {
             (*dest) = INT64_MIN;
         } else {
-            (*dest) = -((int64_t) mr);
+            (*dest) = -((std::int64_t) mr);
         }
     }
     return true;
@@ -152,7 +154,7 @@ struct SharemindAssemblerLabelSlots
         for (auto & value : *this) {
             assert(value.tokenIt != endIt);
 
-            size_t absTarget = l.offset;
+            std::size_t absTarget = l.offset;
             if (!assign_add_sizet_int64(&absTarget, value.extraOffset))
                 return false; /**< \todo Provide better diagnostics */
 
@@ -235,17 +237,17 @@ SharemindAssemblerError sharemind_assembler_assemble(
     sharemind::AssemblerTokens::const_iterator t(ts.begin());
     sharemind::AssemblerTokens::const_iterator const e(ts.end());
     SharemindAssemblerLinkingUnit * lu;
-    uint8_t lu_index = 0u;
+    std::uint8_t lu_index = 0u;
     int section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
-    size_t numBindings = 0u;
-    size_t numPdBindings = 0u;
+    std::size_t numBindings = 0u;
+    std::size_t numPdBindings = 0u;
     void * dataToWrite = nullptr;
-    size_t dataToWriteLength = 0u;
+    std::size_t dataToWriteLength = 0u;
 
     /* for .data and .fill: */
-    uint64_t multiplier;
-    uint_fast8_t type;
-    static const size_t widths[8] = { 1u, 2u, 4u, 8u, 1u, 2u, 4u, 8u };
+    std::uint64_t multiplier;
+    std::uint_fast8_t type;
+    static std::size_t const widths[8] = { 1u, 2u, 4u, 8u, 1u, 2u, 4u, 8u };
 
     assert(lus);
     assert(lus->size == 0u);
@@ -335,7 +337,7 @@ assemble_newline:
                     } else {
                         lu = &lus->data[v];
                     }
-                    lu_index = (uint8_t) v;
+                    lu_index = (std::uint8_t) v;
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
                 }
             } else if (TOKEN_MATCH(".section")) {
@@ -400,8 +402,8 @@ assemble_newline:
 
                 auto const syscallSig(t->stringValue());
 
-                const size_t oldLen = lu->sections[section_index].length;
-                const size_t newLen = oldLen + syscallSig.size() + 1;
+                std::size_t const oldLen = lu->sections[section_index].length;
+                std::size_t const newLen = oldLen + syscallSig.size() + 1;
                 void * newData =
                         realloc(lu->sections[section_index].data, newLen);
                 if (unlikely(!newData))
@@ -431,8 +433,8 @@ assemble_newline:
                          != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT))
                 goto assemble_unexpected_token_t;
 
-            size_t args = 0u;
-            size_t l = t->length;
+            std::size_t args = 0u;
+            std::size_t l = t->length;
             char * name = (char *) malloc(sizeof(char) * (l + 1u));
             if (unlikely(!name))
                 return SHAREMIND_ASSEMBLE_OUT_OF_MEMORY;
@@ -446,7 +448,7 @@ assemble_newline:
                 if (t->type == AssemblerToken::Type::NEWLINE) {
                     break;
                 } else if (t->type == AssemblerToken::Type::KEYWORD) {
-                    size_t const newSize = l + t->length + 1u;
+                    std::size_t const newSize = l + t->length + 1u;
                     if (unlikely(newSize < l))
                         goto assemble_invalid_parameter_t;
                     char * const newName =
@@ -475,7 +477,7 @@ assemble_newline:
             name[l] = '\0';
 
             /* Detect and check instruction: */
-            const SharemindVmInstruction * const i =
+            SharemindVmInstruction const * const i =
                     sharemind_vm_instruction_from_name(name);
             if (unlikely(!i)) {
                 if (errorToken)
@@ -494,7 +496,7 @@ assemble_newline:
             free(name);
 
             /* Detect offset for jump instructions */
-            size_t jmpOffset;
+            std::size_t jmpOffset;
             bool doJumpLabel;
             {
                 char c[sizeof(i->code)];
@@ -566,7 +568,7 @@ assemble_newline:
                             /* Because the label was defined & we're one-pass:*/
                             assert(jmpOffset >= loc.offset);
 
-                            size_t absTarget = loc.offset;
+                            std::size_t absTarget = loc.offset;
                             if (!assign_add_sizet_int64(&absTarget,
                                                         ot->labelOffset())
                                 || !substract_2sizet_to_int64(&instr->int64[0],
@@ -602,7 +604,7 @@ assemble_newline:
                                     lu->sections[section_index].data;
 
                         assert(instr > cbData);
-                        assert(((uintmax_t) (instr - cbData)) <= SIZE_MAX);
+                        assert(((std::uintmax_t) (instr - cbData)) <= SIZE_MAX);
 
                         lst[std::move(label)].emplace_back(
                                     ot->labelOffset(),
@@ -799,8 +801,8 @@ assemble_data_write:
         lu->sections[SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS].length +=
                 (multiplier * dataToWriteLength);
     } else {
-        const size_t oldLen = lu->sections[section_index].length;
-        const size_t newLen = oldLen + (multiplier * dataToWriteLength);
+        std::size_t const oldLen = lu->sections[section_index].length;
+        std::size_t const newLen = oldLen + (multiplier * dataToWriteLength);
         void * newData = realloc(lu->sections[section_index].data, newLen);
         if (unlikely(!newData)) {
             free(dataToWrite);
@@ -810,13 +812,13 @@ assemble_data_write:
         lu->sections[section_index].length = newLen;
 
         /* Actually write the values. */
-        newData = ((uint8_t *) newData) + oldLen;
+        newData = ((std::uint8_t *) newData) + oldLen;
         if (dataToWrite) {
             for (;;) {
                 memcpy(newData, dataToWrite, dataToWriteLength);
                 if (!--multiplier)
                     break;
-                newData = ((uint8_t *) newData) + dataToWriteLength;
+                newData = ((std::uint8_t *) newData) + dataToWriteLength;
             };
         } else {
             memset(newData, 0, dataToWriteLength);
