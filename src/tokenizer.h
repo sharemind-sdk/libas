@@ -25,11 +25,16 @@
 #include "tokens.h"
 
 
-std::unique_ptr<sharemind::AssemblerTokens> sharemind_assembler_tokenize(
-        char const * program,
-        std::size_t length,
-        std::size_t * errorSl,
-        std::size_t *errorSc)
+namespace sharemind {
+namespace Assembler {
+
+std::unique_ptr<TokensVector> tokenize(char const * program,
+                                       std::size_t length,
+                                       std::size_t * errorSl,
+                                       std::size_t *errorSc)
     __attribute__ ((nonnull(1), warn_unused_result));
+
+} /* namespace Assembler { */
+} /* namespace sharemind { */
 
 #endif /* SHAREMIND_LIBAS_TOKENIZER_H */

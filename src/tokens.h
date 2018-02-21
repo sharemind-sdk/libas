@@ -27,11 +27,12 @@
 
 
 namespace sharemind {
+namespace Assembler {
 
-std::uint64_t assembler_read_hex(const char * c, size_t l)
+std::uint64_t readHex(char const * c, std::size_t l)
         __attribute__ ((nonnull(1)));
 
-struct AssemblerToken {
+struct Token {
 
     enum class Type {
         NEWLINE,
@@ -46,7 +47,7 @@ struct AssemblerToken {
 
 /* Methods: */
 
-    AssemblerToken(Type type_,
+    Token(Type type_,
                    char const * text_,
                    std::size_t length_,
                    std::size_t startLine_,
@@ -58,11 +59,11 @@ struct AssemblerToken {
         , start_column(startColumn_)
     {}
 
-    AssemblerToken(AssemblerToken &&) noexcept = default;
-    AssemblerToken(AssemblerToken const &) noexcept = default;
+    Token(Token &&) noexcept = default;
+    Token(Token const &) noexcept = default;
 
-    AssemblerToken & operator=(AssemblerToken &&) noexcept = default;
-    AssemblerToken & operator=(AssemblerToken const &) noexcept = default;
+    Token & operator=(Token &&) noexcept = default;
+    Token & operator=(Token const &) noexcept = default;
 
     std::int64_t hexValue() const;
     std::uint64_t uhexValue() const;
@@ -83,20 +84,21 @@ struct AssemblerToken {
 
 };
 
-std::ostream & operator<<(std::ostream & os, AssemblerToken::Type const type);
-std::ostream & operator<<(std::ostream & os, AssemblerToken const & token);
+std::ostream & operator<<(std::ostream & os, Token::Type const type);
+std::ostream & operator<<(std::ostream & os, Token const & token);
 
-class AssemblerTokens: public std::vector<AssemblerToken> {
+class TokensVector: public std::vector<Token> {
 
 public: /* Methods: */
 
-    using std::vector<AssemblerToken>::vector;
-    using std::vector<AssemblerToken>::operator=;
+    using std::vector<Token>::vector;
+    using std::vector<Token>::operator=;
 
     void popBackNewlines() noexcept;
 
 };
 
-} // namespace sharemind {
+} /* namespace Assembler { */
+} /* namespace sharemind { */
 
 #endif /* SHAREMIND_LIBAS_TOKENS_H */

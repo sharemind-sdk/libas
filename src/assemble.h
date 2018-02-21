@@ -25,6 +25,9 @@
 #include "tokens.h"
 
 
+namespace sharemind {
+namespace Assembler {
+
 #define SHAREMIND_ASSEMBLER_ERROR_ENUM \
     ((SHAREMIND_ASSEMBLE_OK, = 0)) \
     ((SHAREMIND_ASSEMBLE_OUT_OF_MEMORY,)) \
@@ -38,14 +41,16 @@
     ((SHAREMIND_ASSEMBLE_UNDEFINED_LABEL,)) \
     ((SHAREMIND_ASSEMBLE_INVALID_LABEL,)) \
     ((SHAREMIND_ASSEMBLE_INVALID_LABEL_OFFSET,))
-SHAREMIND_ENUM_CUSTOM_DEFINE(SharemindAssemblerError, SHAREMIND_ASSEMBLER_ERROR_ENUM);
-SHAREMIND_ENUM_DECLARE_TOSTRING(SharemindAssemblerError);
+SHAREMIND_ENUM_CUSTOM_DEFINE(Error, SHAREMIND_ASSEMBLER_ERROR_ENUM);
+SHAREMIND_ENUM_DECLARE_TOSTRING(Error);
 
-SharemindAssemblerError sharemind_assembler_assemble(
-        sharemind::AssemblerTokens const & ts,
-        SharemindAssemblerLinkingUnits * lus,
-        sharemind::AssemblerTokens::const_iterator * errorToken,
-        char ** errorString)
+Error assemble(TokensVector const & ts,
+               SharemindAssemblerLinkingUnits * lus,
+               TokensVector::const_iterator * errorToken,
+               char ** errorString)
     __attribute__ ((nonnull(2), warn_unused_result));
+
+} /* namespace Assembler { */
+} /* namespace sharemind { */
 
 #endif /* SHAREMIND_LIBAS_ASSEMBLE_H */

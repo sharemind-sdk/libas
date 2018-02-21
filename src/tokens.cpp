@@ -32,7 +32,7 @@
 
 
 namespace sharemind {
-
+namespace Assembler {
 namespace {
 
 constexpr auto const int64Min = std::numeric_limits<std::int64_t>::min();
@@ -41,7 +41,7 @@ constexpr auto const absInt64Min = signedToUnsigned(-(int64Min + 1)) + 1u;
 
 } // anonymous namespace
 
-std::uint64_t assembler_read_hex(char const * c, std::size_t l) {
+std::uint64_t readHex(char const * c, std::size_t l) {
     assert(c);
 
     auto * const e = c + l;
@@ -65,7 +65,7 @@ std::uint64_t assembler_read_hex(char const * c, std::size_t l) {
     return v;
 }
 
-std::int64_t AssemblerToken::hexValue() const {
+std::int64_t Token::hexValue() const {
     assert(type == Type::HEX);
     assert(length >= 4u);
     assert(length <= 19u);
@@ -73,8 +73,7 @@ std::int64_t AssemblerToken::hexValue() const {
     assert(text[1u] == '0');
     assert(text[2u] == 'x');
 
-    auto v = assembler_read_hex(text + 3u, length - 3u);
-
+    auto v = readHex(text + 3u, length - 3u);
     if (text[0] == '-') {
         assert(v <= absInt64Min);
         return -static_cast<std::int64_t>(v);
@@ -85,17 +84,16 @@ std::int64_t AssemblerToken::hexValue() const {
     }
 }
 
-std::uint64_t AssemblerToken::uhexValue() const {
+std::uint64_t Token::uhexValue() const {
     assert(type == Type::UHEX);
     assert(length >= 3u);
     assert(length <= 18u);
     assert(text[0u] == '0');
     assert(text[1u] == 'x');
-
-    return assembler_read_hex(text + 2u, length - 2u);
+    return readHex(text + 2u, length - 2u);
 }
 
-std::size_t AssemblerToken::stringLength() const {
+std::size_t Token::stringLength() const {
     assert(type == Type::STRING);
     assert(length >= 2u);
     std::size_t l = 0u;
@@ -110,7 +108,7 @@ std::size_t AssemblerToken::stringLength() const {
     return l;
 }
 
-std::string AssemblerToken::stringValue() const{
+std::string Token::stringValue() const{
     assert(type == Type::STRING);
     auto const l = stringLength();
     std::string r;
@@ -146,7 +144,7 @@ std::string AssemblerToken::stringValue() const{
     return r;
 }
 
-std::string AssemblerToken::labelToString() const {
+std::string Token::labelToString() const {
     if (type == Type::LABEL) {
         assert(length >= 2u);
         return {text + 1u, length - 1u};
@@ -161,7 +159,7 @@ std::string AssemblerToken::labelToString() const {
     }
 }
 
-std::int64_t AssemblerToken::labelOffset() const {
+std::int64_t Token::labelOffset() const {
     if (type == Type::LABEL) {
         assert(text[0u] == ':');
         assert(length >= 2u);
@@ -175,8 +173,7 @@ std::int64_t AssemblerToken::labelOffset() const {
         ++h;
     bool const neg = (*h == '-');
     h += 3;
-    auto v = assembler_read_hex(h, length - static_cast<std::size_t>(h - text));
-
+    auto v = readHex(h, length - static_cast<std::size_t>(h - text));
     if (neg) {
         assert(v <= absInt64Min);
         return -static_cast<std::int64_t>(v);
@@ -186,9 +183,9 @@ std::int64_t AssemblerToken::labelOffset() const {
     }
 }
 
-std::ostream & operator<<(std::ostream & os, AssemblerToken::Type const type) {
+std::ostream & operator<<(std::ostream & os, Token::Type const type) {
     #define SHAREMIND_LIBAS_TOKENS_T(v) \
-            case AssemblerToken::Type::v: os << #v; break
+            case Token::Type::v: os << #v; break
     switch (type) {
         SHAREMIND_LIBAS_TOKENS_T(NEWLINE);
         SHAREMIND_LIBAS_TOKENS_T(DIRECTIVE);
@@ -203,8 +200,8 @@ std::ostream & operator<<(std::ostream & os, AssemblerToken::Type const type) {
     return os;
 }
 
-std::ostream & operator<<(std::ostream & os, AssemblerToken const & token) {
-    if (token.type == AssemblerToken::Type::NEWLINE)
+std::ostream & operator<<(std::ostream & os, Token const & token) {
+    if (token.type == Token::Type::NEWLINE)
         return os << token.type;
     os << token.type << '(';
     /// \todo Optimize this:
@@ -213,12 +210,13 @@ std::ostream & operator<<(std::ostream & os, AssemblerToken const & token) {
     return os << ")@" << token.start_line << ':' << token.start_column;
 }
 
-void AssemblerTokens::popBackNewlines() noexcept {
+void TokensVector::popBackNewlines() noexcept {
     while (!empty()) {
-        if (back().type != AssemblerToken::Type::NEWLINE)
+        if (back().type != Token::Type::NEWLINE)
             return;
         pop_back();
     }
 }
 
+} // namespace Assembler {
 } // namespace sharemind {
