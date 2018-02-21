@@ -30,8 +30,9 @@
 #include <utility>
 
 
-static inline bool assign_add_sizet_int64(size_t * const lhs, const int64_t rhs)
-{
+namespace {
+
+inline bool assign_add_sizet_int64(size_t * const lhs, const int64_t rhs) {
     if (rhs > 0) {
         if (((uint64_t) rhs) > SIZE_MAX - (*lhs))
             return false;
@@ -51,10 +52,9 @@ static inline bool assign_add_sizet_int64(size_t * const lhs, const int64_t rhs)
     return true;
 }
 
-static inline bool substract_2sizet_to_int64(
-        int64_t * const dest,
-        const size_t lhs,
-        const size_t rhs)
+inline bool substract_2sizet_to_int64(int64_t * const dest,
+                                      const size_t lhs,
+                                      const size_t rhs)
 {
     if (lhs >= rhs) {
         size_t r = lhs - rhs;
@@ -196,6 +196,8 @@ struct SmAsLabelSlotsMap
             ::operator=;
 
 };
+
+} // anonymous namespace
 
 SHAREMIND_ENUM_CUSTOM_DEFINE_TOSTRING(SharemindAssemblerError,
                                       SHAREMIND_ASSEMBLER_ERROR_ENUM)
