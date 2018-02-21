@@ -22,6 +22,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <limits>
 #include <sharemind/abort.h>
 #include <sharemind/libvmi/instr.h>
 #include <sharemind/likely.h>
@@ -36,15 +37,17 @@ inline bool assign_add_sizet_int64(std::size_t * const lhs,
                                    std::int64_t const rhs)
 {
     if (rhs > 0) {
-        if (((std::uint64_t) rhs) > SIZE_MAX - (*lhs))
+        if (((std::uint64_t) rhs)
+            > std::numeric_limits<std::size_t>::max() - (*lhs))
             return false;
         (*lhs) += (std::uint64_t) rhs;
     } else if (rhs < 0) {
-        if (rhs == INT64_MIN) {
-            if ((*lhs) <= (std::uint64_t) INT64_MAX)
+        if (rhs == std::numeric_limits<std::int64_t>::min()) {
+            if ((*lhs)
+                <= (std::uint64_t) std::numeric_limits<std::int64_t>::max())
                 return false;
             (*lhs)--;
-            (*lhs) -= (std::uint64_t) INT64_MAX;
+            (*lhs) -= (std::uint64_t) std::numeric_limits<std::int64_t>::max();
         } else {
             if ((*lhs) < (std::uint64_t) -rhs)
               return false;
@@ -60,16 +63,18 @@ inline bool substract_2sizet_to_int64(std::int64_t * const dest,
 {
     if (lhs >= rhs) {
         std::size_t r = lhs - rhs;
-        if (r > INT64_MAX)
+        if (r > std::numeric_limits<std::int64_t>::max())
             return false;
         (*dest) = (std::int64_t) r;
     } else {
         std::size_t mr = rhs - lhs;
         assert(mr > 0);
-        if (mr - 1 > (std::uint64_t) INT64_MAX) {
+        if (mr - 1 > (std::uint64_t) std::numeric_limits<std::int64_t>::max()) {
             return false;
-        } else if (mr - 1 == (std::uint64_t) INT64_MAX) {
-            (*dest) = INT64_MIN;
+        } else if (mr - 1
+                   == (std::uint64_t) std::numeric_limits<std::int64_t>::max())
+        {
+            (*dest) = std::numeric_limits<std::int64_t>::min();
         } else {
             (*dest) = -((std::int64_t) mr);
         }
@@ -323,7 +328,7 @@ assemble_newline:
                     goto assemble_invalid_parameter_t;
 
                 auto const v = t->uhexValue();
-                if (unlikely(v > UINT8_MAX))
+                if (unlikely(v > std::numeric_limits<std::uint8_t>::max()))
                     goto assemble_invalid_parameter_t;
 
                 if (likely(v != lu_index)) {
@@ -604,7 +609,8 @@ assemble_newline:
                                     lu->sections[section_index].data;
 
                         assert(instr > cbData);
-                        assert(((std::uintmax_t) (instr - cbData)) <= SIZE_MAX);
+                        assert(((std::uintmax_t) (instr - cbData))
+                               <= std::numeric_limits<std::size_t>::max());
 
                         lst[std::move(label)].emplace_back(
                                     ot->labelOffset(),
@@ -700,33 +706,33 @@ assemble_data_opt_param:
         auto const v = t->uhexValue();
         switch (type) {
             case 0u: /* uint8 */
-                if (v > UINT8_MAX)
+                if (v > std::numeric_limits<std::uint8_t>::max())
                     goto assemble_invalid_parameter_t;
                 break;
             case 1u: /* uint16 */
-                if (v > UINT16_MAX)
+                if (v > std::numeric_limits<std::uint16_t>::max())
                     goto assemble_invalid_parameter_t;
                 break;
             case 2u: /* uint32 */
-                if (v > UINT32_MAX)
+                if (v > std::numeric_limits<std::uint32_t>::max())
                     goto assemble_invalid_parameter_t;
                 break;
             case 3u: /* uint64; All should be fine here. */
                 break;
             case 4u: /* int8 */
-                if (v > INT8_MAX)
+                if (v > std::numeric_limits<std::int8_t>::max())
                     goto assemble_invalid_parameter_t;
                 break;
             case 5u: /* int16 */
-                if (v > INT16_MAX)
+                if (v > std::numeric_limits<std::int16_t>::max())
                     goto assemble_invalid_parameter_t;
                 break;
             case 6u: /* int32 */
-                if (v > INT32_MAX)
+                if (v > std::numeric_limits<std::int32_t>::max())
                     goto assemble_invalid_parameter_t;
                 break;
             case 7u: /* int64 */
-                if (v > INT64_MAX)
+                if (v > std::numeric_limits<std::int64_t>::max())
                     goto assemble_invalid_parameter_t;
                 break;
             case 8u: /* string */
@@ -742,15 +748,15 @@ assemble_data_opt_param:
         auto const v = t->hexValue();
         switch (type) {
             case 0u: /* uint8 */
-                if (v > UINT8_MAX || v < 0)
+                if (v > std::numeric_limits<std::uint8_t>::max() || v < 0)
                     goto assemble_invalid_parameter_t;
                 break;
             case 1u: /* uint16 */
-                if (v > UINT16_MAX || v < 0)
+                if (v > std::numeric_limits<std::uint16_t>::max() || v < 0)
                     goto assemble_invalid_parameter_t;
                 break;
             case 2u: /* uint32 */
-                if (v > UINT32_MAX || v < 0)
+                if (v > std::numeric_limits<std::uint32_t>::max() || v < 0)
                     goto assemble_invalid_parameter_t;
                 break;
             case 3u: /* uint64 */
@@ -758,15 +764,18 @@ assemble_data_opt_param:
                     goto assemble_invalid_parameter_t;
                 break;
             case 4u: /* int8 */
-                if (v < INT8_MIN || v > INT8_MAX)
+                if (v < std::numeric_limits<std::int8_t>::min()
+                    || v > std::numeric_limits<std::int8_t>::max())
                     goto assemble_invalid_parameter_t;
                 break;
             case 5u: /* int16 */
-                if (v < INT16_MIN || v > INT16_MAX)
+                if (v < std::numeric_limits<std::int16_t>::min()
+                    || v > std::numeric_limits<std::int16_t>::max())
                     goto assemble_invalid_parameter_t;
                 break;
             case 6u: /* int32 */
-                if (v < INT32_MIN || v > INT32_MAX)
+                if (v < std::numeric_limits<std::int32_t>::min()
+                    || v > std::numeric_limits<std::int32_t>::max())
                     goto assemble_invalid_parameter_t;
                 break;
             case 7u: /* int64; All should be fine here. */
