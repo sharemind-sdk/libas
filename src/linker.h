@@ -25,11 +25,16 @@
 #include "linkingunits.h"
 
 
-void * sharemind_assembler_link(
-        uint16_t version,
-        SharemindAssemblerLinkingUnits * lus,
-        size_t * length,
-        uint8_t activeLinkingUnit)
+namespace sharemind {
+namespace Assembler {
+
+void * link(std::uint16_t version,
+            SharemindAssemblerLinkingUnits * lus,
+            std::size_t * length,
+            std::uint8_t activeLinkingUnit)
     __attribute__ ((nonnull(2, 3), warn_unused_result));
+
+} /* namespace Assembler { */
+} /* namespace sharemind { */
 
 #endif /* SHAREMIND_LIBAS_LINKER_H */

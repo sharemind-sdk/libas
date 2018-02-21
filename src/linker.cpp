@@ -29,12 +29,16 @@
 #include <sharemind/null.h>
 
 
-/* COMMON */
-static const size_t extraPadding[8] = { 0u, 7u, 6u, 5u, 4u, 3u, 2u, 1u };
+namespace sharemind {
+namespace Assembler {
 
-static inline bool writeSection_0x0(SharemindAssemblerSection * s,
-                                    char ** pos,
-                                    SHAREMIND_EXECUTABLE_SECTION_TYPE type)
+namespace {
+
+std::size_t const extraPadding[8] = { 0u, 7u, 6u, 5u, 4u, 3u, 2u, 1u };
+
+inline bool writeSection_0x0(SharemindAssemblerSection * s,
+                             char ** pos,
+                             SHAREMIND_EXECUTABLE_SECTION_TYPE type)
 {
     assert(s->length > 0u
            && (s->data || type == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS));
@@ -183,10 +187,12 @@ static bool sharemind_assembler_link_0x0(char ** data,
     return r;
 }
 
-void * sharemind_assembler_link(uint16_t version,
-                                SharemindAssemblerLinkingUnits * lus,
-                                size_t * length,
-                                uint8_t activeLinkingUnit)
+} // anonymous namespace
+
+void * link(std::uint16_t version,
+            SharemindAssemblerLinkingUnits * lus,
+            std::size_t * length,
+            std::uint8_t activeLinkingUnit)
 {
     assert(lus);
     assert(length);
@@ -211,3 +217,6 @@ void * sharemind_assembler_link(uint16_t version,
         return SHAREMIND_NULL;
     }
 }
+
+} /* namespace Assembler { */
+} /* namespace sharemind { */
