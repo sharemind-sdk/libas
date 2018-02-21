@@ -22,7 +22,6 @@
 #include <cassert>
 #include <cstdlib>
 #include <sharemind/likely.h>
-#include <sharemind/null.h>
 #include <sharemind/MakeUnique.h>
 
 
@@ -333,7 +332,7 @@ tokenize_error:
         *errorSl = sl;
     if (errorSc)
         *errorSc = sc;
-    return SHAREMIND_NULL;
+    return nullptr;
 }
 
 } // namespace Assembler {

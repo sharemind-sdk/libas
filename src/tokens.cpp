@@ -28,7 +28,6 @@
 #include <sharemind/IntegralComparisons.h>
 #include <sharemind/SignedToUnsigned.h>
 #include <sharemind/likely.h>
-#include <sharemind/null.h>
 
 
 namespace sharemind {
