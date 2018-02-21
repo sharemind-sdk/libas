@@ -20,16 +20,41 @@
 #ifndef SHAREMIND_LIBAS_LINKER_H
 #define SHAREMIND_LIBAS_LINKER_H
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
-#include "linkingunits.h"
+#include <sharemind/libexecutable/sharemind_executable_section_type.h>
+#include <vector>
 
 
 namespace sharemind {
 namespace Assembler {
 
+struct Section {
+    ~Section() noexcept;
+    std::size_t length = 0u;
+    void * data = nullptr;
+};
+
+
+struct LinkingUnit {
+    std::array<Section, SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT> sections;
+};
+
+struct LinkingUnitsVector: std::vector<LinkingUnit> {
+
+/* Methods: */
+
+    using std::vector<LinkingUnit>::vector;
+    using std::vector<LinkingUnit>::operator=;
+
+    std::size_t totalSize() const noexcept;
+    bool writeTo(char ** pos) const noexcept;
+
+};
+
 void * link(std::uint16_t version,
-            SharemindAssemblerLinkingUnits * lus,
+            LinkingUnitsVector * lus,
             std::size_t * length,
             std::uint8_t activeLinkingUnit)
     __attribute__ ((nonnull(2, 3), warn_unused_result));

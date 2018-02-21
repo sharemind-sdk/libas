@@ -21,7 +21,7 @@
 #define SHAREMIND_LIBAS_ASSEMBLE_H
 
 #include <sharemind/preprocessor.h>
-#include "linkingunits.h"
+#include "linker.h"
 #include "tokens.h"
 
 
@@ -45,7 +45,7 @@ SHAREMIND_ENUM_CUSTOM_DEFINE(Error, SHAREMIND_ASSEMBLER_ERROR_ENUM);
 SHAREMIND_ENUM_DECLARE_TOSTRING(Error);
 
 Error assemble(TokensVector const & ts,
-               SharemindAssemblerLinkingUnits * lus,
+               LinkingUnitsVector * lus,
                TokensVector::const_iterator * errorToken,
                char ** errorString)
     __attribute__ ((nonnull(2), warn_unused_result));

@@ -24,6 +24,7 @@
 #include <cstdlib>
 #include <limits>
 #include <sharemind/abort.h>
+#include <sharemind/codeblock.h>
 #include <sharemind/libvmi/instr.h>
 #include <sharemind/likely.h>
 #include <sharemind/SimpleUnorderedStringMap.h>
@@ -232,13 +233,13 @@ SHAREMIND_ENUM_CUSTOM_DEFINE_TOSTRING(Error, SHAREMIND_ASSEMBLER_ERROR_ENUM)
     } while ((0))
 
 Error assemble(TokensVector const & ts,
-               SharemindAssemblerLinkingUnits * lus,
+               LinkingUnitsVector * lus,
                TokensVector::const_iterator * errorToken,
                char ** errorString)
 {
     TokensVector::const_iterator t(ts.begin());
     TokensVector::const_iterator const e(ts.end());
-    SharemindAssemblerLinkingUnit * lu;
+    LinkingUnit * lu;
     std::uint8_t lu_index = 0u;
     int section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
     std::size_t numBindings = 0u;
@@ -252,7 +253,7 @@ Error assemble(TokensVector const & ts,
     static std::size_t const widths[8] = { 1u, 2u, 4u, 8u, 1u, 2u, 4u, 8u };
 
     assert(lus);
-    assert(lus->size == 0u);
+    assert(lus->size() == 0u);
 
     if (errorToken)
         *errorToken = ts.end();
@@ -266,11 +267,8 @@ Error assemble(TokensVector const & ts,
 
     LabelSlotsMap lst;
 
-    lu = SharemindAssemblerLinkingUnits_push(lus);
-    if (unlikely(!lu))
-        return SHAREMIND_ASSEMBLE_OUT_OF_MEMORY;
-
-    SharemindAssemblerLinkingUnit_init(lu);
+    lus->emplace_back();
+    lu = &lus->back();
 
     if (unlikely(ts.empty()))
         return SHAREMIND_ASSEMBLE_OK;
@@ -329,15 +327,13 @@ assemble_newline:
                     goto assemble_invalid_parameter_t;
 
                 if (likely(v != lu_index)) {
-                    if (unlikely(v > lus->size))
+                    if (unlikely(v > lus->size()))
                         goto assemble_invalid_parameter_t;
-                    if (v == lus->size) {
-                        lu = SharemindAssemblerLinkingUnits_push(lus);
-                        if (unlikely(!lu))
-                            return SHAREMIND_ASSEMBLE_OUT_OF_MEMORY;
-                        SharemindAssemblerLinkingUnit_init(lu);
+                    if (v == lus->size()) {
+                        lus->emplace_back();
+                        lu = &lus->back();
                     } else {
-                        lu = &lus->data[v];
+                        lu = &(*lus)[v];
                     }
                     lu_index = (std::uint8_t) v;
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
