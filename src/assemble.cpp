@@ -65,22 +65,27 @@ inline bool substract_2sizet_to_int64(std::int64_t * const dest,
                                       std::size_t const lhs,
                                       std::size_t const rhs)
 {
+    static constexpr auto const int64max =
+            std::numeric_limits<std::int64_t>::max();
     if (lhs >= rhs) {
-        std::size_t r = lhs - rhs;
-        if (r > std::numeric_limits<std::int64_t>::max())
+        std::size_t const r = lhs - rhs;
+        if (r > static_cast<std::uint64_t>(int64max))
             return false;
-        (*dest) = (std::int64_t) r;
+        (*dest) = static_cast<std::int64_t>(r);
     } else {
-        std::size_t mr = rhs - lhs;
+        std::size_t const mr = rhs - lhs;
         assert(mr > 0);
-        if (mr - 1 > (std::uint64_t) std::numeric_limits<std::int64_t>::max()) {
+        static_assert(-std::numeric_limits<std::int64_t>::max()
+                      == std::numeric_limits<std::int64_t>::min() + 1, "");
+        static constexpr auto const absMin =
+                static_cast<std::uint64_t>(
+                    std::numeric_limits<std::int64_t>::max()) + 1u;
+        if (mr > absMin) {
             return false;
-        } else if (mr - 1
-                   == (std::uint64_t) std::numeric_limits<std::int64_t>::max())
-        {
+        } else if (mr == absMin) {
             (*dest) = std::numeric_limits<std::int64_t>::min();
         } else {
-            (*dest) = -((std::int64_t) mr);
+            (*dest) = -static_cast<std::int64_t>(mr);
         }
     }
     return true;
