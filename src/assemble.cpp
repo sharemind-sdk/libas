@@ -37,21 +37,25 @@ inline bool assign_add_sizet_int64(std::size_t * const lhs,
                                    std::int64_t const rhs)
 {
     if (rhs > 0) {
-        if (((std::uint64_t) rhs)
-            > std::numeric_limits<std::size_t>::max() - (*lhs))
+        auto const urhs = static_cast<std::uint64_t>(rhs);
+        if (urhs > std::numeric_limits<std::size_t>::max() - (*lhs))
             return false;
-        (*lhs) += (std::uint64_t) rhs;
+        (*lhs) += urhs;
     } else if (rhs < 0) {
+        static_assert(-std::numeric_limits<std::int64_t>::max()
+                      == std::numeric_limits<std::int64_t>::min() + 1, "");
         if (rhs == std::numeric_limits<std::int64_t>::min()) {
-            if ((*lhs)
-                <= (std::uint64_t) std::numeric_limits<std::int64_t>::max())
+            static constexpr auto const absMin =
+                    static_cast<std::uint64_t>(
+                        std::numeric_limits<std::int64_t>::max()) + 1u;
+            if ((*lhs) < absMin)
                 return false;
-            (*lhs)--;
-            (*lhs) -= (std::uint64_t) std::numeric_limits<std::int64_t>::max();
+            (*lhs) -= absMin;
         } else {
-            if ((*lhs) < (std::uint64_t) -rhs)
-              return false;
-            (*lhs) -= (std::uint64_t) -rhs;
+            auto const absRhs = static_cast<std::uint64_t>(-rhs);
+            if ((*lhs) < absRhs)
+                return false;
+            (*lhs) -= absRhs;
         }
     }
     return true;
