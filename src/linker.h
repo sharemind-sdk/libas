@@ -25,6 +25,7 @@
 #include <cstdint>
 #include <sharemind/libexecutable/sharemind_executable_section_type.h>
 #include <vector>
+#include "Exception.h"
 
 
 namespace sharemind {
@@ -41,23 +42,11 @@ struct LinkingUnit {
     std::array<Section, SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT> sections;
 };
 
-struct LinkingUnitsVector: std::vector<LinkingUnit> {
+using LinkingUnitsVector = std::vector<LinkingUnit>;
 
-/* Methods: */
-
-    using std::vector<LinkingUnit>::vector;
-    using std::vector<LinkingUnit>::operator=;
-
-    std::size_t totalSize() const noexcept;
-    bool writeTo(char ** pos) const noexcept;
-
-};
-
-void * link(std::uint16_t version,
-            LinkingUnitsVector * lus,
-            std::size_t * length,
-            std::uint8_t activeLinkingUnit)
-    __attribute__ ((nonnull(2, 3), warn_unused_result));
+std::vector<char> link(std::uint16_t version,
+                       LinkingUnitsVector const & lus,
+                       std::uint8_t activeLinkingUnit = 0u);
 
 } /* namespace Assembler { */
 } /* namespace sharemind { */
