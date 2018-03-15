@@ -20,8 +20,10 @@
 #include "tokenizer.h"
 
 #include <cassert>
+#include <sharemind/Concat.h>
 #include <sharemind/likely.h>
 #include <sharemind/MakeUnique.h>
+#include "Exception.h"
 
 
 namespace sharemind {
@@ -54,7 +56,12 @@ namespace Assembler {
 #define ID_HEAD ASCII_LETTER: case '_'
 #define ID_TAIL ASCII_LETTER: case DECIMAL_DIGIT: case '_'
 
-#define TOKENIZE_INC_CHECK_EOF(eof) \
+#define SEPARATOR_WHITESPACE ' ': case '\t': case '\r': case '\v': case '\f'
+
+#define SIMPLE_ERROR_OUT(...) throw Exception(__VA_ARGS__)
+#define ERROR_OUT(...) SIMPLE_ERROR_OUT(concat(__VA_ARGS__))
+
+#define TOKENIZE_INC_CHECK_EOF(...) \
     do { \
         if (*c == '\n') { \
             sl++; \
@@ -62,8 +69,38 @@ namespace Assembler {
         } else \
             sc++; \
         if (++c == e) \
-            goto eof; \
+            { __VA_ARGS__ } \
     } while (0)
+#define TOKENIZE_INC_CHECK_EOF_OK TOKENIZE_INC_CHECK_EOF(goto tokenize_ok;)
+
+std::string asciiCharToPrintable(char const c) {
+    switch (c) {
+        case ASCII_LETTER:
+        case DECIMAL_DIGIT:
+        case ' ': case '!': case '"': case '#': case '$': case '%': case '&':
+        case '\'': case '(': case ')': case '*': case '+': case ',': case '-':
+        case '.': case '/': case ':': case ';': case '<': case '=': case '>':
+        case '?': case '@': case '[': case '\\': case ']': case '^': case '_':
+        case '`': case '{': case '|': case '}': case '~':
+            return std::string{c};
+        case '\a': return "\a";
+        case '\b': return "\b";
+        case '\f': return "\f";
+        case '\n': return "\n";
+        case '\r': return "\r";
+        case '\t': return "\t";
+        case '\v': return "\v";
+        default:
+            return concat("\\x", std::hex, static_cast<unsigned>(c));
+    }
+}
+
+#define ERROR_OUT_UNEXPECTED(expected, found, what) \
+    ERROR_OUT("Expected " expected " while parsing " what ", but '", \
+               asciiCharToPrintable((found)), "' encountered!")
+#define TOKENIZE_INC_CHECK_EOF_UNEXPECTED(...) \
+    TOKENIZE_INC_CHECK_EOF(SIMPLE_ERROR_OUT( \
+            "Unexpected end-of-file while parsing " __VA_ARGS__ "!" );)
 
 #define NEWTOKEN(d,type,text,len,sl,sc) \
     do { \
@@ -71,10 +108,7 @@ namespace Assembler {
         d = &ts->back(); \
     } while (0)
 
-std::unique_ptr<TokensVector> tokenize(char const * program,
-                                       std::size_t length,
-                                       std::size_t * errorSl,
-                                       std::size_t * errorSc)
+std::unique_ptr<TokensVector> tokenize(char const * program, std::size_t length)
 {
     assert(program);
 
@@ -88,22 +122,156 @@ std::unique_ptr<TokensVector> tokenize(char const * program,
     auto ts(makeUnique<TokensVector>());
     Token * lastToken = nullptr;
 
-    std::size_t hexmin = 0u;
-    std::size_t hexstart = 0u;
+    char hexstart;
 
     if (unlikely(c == e))
         goto tokenize_ok;
 
     /* Lex optional UTF-8 byte-order mark 0xefbbbf */
     if (unlikely(*c == '\xef')) {
-        TOKENIZE_INC_CHECK_EOF(tokenize_error);
+        TOKENIZE_INC_CHECK_EOF_UNEXPECTED("UTF-8 byte-order-mark");
         if (unlikely(*c != '\xbb'))
-            goto tokenize_error;
-        TOKENIZE_INC_CHECK_EOF(tokenize_error);
+            SIMPLE_ERROR_OUT("Invalid UTF-8 byte-order-mark!");
+        TOKENIZE_INC_CHECK_EOF_UNEXPECTED("UTF-8 byte-order-mark");
         if (unlikely(*c != '\xbf'))
-            goto tokenize_error;
-        TOKENIZE_INC_CHECK_EOF(tokenize_ok);
+            SIMPLE_ERROR_OUT("Invalid UTF-8 byte-order-mark!");
+        TOKENIZE_INC_CHECK_EOF_OK;
     }
+#define HANDLE_SEPARATOR_WHITESPACE \
+    do { \
+        TOKENIZE_INC_CHECK_EOF_OK; \
+        goto tokenize_begin; \
+    } while(false)
+#define HANDLE_COMMENT \
+    do { \
+        TOKENIZE_INC_CHECK_EOF_OK; \
+        while (likely(*c != '\n')) \
+            TOKENIZE_INC_CHECK_EOF_OK; \
+        goto tokenize_begin; \
+    } while(false)
+#define TOKEN_END_CASES(...) \
+    case SEPARATOR_WHITESPACE: \
+        __VA_ARGS__ \
+        HANDLE_SEPARATOR_WHITESPACE; \
+    case '\n': \
+        __VA_ARGS__ \
+        NEWTOKEN(lastToken, Token::Type::NEWLINE, c, 1u, sl, sc); \
+        TOKENIZE_INC_CHECK_EOF_OK; \
+        goto tokenize_begin; \
+    case '#': \
+        __VA_ARGS__ \
+        HANDLE_COMMENT
+
+#define CREATE_START_COUNTED_TOKEN(type, what) \
+    do { \
+        NEWTOKEN(lastToken, \
+                 Token::Type::type, \
+                 what ## Start, \
+                 static_cast<std::size_t>(c - what ## Start), \
+                 what ## StartLine, \
+                 what ## StartColumn); \
+    } while (false)
+#define TOKENIZE_KEYWORD_OR_DIRECTIVE(start, startCol, type, what) \
+    do { \
+        auto const what ## Start = start; \
+        auto const what ## StartLine = sl; \
+        auto const what ## StartColumn = startCol; \
+        for (;;) { \
+            TOKENIZE_INC_CHECK_EOF(CREATE_START_COUNTED_TOKEN(type, what););\
+            switch (*c) { \
+                case ID_TAIL: \
+                    break; \
+                case '.': \
+                    TOKENIZE_INC_CHECK_EOF_UNEXPECTED(#what); \
+                    switch (*c) { \
+                        case ID_HEAD: \
+                            break; \
+                        default: \
+                            ERROR_OUT_UNEXPECTED("letter or underscore", \
+                                                 *c, #what); \
+                    } \
+                    break; \
+                TOKEN_END_CASES(CREATE_START_COUNTED_TOKEN(type, what);); \
+                default: \
+                    ERROR_OUT_UNEXPECTED("letter, underscore, '.', " \
+                                         "whitespace, comment or end-of-file", \
+                                         *c, #what); \
+            } \
+        } \
+    } while (false)
+#define TOKENIZE_HEX_FROM_0_CHECK_N_CREATE(type, id, what) \
+    do { \
+        /* Check signed range (min -8000000000000000, max 7fffffffffffffff): */\
+        if (hexstart == '+') { \
+            switch (*(c - 16u)) { \
+            case '8': case '9': \
+            case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': \
+            case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': \
+                SIMPLE_ERROR_OUT("64-bit signed hexadecimal too big while " \
+                                 "parsing " what "!"); \
+            default: break; \
+            } \
+        } else if (hexstart == '-') { \
+            auto c2 = c - 16u; /* Initially pointer to first digit. */ \
+            switch (*c2) { \
+            case '8': \
+                while (++c2 != c) \
+                    if (*c2 != '0') \
+                        SIMPLE_ERROR_OUT("64-bit signed hexadecimal too small "\
+                                         "while parsing " what "!"); \
+                break; \
+            case '9': \
+            case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': \
+            case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': \
+                SIMPLE_ERROR_OUT("64-bit signed hexadecimal too big while " \
+                                 "parsing " what "!"); \
+            default: break; \
+            } \
+        } \
+        CREATE_START_COUNTED_TOKEN(type, id); \
+    } while (false)
+#define TOKENIZE_HEX_FROM_0(start, startCol, type, id, what) \
+    do { \
+        assert(*c == '0'); \
+        assert((hexstart == '0') || (hexstart == '+') || (hexstart == '-')); \
+        auto const id ## Start = (start); \
+        auto const id ## StartLine = sl; \
+        auto const id ## StartColumn = (startCol); \
+        TOKENIZE_INC_CHECK_EOF_UNEXPECTED(what); \
+        if (unlikely(*c != 'x')) \
+            ERROR_OUT_UNEXPECTED("'x'", *c, what); \
+        TOKENIZE_INC_CHECK_EOF_UNEXPECTED(what); \
+        switch (*c) { /* First digit: */ \
+            case HEXADECIMAL_DIGIT: break; \
+            default: ERROR_OUT_UNEXPECTED("hexadecimal digit", *c, what); \
+        } \
+        unsigned digitsLeft = 15u; \
+        do { \
+            TOKENIZE_INC_CHECK_EOF(CREATE_START_COUNTED_TOKEN(type, id); \
+                                   goto tokenize_ok;); \
+            switch (*c) { \
+                case HEXADECIMAL_DIGIT: \
+                    break; \
+                TOKEN_END_CASES(CREATE_START_COUNTED_TOKEN(type, id););\
+                default: \
+                    ERROR_OUT_UNEXPECTED("hexadecimal digit, whitespace, " \
+                                         "comment or end-of-file", \
+                                         *c, what); \
+            } \
+        } while (--digitsLeft); \
+        TOKENIZE_INC_CHECK_EOF( \
+                TOKENIZE_HEX_FROM_0_CHECK_N_CREATE(type, id, what); \
+                goto tokenize_ok;); \
+        switch (*c) { \
+        case HEXADECIMAL_DIGIT: \
+            SIMPLE_ERROR_OUT("64-bit hexadecimal has too many digits while " \
+                             "parsing " what "!"); \
+        TOKEN_END_CASES(TOKENIZE_HEX_FROM_0_CHECK_N_CREATE(type, id, what);); \
+        default: \
+            ERROR_OUT_UNEXPECTED("whitespace, comment or end-of-file", \
+                                 *c, what); \
+        } \
+    } while (false)
 
 tokenize_begin:
 
@@ -112,57 +280,48 @@ tokenize_begin:
             if (lastToken && lastToken->type != Token::Type::NEWLINE)
                 NEWTOKEN(lastToken, Token::Type::NEWLINE, c, 1u, sl, sc);
             /* FALLTHROUGH */
-        case ' ': case '\t': case '\r': case '\v': case '\f':
-            TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-            goto tokenize_begin;
+        case SEPARATOR_WHITESPACE:
+            HANDLE_SEPARATOR_WHITESPACE;
         case '#':
-            TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-            while (likely(*c != '\n'))
-                TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-            goto tokenize_begin;
+            HANDLE_COMMENT;
         case '.':
-            TOKENIZE_INC_CHECK_EOF(tokenize_error);
+            TOKENIZE_INC_CHECK_EOF_UNEXPECTED("directive");
             switch (*c) {
                 case ID_HEAD:
                     break;
                 default:
-                    goto tokenize_error;
+                    ERROR_OUT_UNEXPECTED("letter or underscore",
+                                         *c,
+                                         "directive");
             }
-            NEWTOKEN(lastToken, Token::Type::DIRECTIVE, c - 1, 2u, sl, sc);
-            goto tokenize_keyword;
+            TOKENIZE_KEYWORD_OR_DIRECTIVE(c - 1u,
+                                          sc - 1u,
+                                          DIRECTIVE,
+                                          directive);
         case '+':
         case '-':
-            TOKENIZE_INC_CHECK_EOF(tokenize_error);
+            hexstart = *c;
+            TOKENIZE_INC_CHECK_EOF_UNEXPECTED("signed hexadecimal");
             if (*c != '0')
-                goto tokenize_error;
-            hexmin = 1u;
-            /* FALLTHROUGH */
+                ERROR_OUT_UNEXPECTED("'0'", *c, "signed hexadecimal");
+            TOKENIZE_HEX_FROM_0(c - 1u,
+                                sc - 1u,
+                                HEX,
+                                signedHexadecimal,
+                                "signed hexadecimal");
         case '0':
-            TOKENIZE_INC_CHECK_EOF(tokenize_error);
-            if (unlikely(*c != 'x'))
-                goto tokenize_error;
-            TOKENIZE_INC_CHECK_EOF(tokenize_error);
-            switch (*c) {
-                case HEXADECIMAL_DIGIT:
-                    break;
-                default:
-                    goto tokenize_error;
-            }
-            NEWTOKEN(lastToken,
-                     hexmin ? Token::Type::HEX : Token::Type::UHEX,
-                     c - 2 - hexmin,
-                     3u + hexmin,
-                     sl,
-                     sc);
-            hexmin = 0u;
-            hexstart = 0u;
-            goto tokenize_hex;
+            hexstart = *c;
+            TOKENIZE_HEX_FROM_0(c,
+                                sc,
+                                UHEX,
+                                unsignedHexadecimal,
+                                "unsigned hexadecimal");
         case '"':
             t = c;
             for (;;) {
-                TOKENIZE_INC_CHECK_EOF(tokenize_error);
+                TOKENIZE_INC_CHECK_EOF_UNEXPECTED("string");
                 if (unlikely(*c == '\\')) {
-                    TOKENIZE_INC_CHECK_EOF(tokenize_error);
+                    TOKENIZE_INC_CHECK_EOF_UNEXPECTED("string");
                     continue;
                 }
 
@@ -176,135 +335,50 @@ tokenize_begin:
                      static_cast<std::size_t>(c - t + 1u),
                      sl,
                      sc);
-            TOKENIZE_INC_CHECK_EOF(tokenize_ok);
+            TOKENIZE_INC_CHECK_EOF_OK;
             goto tokenize_begin;
-        case ':':
-            TOKENIZE_INC_CHECK_EOF(tokenize_error);
+        case ':': {
+            TOKENIZE_INC_CHECK_EOF_UNEXPECTED("label");
             switch (*c) {
                 case ID_HEAD:
                     break;
                 default:
-                    goto tokenize_error;
+                    ERROR_OUT_UNEXPECTED("letter or underscore", *c, "label");
             }
-            NEWTOKEN(lastToken, Token::Type::LABEL, c - 1, 2u, sl, sc);
+            auto const labelStart = c - 1u;
+            auto const labelStartLine = sl;
+            auto const labelStartColumn = sc - 1u;
             for (;;) {
-                TOKENIZE_INC_CHECK_EOF(tokenize_ok);
+                TOKENIZE_INC_CHECK_EOF();
                 switch (*c) {
                     case ID_TAIL:
-                        lastToken->length++;
-                        break;
-                    case ' ': case '\t': case '\r': case '\v': case '\f':
-                        TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-                    case '\n':
-                        goto tokenize_begin;
-                    case '.':
-                        TOKENIZE_INC_CHECK_EOF(tokenize_error);
-                        switch (*c) {
-                            case ID_HEAD:
-                                break;
-                            default:
-                                goto tokenize_error;
-                        }
-                        lastToken->length += 2u;
                         break;
                     case '+': case '-':
-                        hexstart = lastToken->length - 1u;
-                        TOKENIZE_INC_CHECK_EOF(tokenize_error);
+                        hexstart = *c;
+                        TOKENIZE_INC_CHECK_EOF_UNEXPECTED("label offset");
                         if (unlikely(*c != '0'))
-                            goto tokenize_error;
-                        TOKENIZE_INC_CHECK_EOF(tokenize_error);
-                        if (unlikely(*c != 'x'))
-                            goto tokenize_error;
-                        TOKENIZE_INC_CHECK_EOF(tokenize_error);
-                        switch (*c) {
-                            case HEXADECIMAL_DIGIT:
-                                break;
-                            default:
-                                goto tokenize_error;
-                        }
-                        lastToken->length += 4u;
-                        lastToken->type = Token::Type::LABEL_O;
-                        goto tokenize_hex;
+                            ERROR_OUT_UNEXPECTED("'0'", *c, "label offset");
+                        TOKENIZE_HEX_FROM_0(labelStart,
+                                            labelStartColumn,
+                                            LABEL_O,
+                                            labelWithOffset,
+                                            "label with offset");
+                    TOKEN_END_CASES(CREATE_START_COUNTED_TOKEN(LABEL, label););
                     default:
-                        goto tokenize_error;
+                        ERROR_OUT("Unexpected '", asciiCharToPrintable(*c),
+                                  "' found while parsing label!");
                 }
             }
+        }
         case ID_HEAD:
-            NEWTOKEN(lastToken, Token::Type::KEYWORD, c, 1u, sl, sc);
-            goto tokenize_keyword;
+            TOKENIZE_KEYWORD_OR_DIRECTIVE(c, sc, KEYWORD, keyword);
         default:
-            goto tokenize_error;
-    }
-
-tokenize_hex:
-
-    for (;;) {
-        TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-        switch (*c) {
-            case HEXADECIMAL_DIGIT:
-                if (lastToken->text[hexstart] == '-' || lastToken->text[hexstart] == '+') {
-                    if (lastToken->length > 18u)
-                        goto tokenize_error;
-                    if (lastToken->length == 18u) {
-                        if (lastToken->text[hexstart] == '-' && readHex(lastToken->text + 3, 18u) > ((std::uint64_t) -(INT64_MIN + 1)) + 1u)
-                            goto tokenize_error;
-                        if (lastToken->text[hexstart] == '+' && readHex(lastToken->text + 3, 18u) > (std::uint64_t) INT64_MAX)
-                            goto tokenize_error;
-                    }
-                } else {
-                    if (lastToken->length >= 18u)
-                        goto tokenize_error;
-                }
-                break;
-            case ' ': case '\t': case '\r': case '\v': case '\f':
-                TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-            case '\n':
-                goto tokenize_begin;
-            default:
-                goto tokenize_error;
-        }
-        lastToken->length++;
-    }
-
-
-tokenize_keyword:
-
-    for (;;) {
-        TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-        switch (*c) {
-            case ID_TAIL:
-                lastToken->length++;
-                break;
-            case ' ': case '\t': case '\r': case '\v': case '\f':
-                TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-            case '\n':
-                goto tokenize_begin;
-            case '.':
-                TOKENIZE_INC_CHECK_EOF(tokenize_error);
-                switch (*c) {
-                    case ID_HEAD:
-                        break;
-                    default:
-                        goto tokenize_error;
-                }
-                lastToken->length += 2u;
-                break;
-            default:
-                goto tokenize_error;
-        }
+            ERROR_OUT("Unexpected '", asciiCharToPrintable(*c), "' found!");
     }
 
 tokenize_ok:
     ts->popBackNewlines();
     return ts;
-
-tokenize_error:
-
-    if (errorSl)
-        *errorSl = sl;
-    if (errorSc)
-        *errorSc = sc;
-    return nullptr;
 }
 
 } // namespace Assembler {
