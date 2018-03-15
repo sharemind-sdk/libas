@@ -105,7 +105,7 @@ std::unique_ptr<TokensVector> tokenize(char const * program,
         TOKENIZE_INC_CHECK_EOF(tokenize_ok);
     }
 
-tokenize_begin2:
+tokenize_begin:
 
     switch (*c) {
         case '\n':
@@ -114,7 +114,7 @@ tokenize_begin2:
             /* FALLTHROUGH */
         case ' ': case '\t': case '\r': case '\v': case '\f':
             TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-            goto tokenize_begin2;
+            goto tokenize_begin;
         case '#':
             TOKENIZE_INC_CHECK_EOF(tokenize_ok);
             goto tokenize_comment;
@@ -150,7 +150,7 @@ tokenize_comment:
     while (likely(*c != '\n'))
         TOKENIZE_INC_CHECK_EOF(tokenize_ok);
 
-    goto tokenize_begin2;
+    goto tokenize_begin;
 
 tokenize_directive:
 
@@ -202,7 +202,7 @@ tokenize_hex2:
         case ' ': case '\t': case '\r': case '\v': case '\f':
             TOKENIZE_INC_CHECK_EOF(tokenize_ok);
         case '\n':
-            goto tokenize_begin2;
+            goto tokenize_begin;
         default:
             goto tokenize_error;
     }
@@ -230,7 +230,7 @@ tokenize_string:
              sl,
              sc);
     TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-    goto tokenize_begin2;
+    goto tokenize_begin;
 
 
 tokenize_label:
@@ -253,7 +253,7 @@ tokenize_label2:
         case ' ': case '\t': case '\r': case '\v': case '\f':
             TOKENIZE_INC_CHECK_EOF(tokenize_ok);
         case '\n':
-            goto tokenize_begin2;
+            goto tokenize_begin;
         case '.':
             TOKENIZE_INC_CHECK_EOF(tokenize_error);
             switch (*c) {
@@ -306,7 +306,7 @@ tokenize_keyword2:
         case ' ': case '\t': case '\r': case '\v': case '\f':
             TOKENIZE_INC_CHECK_EOF(tokenize_ok);
         case '\n':
-            goto tokenize_begin2;
+            goto tokenize_begin;
         case '.':
             TOKENIZE_INC_CHECK_EOF(tokenize_error);
             switch (*c) {
