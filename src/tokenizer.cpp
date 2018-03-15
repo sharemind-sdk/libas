@@ -117,10 +117,19 @@ tokenize_begin:
             goto tokenize_begin;
         case '#':
             TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-            goto tokenize_comment;
+            while (likely(*c != '\n'))
+                TOKENIZE_INC_CHECK_EOF(tokenize_ok);
+            goto tokenize_begin;
         case '.':
             TOKENIZE_INC_CHECK_EOF(tokenize_error);
-            goto tokenize_directive;
+            switch (*c) {
+                case ID_HEAD:
+                    break;
+                default:
+                    goto tokenize_error;
+            }
+            NEWTOKEN(lastToken, Token::Type::DIRECTIVE, c - 1, 2u, sl, sc);
+            goto tokenize_keyword;
         case '+':
         case '-':
             TOKENIZE_INC_CHECK_EOF(tokenize_error);
@@ -149,175 +158,141 @@ tokenize_begin:
             hexstart = 0u;
             goto tokenize_hex;
         case '"':
-            goto tokenize_string;
+            t = c;
+            for (;;) {
+                TOKENIZE_INC_CHECK_EOF(tokenize_error);
+                if (unlikely(*c == '\\')) {
+                    TOKENIZE_INC_CHECK_EOF(tokenize_error);
+                    continue;
+                }
+
+                if (unlikely(*c == '"'))
+                    break;
+            }
+            assert(t < c);
+            NEWTOKEN(lastToken,
+                     Token::Type::STRING,
+                     t,
+                     static_cast<std::size_t>(c - t + 1u),
+                     sl,
+                     sc);
+            TOKENIZE_INC_CHECK_EOF(tokenize_ok);
+            goto tokenize_begin;
         case ':':
             TOKENIZE_INC_CHECK_EOF(tokenize_error);
-            goto tokenize_label;
+            switch (*c) {
+                case ID_HEAD:
+                    break;
+                default:
+                    goto tokenize_error;
+            }
+            NEWTOKEN(lastToken, Token::Type::LABEL, c - 1, 2u, sl, sc);
+            for (;;) {
+                TOKENIZE_INC_CHECK_EOF(tokenize_ok);
+                switch (*c) {
+                    case ID_TAIL:
+                        lastToken->length++;
+                        break;
+                    case ' ': case '\t': case '\r': case '\v': case '\f':
+                        TOKENIZE_INC_CHECK_EOF(tokenize_ok);
+                    case '\n':
+                        goto tokenize_begin;
+                    case '.':
+                        TOKENIZE_INC_CHECK_EOF(tokenize_error);
+                        switch (*c) {
+                            case ID_HEAD:
+                                break;
+                            default:
+                                goto tokenize_error;
+                        }
+                        lastToken->length += 2u;
+                        break;
+                    case '+': case '-':
+                        hexstart = lastToken->length - 1u;
+                        TOKENIZE_INC_CHECK_EOF(tokenize_error);
+                        if (unlikely(*c != '0'))
+                            goto tokenize_error;
+                        TOKENIZE_INC_CHECK_EOF(tokenize_error);
+                        if (unlikely(*c != 'x'))
+                            goto tokenize_error;
+                        TOKENIZE_INC_CHECK_EOF(tokenize_error);
+                        switch (*c) {
+                            case HEXADECIMAL_DIGIT:
+                                break;
+                            default:
+                                goto tokenize_error;
+                        }
+                        lastToken->length += 4u;
+                        lastToken->type = Token::Type::LABEL_O;
+                        goto tokenize_hex;
+                    default:
+                        goto tokenize_error;
+                }
+            }
         case ID_HEAD:
+            NEWTOKEN(lastToken, Token::Type::KEYWORD, c, 1u, sl, sc);
             goto tokenize_keyword;
         default:
             goto tokenize_error;
     }
 
-tokenize_comment:
-
-    while (likely(*c != '\n'))
-        TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-
-    goto tokenize_begin;
-
-tokenize_directive:
-
-    switch (*c) {
-        case ID_HEAD:
-            break;
-        default:
-            goto tokenize_error;
-    }
-    NEWTOKEN(lastToken, Token::Type::DIRECTIVE, c - 1, 2u, sl, sc);
-    goto tokenize_keyword2;
-
 tokenize_hex:
 
-    TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-    switch (*c) {
-        case HEXADECIMAL_DIGIT:
-            if (lastToken->text[hexstart] == '-' || lastToken->text[hexstart] == '+') {
-                if (lastToken->length > 18u)
-                    goto tokenize_error;
-                if (lastToken->length == 18u) {
-                    if (lastToken->text[hexstart] == '-' && readHex(lastToken->text + 3, 18u) > ((std::uint64_t) -(INT64_MIN + 1)) + 1u)
+    for (;;) {
+        TOKENIZE_INC_CHECK_EOF(tokenize_ok);
+        switch (*c) {
+            case HEXADECIMAL_DIGIT:
+                if (lastToken->text[hexstart] == '-' || lastToken->text[hexstart] == '+') {
+                    if (lastToken->length > 18u)
                         goto tokenize_error;
-                    if (lastToken->text[hexstart] == '+' && readHex(lastToken->text + 3, 18u) > (std::uint64_t) INT64_MAX)
+                    if (lastToken->length == 18u) {
+                        if (lastToken->text[hexstart] == '-' && readHex(lastToken->text + 3, 18u) > ((std::uint64_t) -(INT64_MIN + 1)) + 1u)
+                            goto tokenize_error;
+                        if (lastToken->text[hexstart] == '+' && readHex(lastToken->text + 3, 18u) > (std::uint64_t) INT64_MAX)
+                            goto tokenize_error;
+                    }
+                } else {
+                    if (lastToken->length >= 18u)
                         goto tokenize_error;
                 }
-            } else {
-                if (lastToken->length >= 18u)
-                    goto tokenize_error;
-            }
-            break;
-        case ' ': case '\t': case '\r': case '\v': case '\f':
-            TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-        case '\n':
-            goto tokenize_begin;
-        default:
-            goto tokenize_error;
-    }
-    lastToken->length++;
-    goto tokenize_hex;
-
-tokenize_string:
-
-    t = c;
-    for (;;) {
-        TOKENIZE_INC_CHECK_EOF(tokenize_error);
-        if (unlikely(*c == '\\')) {
-            TOKENIZE_INC_CHECK_EOF(tokenize_error);
-            continue;
+                break;
+            case ' ': case '\t': case '\r': case '\v': case '\f':
+                TOKENIZE_INC_CHECK_EOF(tokenize_ok);
+            case '\n':
+                goto tokenize_begin;
+            default:
+                goto tokenize_error;
         }
-
-        if (unlikely(*c == '"'))
-            break;
+        lastToken->length++;
     }
-    assert(t < c);
-    NEWTOKEN(lastToken,
-             Token::Type::STRING,
-             t,
-             static_cast<std::size_t>(c - t + 1u),
-             sl,
-             sc);
-    TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-    goto tokenize_begin;
 
-
-tokenize_label:
-
-    switch (*c) {
-        case ID_HEAD:
-            break;
-        default:
-            goto tokenize_error;
-    }
-    NEWTOKEN(lastToken, Token::Type::LABEL, c - 1, 2u, sl, sc);
-
-tokenize_label2:
-
-    TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-    switch (*c) {
-        case ID_TAIL:
-            lastToken->length++;
-            break;
-        case ' ': case '\t': case '\r': case '\v': case '\f':
-            TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-        case '\n':
-            goto tokenize_begin;
-        case '.':
-            TOKENIZE_INC_CHECK_EOF(tokenize_error);
-            switch (*c) {
-                case ID_HEAD:
-                    break;
-                default:
-                    goto tokenize_error;
-            }
-            lastToken->length += 2u;
-            break;
-        case '+': case '-':
-            hexstart = lastToken->length - 1u;
-            goto tokenize_label3;
-        default:
-            goto tokenize_error;
-    }
-    goto tokenize_label2;
-
-tokenize_label3:
-
-    TOKENIZE_INC_CHECK_EOF(tokenize_error);
-    if (unlikely(*c != '0'))
-        goto tokenize_error;
-    TOKENIZE_INC_CHECK_EOF(tokenize_error);
-    if (unlikely(*c != 'x'))
-        goto tokenize_error;
-    TOKENIZE_INC_CHECK_EOF(tokenize_error);
-    switch (*c) {
-        case HEXADECIMAL_DIGIT:
-            break;
-        default:
-            goto tokenize_error;
-    }
-    lastToken->length += 4u;
-    lastToken->type = Token::Type::LABEL_O;
-    goto tokenize_hex;
 
 tokenize_keyword:
 
-    NEWTOKEN(lastToken, Token::Type::KEYWORD, c, 1u, sl, sc);
-    goto tokenize_keyword2;
-
-tokenize_keyword2:
-
-    TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-    switch (*c) {
-        case ID_TAIL:
-            lastToken->length++;
-            break;
-        case ' ': case '\t': case '\r': case '\v': case '\f':
-            TOKENIZE_INC_CHECK_EOF(tokenize_ok);
-        case '\n':
-            goto tokenize_begin;
-        case '.':
-            TOKENIZE_INC_CHECK_EOF(tokenize_error);
-            switch (*c) {
-                case ID_HEAD:
-                    break;
-                default:
-                    goto tokenize_error;
-            }
-            lastToken->length += 2u;
-            break;
-        default:
-            goto tokenize_error;
+    for (;;) {
+        TOKENIZE_INC_CHECK_EOF(tokenize_ok);
+        switch (*c) {
+            case ID_TAIL:
+                lastToken->length++;
+                break;
+            case ' ': case '\t': case '\r': case '\v': case '\f':
+                TOKENIZE_INC_CHECK_EOF(tokenize_ok);
+            case '\n':
+                goto tokenize_begin;
+            case '.':
+                TOKENIZE_INC_CHECK_EOF(tokenize_error);
+                switch (*c) {
+                    case ID_HEAD:
+                        break;
+                    default:
+                        goto tokenize_error;
+                }
+                lastToken->length += 2u;
+                break;
+            default:
+                goto tokenize_error;
+        }
     }
-    goto tokenize_keyword2;
 
 tokenize_ok:
     ts->popBackNewlines();
