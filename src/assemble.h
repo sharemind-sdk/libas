@@ -20,7 +20,9 @@
 #ifndef SHAREMIND_LIBAS_ASSEMBLE_H
 #define SHAREMIND_LIBAS_ASSEMBLE_H
 
+#include <sharemind/ExceptionMacros.h>
 #include <sharemind/preprocessor.h>
+#include "Exception.h"
 #include "linker.h"
 #include "tokens.h"
 
@@ -28,27 +30,24 @@
 namespace sharemind {
 namespace Assembler {
 
-#define SHAREMIND_ASSEMBLER_ERROR_ENUM \
-    ((SHAREMIND_ASSEMBLE_OK, = 0)) \
-    ((SHAREMIND_ASSEMBLE_OUT_OF_MEMORY,)) \
-    ((SHAREMIND_ASSEMBLE_UNEXPECTED_TOKEN,)) \
-    ((SHAREMIND_ASSEMBLE_UNEXPECTED_EOF,)) \
-    ((SHAREMIND_ASSEMBLE_DUPLICATE_LABEL,)) \
-    ((SHAREMIND_ASSEMBLE_UNKNOWN_DIRECTIVE,)) \
-    ((SHAREMIND_ASSEMBLE_UNKNOWN_INSTRUCTION,)) \
-    ((SHAREMIND_ASSEMBLE_INVALID_NUMBER_OF_PARAMETERS,)) \
-    ((SHAREMIND_ASSEMBLE_INVALID_PARAMETER,)) \
-    ((SHAREMIND_ASSEMBLE_UNDEFINED_LABEL,)) \
-    ((SHAREMIND_ASSEMBLE_INVALID_LABEL,)) \
-    ((SHAREMIND_ASSEMBLE_INVALID_LABEL_OFFSET,))
-SHAREMIND_ENUM_CUSTOM_DEFINE(Error, SHAREMIND_ASSEMBLER_ERROR_ENUM);
-SHAREMIND_ENUM_DECLARE_TOSTRING(Error);
+class AssembleException: public Exception {
 
-Error assemble(TokensVector const & ts,
-               LinkingUnitsVector * lus,
-               TokensVector::const_iterator * errorToken,
-               char ** errorString)
-    __attribute__ ((nonnull(2), warn_unused_result));
+public: /* Methods: */
+
+    template <typename ... Args>
+    AssembleException(TokensVector::const_iterator tokenIt,
+                      Args && ... args)
+        : Exception(std::forward<Args>(args)...)
+        , m_tokenIt(tokenIt)
+    {}
+
+private: /* Fields: */
+
+    TokensVector::const_iterator m_tokenIt;
+
+};
+
+void assemble(TokensVector const & ts, LinkingUnitsVector & lus);
 
 } /* namespace Assembler { */
 } /* namespace sharemind { */

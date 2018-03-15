@@ -23,8 +23,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <limits>
+#include <new>
 #include <sharemind/abort.h>
 #include <sharemind/codeblock.h>
+#include <sharemind/Concat.h>
 #include <sharemind/libvmi/instr.h>
 #include <sharemind/likely.h>
 #include <sharemind/SimpleUnorderedStringMap.h>
@@ -209,14 +211,12 @@ struct LabelSlotsMap: public SimpleUnorderedStringMap<LabelSlotsVector> {
 
 } // anonymous namespace
 
-SHAREMIND_ENUM_CUSTOM_DEFINE_TOSTRING(Error, SHAREMIND_ASSEMBLER_ERROR_ENUM)
-
 #define EOF_TEST     (unlikely(  t >= e))
 #define INC_EOF_TEST (unlikely(++t >= e))
 
 #define INC_CHECK_EOF \
     if (INC_EOF_TEST) { \
-        return SHAREMIND_ASSEMBLE_UNEXPECTED_EOF; \
+        throw AssembleException(ts.end(), "Unexpected end-of-file!"); \
     } else (void) 0
 
 #define DO_EOL(eof,noexpect) \
@@ -233,11 +233,7 @@ SHAREMIND_ENUM_CUSTOM_DEFINE_TOSTRING(Error, SHAREMIND_ASSEMBLER_ERROR_ENUM)
         DO_EOL(eof,noexpect); \
     } while ((0))
 
-Error assemble(TokensVector const & ts,
-               LinkingUnitsVector * lus,
-               TokensVector::const_iterator * errorToken,
-               char ** errorString)
-{
+void assemble(TokensVector const & ts, LinkingUnitsVector & lus) {
     TokensVector::const_iterator t(ts.begin());
     TokensVector::const_iterator const e(ts.end());
     LinkingUnit * lu;
@@ -253,13 +249,7 @@ Error assemble(TokensVector const & ts,
     std::uint_fast8_t type;
     static std::size_t const widths[8] = { 1u, 2u, 4u, 8u, 1u, 2u, 4u, 8u };
 
-    assert(lus);
-    assert(lus->size() == 0u);
-
-    if (errorToken)
-        *errorToken = ts.end();
-    if (errorString)
-        *errorString = nullptr;
+    assert(lus.empty());
 
     LabelLocationMap ll;
     ll.emplace("RODATA", 1u);
@@ -268,11 +258,11 @@ Error assemble(TokensVector const & ts,
 
     LabelSlotsMap lst;
 
-    lus->emplace_back();
-    lu = &lus->back();
+    lus.emplace_back();
+    lu = &lus.back();
 
     if (unlikely(ts.empty()))
-        return SHAREMIND_ASSEMBLE_OK;
+        return;
 
 assemble_newline:
     switch (t->type()) {
@@ -294,20 +284,16 @@ assemble_newline:
                                    : lu->sections[section_index].length),
                                 section_index,
                                 lu_index)));
-            if (!r.second) {
-                if (errorToken)
-                    *errorToken = t;
-                return SHAREMIND_ASSEMBLE_DUPLICATE_LABEL;
-            }
+            if (!r.second)
+                throw AssembleException(t, concat("Duplicate label: \"",
+                                                  t->labelValue(), '"'));
 
             /* Fill pending label slots: */
             auto const recordIt(lst.find(r.first->first));
             if (recordIt != lst.end()) {
-                if (!recordIt->second.fillSlots(r.first->second, ts.end())) {
-                    if (errorToken)
-                        *errorToken = t;
-                    return SHAREMIND_ASSEMBLE_INVALID_LABEL;
-                }
+                if (!recordIt->second.fillSlots(r.first->second, ts.end()))
+                    throw AssembleException(t, concat("Invalid label: \"",
+                                                      t->labelValue(), '"'));
                 lst.erase(recordIt);
             }
             break;
@@ -323,13 +309,13 @@ assemble_newline:
                     goto assemble_invalid_parameter_t;
 
                 if (likely(v != lu_index)) {
-                    if (unlikely(v > lus->size()))
+                    if (unlikely(v > lus.size()))
                         goto assemble_invalid_parameter_t;
-                    if (v == lus->size()) {
-                        lus->emplace_back();
-                        lu = &lus->back();
+                    if (v == lus.size()) {
+                        lus.emplace_back();
+                        lu = &lus.back();
                     } else {
-                        lu = &(*lus)[v];
+                        lu = &lus[v];
                     }
                     lu_index = (std::uint8_t) v;
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
@@ -401,7 +387,7 @@ assemble_newline:
                 void * newData =
                         realloc(lu->sections[section_index].data, newLen);
                 if (unlikely(!newData))
-                    return SHAREMIND_ASSEMBLE_OUT_OF_MEMORY;
+                    throw std::bad_alloc();
                 lu->sections[section_index].data = newData;
                 lu->sections[section_index].length = newLen;
 
@@ -414,9 +400,8 @@ assemble_newline:
                     numPdBindings++;
                 }
             } else {
-                if (errorToken)
-                    *errorToken = t;
-                return SHAREMIND_ASSEMBLE_UNKNOWN_DIRECTIVE;
+                throw AssembleException(t, concat("Unknown directive: .",
+                                                  t->directiveValue()));
             }
 
             INC_DO_EOL(assemble_check_labels, assemble_unexpected_token_t);
@@ -431,7 +416,7 @@ assemble_newline:
             std::size_t l = t->keywordValue().size();
             char * name = (char *) malloc(sizeof(char) * (l + 1u));
             if (unlikely(!name))
-                return SHAREMIND_ASSEMBLE_OUT_OF_MEMORY;
+                throw std::bad_alloc();
             strncpy(name, t->keywordValue().c_str(), l);
 
             auto ot(t);
@@ -451,7 +436,7 @@ assemble_newline:
                                              sizeof(char) * (newSize + 1u));
                     if (unlikely(!newName)) {
                         free(name);
-                        return SHAREMIND_ASSEMBLE_OUT_OF_MEMORY;
+                        throw std::bad_alloc();
                     }
                     name = newName;
                     name[l] = '_';
@@ -474,20 +459,15 @@ assemble_newline:
             /* Detect and check instruction: */
             SharemindVmInstruction const * const i =
                     sharemind_vm_instruction_from_name(name);
-            if (unlikely(!i)) {
-                if (errorToken)
-                    *errorToken = ot;
-                if (errorString)
-                    *errorString = name;
-                return SHAREMIND_ASSEMBLE_UNKNOWN_INSTRUCTION;
-            }
-            if (unlikely(i->numArgs != args)) {
-                if (errorToken)
-                    *errorToken = ot;
-                if (errorString)
-                    *errorString = name;
-                return SHAREMIND_ASSEMBLE_INVALID_NUMBER_OF_PARAMETERS;
-            }
+            if (unlikely(!i))
+                throw AssembleException(ot,
+                                        concat("Unknown instruction: ", name));
+            if (unlikely(i->numArgs != args))
+                throw AssembleException(ot,
+                                        concat("Instruction \"", name,
+                                               "\" expects ", i->numArgs,
+                                               " arguments, but only ", args,
+                                               " given!"));
             free(name);
 
             /* Detect offset for jump instructions */
@@ -514,7 +494,7 @@ assemble_newline:
                                      * (lu->sections[section_index].length
                                         + args + 1u));
             if (unlikely(!newData))
-                return SHAREMIND_ASSEMBLE_OUT_OF_MEMORY;
+                throw std::bad_alloc();
             lu->sections[section_index].data = newData;
             SharemindCodeBlock * cbdata =
                     (SharemindCodeBlock *) lu->sections[section_index].data;
@@ -554,11 +534,9 @@ assemble_newline:
                             if ((loc.section
                                     != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT)
                                 || (loc.linkingUnit != lu_index))
-                            {
-                                if (errorToken)
-                                    *errorToken = ot;
-                                return SHAREMIND_ASSEMBLE_INVALID_LABEL;
-                            }
+                                throw AssembleException(
+                                        ot,
+                                        concat("Invalid label: ", label));
 
                             /* Because the label was defined & we're one-pass:*/
                             assert(jmpOffset >= loc.offset);
@@ -569,11 +547,9 @@ assemble_newline:
                                 || !substract_2sizet_to_int64(&instr->int64[0],
                                                               absTarget,
                                                               jmpOffset))
-                            {
-                                if (errorToken)
-                                    *errorToken = ot;
-                                return SHAREMIND_ASSEMBLE_INVALID_LABEL_OFFSET;
-                            }
+                                throw AssembleException(
+                                        ot,
+                                        "Invalid label offset!");
                             /** \todo Maybe check whether there's really an
                                       instruction there. */
                         } else {
@@ -581,14 +557,14 @@ assemble_newline:
                             auto const offset = ot->labelOffset();
                             if (loc.section < 0) {
                                 if (offset != 0)
-                                    return SHAREMIND_ASSEMBLE_INVALID_LABEL_OFFSET;
+                                    throw AssembleException(
+                                            ot,
+                                            "Invalid label offset!");
                             } else {
                                 if (!assign_add_sizet_int64(&absTarget, offset))
-                                {
-                                    if (errorToken)
-                                        *errorToken = ot;
-                                    return SHAREMIND_ASSEMBLE_INVALID_LABEL_OFFSET;
-                                }
+                                    throw AssembleException(
+                                            ot,
+                                            "Invalid label offset!");
                             }
                             instr->uint64[0] = absTarget;
                         }
@@ -645,10 +621,10 @@ assemble_check_labels:
 
     /* Check for undefined labels: */
     if (likely(lst.empty()))
-        return SHAREMIND_ASSEMBLE_OK;
-    if (errorToken)
-        *errorToken = lst.begin()->second.begin()->tokenIt;
-    return SHAREMIND_ASSEMBLE_UNDEFINED_LABEL;
+        return;
+    throw AssembleException(
+            lst.begin()->second.begin()->tokenIt,
+            concat("Undefined label: ", lst.begin()->first));
 
 assemble_data_or_fill:
 
@@ -732,7 +708,7 @@ assemble_data_opt_param:
         }
         dataToWrite = malloc(dataToWriteLength);
         if (!dataToWrite)
-            return SHAREMIND_ASSEMBLE_OUT_OF_MEMORY;
+            throw std::bad_alloc();
         memcpy(dataToWrite, &v, dataToWriteLength);
     } else if (t->type() == Token::Type::HEX) {
         auto const v = t->hexValue();
@@ -777,14 +753,14 @@ assemble_data_opt_param:
         }
         dataToWrite = malloc(dataToWriteLength);
         if (!dataToWrite)
-            return SHAREMIND_ASSEMBLE_OUT_OF_MEMORY;
+            throw std::bad_alloc();
         memcpy(dataToWrite, &v, dataToWriteLength);
     } else if (t->type() == Token::Type::STRING && type == 8u) {
         auto const s(t->stringValue());
         dataToWriteLength = s.size();
         dataToWrite = std::malloc(dataToWriteLength + 1u);
         if (!dataToWrite)
-            return SHAREMIND_ASSEMBLE_OUT_OF_MEMORY;
+            throw std::bad_alloc();
         std::memcpy(dataToWrite, s.c_str(), dataToWriteLength + 1u);
     } else {
         goto assemble_invalid_parameter_t;
@@ -805,7 +781,7 @@ assemble_data_write:
         void * newData = realloc(lu->sections[section_index].data, newLen);
         if (unlikely(!newData)) {
             free(dataToWrite);
-            return SHAREMIND_ASSEMBLE_OUT_OF_MEMORY;
+            throw std::bad_alloc();
         }
         lu->sections[section_index].data = newData;
         lu->sections[section_index].length = newLen;
@@ -830,21 +806,13 @@ assemble_data_write:
     goto assemble_newline;
 
 assemble_unexpected_token_t:
-    if (errorToken)
-        *errorToken = t;
-    if (errorString) {
-        std::ostringstream oss;
-        oss << *t;
-        auto const tokenStr(oss.str());
-        *errorString = (char *) malloc(tokenStr.size() + 1u);
-        strncpy(*errorString, tokenStr.c_str(), tokenStr.size() + 1u);
-    }
-    return SHAREMIND_ASSEMBLE_UNEXPECTED_TOKEN;
+
+    throw AssembleException(t, concat("Unexpected token: ", *t));
 
 assemble_invalid_parameter_t:
-    if (errorToken)
-        *errorToken = t;
-    return SHAREMIND_ASSEMBLE_INVALID_PARAMETER;
+
+    throw AssembleException(t, "Invalid parameter!");
+
 }
 
 } // namespace Assembler {
