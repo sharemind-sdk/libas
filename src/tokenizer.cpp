@@ -20,7 +20,6 @@
 #include "tokenizer.h"
 
 #include <cassert>
-#include <cstdlib>
 #include <sharemind/likely.h>
 #include <sharemind/MakeUnique.h>
 
