@@ -75,21 +75,22 @@ namespace Assembler {
 std::unique_ptr<TokensVector> tokenize(char const * program,
                                        std::size_t length,
                                        std::size_t * errorSl,
-                                       std::size_t *errorSc)
+                                       std::size_t * errorSc)
 {
     assert(program);
 
-    const char * c = program;
-    const char * t;
-    const char * const e = c + length;
+    char const * c = program;
+    char const * t;
+    char const * const e = c + length;
 
-    size_t sl = 1u, sc = 1u;
+    std::size_t sl = 1u;
+    std::size_t sc = 1u;
 
     auto ts(makeUnique<TokensVector>());
     Token * lastToken = nullptr;
 
-    size_t hexmin = 0u;
-    size_t hexstart = 0u;
+    std::size_t hexmin = 0u;
+    std::size_t hexstart = 0u;
 
     if (unlikely(c == e))
         goto tokenize_ok;
@@ -189,9 +190,9 @@ tokenize_hex2:
                 if (lastToken->length > 18u)
                     goto tokenize_error;
                 if (lastToken->length == 18u) {
-                    if (lastToken->text[hexstart] == '-' && readHex(lastToken->text + 3, 18u) > ((uint64_t) -(INT64_MIN + 1)) + 1u)
+                    if (lastToken->text[hexstart] == '-' && readHex(lastToken->text + 3, 18u) > ((std::uint64_t) -(INT64_MIN + 1)) + 1u)
                         goto tokenize_error;
-                    if (lastToken->text[hexstart] == '+' && readHex(lastToken->text + 3, 18u) > (uint64_t) INT64_MAX)
+                    if (lastToken->text[hexstart] == '+' && readHex(lastToken->text + 3, 18u) > (std::uint64_t) INT64_MAX)
                         goto tokenize_error;
                 }
             } else {
