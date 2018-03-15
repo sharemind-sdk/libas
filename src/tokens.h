@@ -48,10 +48,10 @@ struct Token {
 /* Methods: */
 
     Token(Type type_,
-                   char const * text_,
-                   std::size_t length_,
-                   std::size_t startLine_,
-                   std::size_t startColumn_) noexcept
+          char const * text_,
+          std::size_t length_,
+          std::size_t startLine_,
+          std::size_t startColumn_) noexcept
         : type(type_)
         , text(text_)
         , length(length_)
