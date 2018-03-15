@@ -28,6 +28,7 @@
 #include <sharemind/libvmi/instr.h>
 #include <sharemind/likely.h>
 #include <sharemind/SimpleUnorderedStringMap.h>
+#include <sstream>
 #include <tuple>
 #include <utility>
 
@@ -222,7 +223,7 @@ SHAREMIND_ENUM_CUSTOM_DEFINE_TOSTRING(Error, SHAREMIND_ASSEMBLER_ERROR_ENUM)
     do { \
         if (EOF_TEST) \
             goto eof; \
-        if (unlikely(t->type != Token::Type::NEWLINE)) \
+        if (unlikely(t->type() != Token::Type::NEWLINE)) \
             goto noexpect; \
     } while ((0))
 
@@ -274,17 +275,15 @@ Error assemble(TokensVector const & ts,
         return SHAREMIND_ASSEMBLE_OK;
 
 assemble_newline:
-    switch (t->type) {
+    switch (t->type()) {
         case Token::Type::NEWLINE:
             break;
         case Token::Type::LABEL:
         {
-            auto label(t->labelToString());
-
             auto const r(
                         ll.emplace(
                             std::piecewise_construct,
-                            std::make_tuple(std::move(label)),
+                            std::make_tuple(t->labelValue()),
                             std::make_tuple(
                                 (section_index
                                  == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND)
@@ -314,12 +313,9 @@ assemble_newline:
             break;
         }
         case Token::Type::DIRECTIVE:
-#define TOKEN_MATCH(name) \
-    ((t->length == sizeof(name) - 1u) \
-     && strncmp(t->text, name, sizeof(name) - 1u) == 0)
-            if (TOKEN_MATCH(".linking_unit")) {
+            if (t->directiveValue() == "linking_unit") {
                 INC_CHECK_EOF;
-                if (unlikely(t->type != Token::Type::UHEX))
+                if (unlikely(t->type() != Token::Type::UHEX))
                     goto assemble_invalid_parameter_t;
 
                 auto const v = t->uhexValue();
@@ -338,36 +334,36 @@ assemble_newline:
                     lu_index = (std::uint8_t) v;
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
                 }
-            } else if (TOKEN_MATCH(".section")) {
+            } else if (t->directiveValue() == "section") {
                 INC_CHECK_EOF;
-                if (unlikely(t->type != Token::Type::KEYWORD))
+                if (unlikely(t->type() != Token::Type::KEYWORD))
                     goto assemble_invalid_parameter_t;
 
-                if (TOKEN_MATCH("TEXT")) {
+                if (t->keywordValue() == "TEXT") {
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
-                } else if (TOKEN_MATCH("RODATA")) {
+                } else if (t->keywordValue() == "RODATA") {
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_RODATA;
-                } else if (TOKEN_MATCH("DATA")) {
+                } else if (t->keywordValue() == "DATA") {
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_DATA;
-                } else if (TOKEN_MATCH("BSS")) {
+                } else if (t->keywordValue() == "BSS") {
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS;
-                } else if (TOKEN_MATCH("BIND")) {
+                } else if (t->keywordValue() == "BIND") {
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND;
-                } else if (TOKEN_MATCH("PDBIND")) {
+                } else if (t->keywordValue() == "PDBIND") {
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND;
-                } else if (TOKEN_MATCH("DEBUG")) {
+                } else if (t->keywordValue() == "DEBUG") {
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_DEBUG;
                 } else {
                     goto assemble_invalid_parameter_t;
                 }
-            } else if (TOKEN_MATCH(".data")) {
+            } else if (t->directiveValue() == "data") {
                 if (unlikely(section_index
                              == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT))
                     goto assemble_unexpected_token_t;
 
                 multiplier = 1u;
                 goto assemble_data_or_fill;
-            } else if (TOKEN_MATCH(".fill")) {
+            } else if (t->directiveValue() == "fill") {
                 if (unlikely((section_index
                               == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT)
                              || (section_index
@@ -378,7 +374,7 @@ assemble_newline:
 
                 INC_CHECK_EOF;
 
-                if (unlikely(t->type != Token::Type::UHEX))
+                if (unlikely(t->type() != Token::Type::UHEX))
                     goto assemble_invalid_parameter_t;
 
                 multiplier = t->uhexValue();
@@ -386,7 +382,7 @@ assemble_newline:
                     goto assemble_invalid_parameter_t;
 
                 goto assemble_data_or_fill;
-            } else if (likely(TOKEN_MATCH(".bind"))) {
+            } else if (likely(t->directiveValue() == "bind")) {
                 if (unlikely((section_index
                               != SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND)
                              && (section_index
@@ -395,7 +391,7 @@ assemble_newline:
 
                 INC_CHECK_EOF;
 
-                if (unlikely(t->type != Token::Type::STRING))
+                if (unlikely(t->type() != Token::Type::STRING))
                     goto assemble_invalid_parameter_t;
 
                 auto const syscallSig(t->stringValue());
@@ -432,21 +428,22 @@ assemble_newline:
                 goto assemble_unexpected_token_t;
 
             std::size_t args = 0u;
-            std::size_t l = t->length;
+            std::size_t l = t->keywordValue().size();
             char * name = (char *) malloc(sizeof(char) * (l + 1u));
             if (unlikely(!name))
                 return SHAREMIND_ASSEMBLE_OUT_OF_MEMORY;
-            strncpy(name, t->text, l);
+            strncpy(name, t->keywordValue().c_str(), l);
 
             auto ot(t);
             /* Collect instruction name and count arguments: */
             for (;;) {
                 if (INC_EOF_TEST)
                     break;
-                if (t->type == Token::Type::NEWLINE) {
+                if (t->type() == Token::Type::NEWLINE) {
                     break;
-                } else if (t->type == Token::Type::KEYWORD) {
-                    std::size_t const newSize = l + t->length + 1u;
+                } else if (t->type() == Token::Type::KEYWORD) {
+                    std::size_t const newSize =
+                            l + t->keywordValue().size() + 1u;
                     if (unlikely(newSize < l))
                         goto assemble_invalid_parameter_t;
                     char * const newName =
@@ -458,12 +455,14 @@ assemble_newline:
                     }
                     name = newName;
                     name[l] = '_';
-                    strncpy(name + l + 1u, t->text, t->length);
+                    strncpy(name + l + 1u,
+                            t->keywordValue().c_str(),
+                            t->keywordValue().size());
                     l = newSize;
-                } else if (likely((t->type == Token::Type::UHEX)
-                                  || (t->type == Token::Type::HEX)
-                                  || (t->type == Token::Type::LABEL)
-                                  || (t->type == Token::Type::LABEL_O)))
+                } else if (likely((t->type() == Token::Type::UHEX)
+                                  || (t->type() == Token::Type::HEX)
+                                  || (t->type() == Token::Type::LABEL)
+                                  || (t->type() == Token::Type::LABEL_O)))
                 {
                     args++;
                 } else {
@@ -530,20 +529,20 @@ assemble_newline:
             for (;;) {
                 if (++ot == t)
                     break;
-                if (ot->type == Token::Type::UHEX) {
+                if (ot->type() == Token::Type::UHEX) {
                     doJumpLabel = false; /* Past first argument */
                     instr++;
                     instr->uint64[0] = ot->uhexValue();
-                } else if (ot->type == Token::Type::HEX) {
+                } else if (ot->type() == Token::Type::HEX) {
                     doJumpLabel = false; /* Past first argument */
                     instr++;
                     instr->int64[0] = ot->hexValue();
-                } else if (likely((ot->type == Token::Type::LABEL)
-                                  || (ot->type
+                } else if (likely((ot->type() == Token::Type::LABEL)
+                                  || (ot->type()
                                       == Token::Type::LABEL_O)))
                 {
                     instr++;
-                    auto label(ot->labelToString());
+                    auto label(ot->labelValue());
 
                     /* Check whether label is defined: */
                     auto const recordIt(ll.find(label));
@@ -617,7 +616,7 @@ assemble_newline:
                 } else {
                     /* Skip keywords, because they're already included in the
                        instruction code. */
-                    assert(ot->type == Token::Type::KEYWORD);
+                    assert(ot->type() == Token::Type::KEYWORD);
                 }
             }
 
@@ -633,7 +632,7 @@ assemble_newline:
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wcovered-switch-default"
         #endif
-        default: SHAREMIND_ABORT("lAa %d\n", (int) t->type);
+        default: SHAREMIND_ABORT("lAa %d\n", (int) t->type());
         #ifdef __clang__
         #pragma GCC diagnostic pop
         #endif
@@ -655,26 +654,26 @@ assemble_data_or_fill:
 
     INC_CHECK_EOF;
 
-    if (unlikely(t->type != Token::Type::KEYWORD))
+    if (unlikely(t->type() != Token::Type::KEYWORD))
         goto assemble_invalid_parameter_t;
 
-    if (TOKEN_MATCH("uint8")) {
+    if (t->keywordValue() == "uint8") {
         type = 0u;
-    } else if (TOKEN_MATCH("uint16")) {
+    } else if (t->keywordValue() == "uint16") {
         type = 1u;
-    } else if (TOKEN_MATCH("uint32")) {
+    } else if (t->keywordValue() == "uint32") {
         type = 2u;
-    } else if (TOKEN_MATCH("uint64")) {
+    } else if (t->keywordValue() == "uint64") {
         type = 3u;
-    } else if (TOKEN_MATCH("int8")) {
+    } else if (t->keywordValue() == "int8") {
         type = 4u;
-    } else if (TOKEN_MATCH("int16")) {
+    } else if (t->keywordValue() == "int16") {
         type = 5u;
-    } else if (TOKEN_MATCH("int32")) {
+    } else if (t->keywordValue() == "int32") {
         type = 6u;
-    } else if (TOKEN_MATCH("int64")) {
+    } else if (t->keywordValue() == "int64") {
         type = 7u;
-    } else if (TOKEN_MATCH("string")) {
+    } else if (t->keywordValue() == "string") {
         type = 8u;
     } else {
         goto assemble_invalid_parameter_t;
@@ -693,7 +692,7 @@ assemble_data_or_fill:
 assemble_data_opt_param:
 
     assert(!dataToWrite);
-    if (t->type == Token::Type::UHEX) {
+    if (t->type() == Token::Type::UHEX) {
         auto const v = t->uhexValue();
         switch (type) {
             case 0u: /* uint8 */
@@ -735,7 +734,7 @@ assemble_data_opt_param:
         if (!dataToWrite)
             return SHAREMIND_ASSEMBLE_OUT_OF_MEMORY;
         memcpy(dataToWrite, &v, dataToWriteLength);
-    } else if (t->type == Token::Type::HEX) {
+    } else if (t->type() == Token::Type::HEX) {
         auto const v = t->hexValue();
         switch (type) {
             case 0u: /* uint8 */
@@ -780,7 +779,7 @@ assemble_data_opt_param:
         if (!dataToWrite)
             return SHAREMIND_ASSEMBLE_OUT_OF_MEMORY;
         memcpy(dataToWrite, &v, dataToWriteLength);
-    } else if (t->type == Token::Type::STRING && type == 8u) {
+    } else if (t->type() == Token::Type::STRING && type == 8u) {
         auto const s(t->stringValue());
         dataToWriteLength = s.size();
         dataToWrite = std::malloc(dataToWriteLength + 1u);
@@ -834,9 +833,11 @@ assemble_unexpected_token_t:
     if (errorToken)
         *errorToken = t;
     if (errorString) {
-        *errorString = (char *) malloc(t->length + 1);
-        strncpy(*errorString, t->text, t->length);
-        *errorString[t->length] = '\0';
+        std::ostringstream oss;
+        oss << *t;
+        auto const tokenStr(oss.str());
+        *errorString = (char *) malloc(tokenStr.size() + 1u);
+        strncpy(*errorString, tokenStr.c_str(), tokenStr.size() + 1u);
     }
     return SHAREMIND_ASSEMBLE_UNEXPECTED_TOKEN;
 

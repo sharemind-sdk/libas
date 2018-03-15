@@ -20,6 +20,7 @@
 #ifndef SHAREMIND_LIBAS_TOKENS_H
 #define SHAREMIND_LIBAS_TOKENS_H
 
+#include <cassert>
 #include <cstdint>
 #include <ostream>
 #include <string>
@@ -32,7 +33,11 @@ namespace Assembler {
 std::uint64_t readHex(char const * c, std::size_t l)
         __attribute__ ((nonnull(1)));
 
-struct Token {
+class Token {
+
+    friend std::ostream & operator<<(std::ostream & os, Token const & token);
+
+public: /* Types: */
 
     enum class Type {
         NEWLINE,
@@ -45,42 +50,69 @@ struct Token {
         KEYWORD
     };
 
-/* Methods: */
+public: /* Methods: */
 
-    Token(Type type_,
-          char const * text_,
-          std::size_t length_,
-          std::size_t startLine_,
-          std::size_t startColumn_) noexcept
-        : type(type_)
-        , text(text_)
-        , length(length_)
-        , start_line(startLine_)
-        , start_column(startColumn_)
-    {}
+    Token(Type type,
+          char const * text,
+          std::size_t length,
+          std::size_t startLine,
+          std::size_t startColumn) noexcept;
 
     Token(Token &&) noexcept = default;
-    Token(Token const &) noexcept = default;
+    Token(Token const &) = default;
 
     Token & operator=(Token &&) noexcept = default;
-    Token & operator=(Token const &) noexcept = default;
+    Token & operator=(Token const &) = default;
 
-    std::int64_t hexValue() const;
-    std::uint64_t uhexValue() const;
+    Type type() const noexcept { return m_type; }
 
-    std::size_t stringLength() const;
-    std::string stringValue() const;
+    std::int64_t hexValue() const noexcept {
+        assert(m_type == Type::HEX);
+        return m_parsedNumeric.hex;
+    }
 
-    std::string labelToString() const;
-    std::int64_t labelOffset() const;
+    std::uint64_t uhexValue() const noexcept {
+        assert(m_type == Type::UHEX);
+        return m_parsedNumeric.uhex;
+    }
 
-/* Fields: */
+    std::string const & directiveValue() const noexcept {
+        assert(m_type == Type::DIRECTIVE);
+        return m_parsedString;
+    }
 
-    Type type;
-    char const * text;
-    std::size_t length;
-    std::size_t start_line;
-    std::size_t start_column;
+    std::string const & stringValue() const noexcept {
+        assert(m_type == Type::STRING);
+        return m_parsedString;
+    }
+
+    std::string const & labelValue() const noexcept {
+        assert((m_type == Type::LABEL) || (m_type == Type::LABEL_O));
+        return m_parsedString;
+    }
+
+    std::int64_t labelOffset() const noexcept {
+        assert((m_type == Type::LABEL) || (m_type == Type::LABEL_O));
+        return m_parsedNumeric.hex;
+    }
+
+    std::string const & keywordValue() const noexcept {
+        assert(m_type == Type::KEYWORD);
+        return m_parsedString;
+    }
+
+private: /* Fields: */
+
+    Type m_type;
+    char const * m_text;
+    std::size_t m_length;
+    std::size_t m_startLine;
+    std::size_t m_startColumn;
+    std::string m_parsedString;
+    union {
+        std::int64_t hex;
+        std::uint64_t uhex;
+    } m_parsedNumeric;
 
 };
 

@@ -19,7 +19,6 @@
 
 #include "tokens.h"
 
-#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -38,31 +37,9 @@ constexpr auto const int64Min = std::numeric_limits<std::int64_t>::min();
 constexpr auto const int64Max = std::numeric_limits<std::int64_t>::max();
 constexpr auto const absInt64Min = signedToUnsigned(-(int64Min + 1)) + 1u;
 
-} // anonymous namespace
-
-std::uint64_t readHex(char const * c, std::size_t l) {
-    assert(c);
-
-    auto * const e = c + l;
-    std::uint64_t v = 0u;
-    do {
-        std::uint64_t digit;
-        switch (*c) {
-            #define X(c) case #c[0u] : digit = 0x ## c ## u; break
-            X(0); X(1); X(2); X(3); X(4); X(5); X(6); X(7); X(8); X(9);
-            X(A); X(B); X(C); X(D); X(E); X(F);
-            X(a); X(b); X(c); X(d); X(e); X(f);
-            #undef X
-            default:
-                std::abort();
-        }
-        v = (v * 16u) + digit;
-    } while (++c < e);
-    return v;
-}
-
-std::int64_t Token::hexValue() const {
-    assert(type == Type::HEX);
+std::int64_t parseHexValue(char const * const text,
+                           std::size_t const length)
+{
     assert(length >= 4u);
     assert(length <= 19u);
     assert(text[0u] == '-' || text[0u] == '+');
@@ -80,8 +57,9 @@ std::int64_t Token::hexValue() const {
     }
 }
 
-std::uint64_t Token::uhexValue() const {
-    assert(type == Type::UHEX);
+inline std::uint64_t parseUhexValue(char const * const text,
+                                    std::size_t const length)
+{
     assert(length >= 3u);
     assert(length <= 18u);
     assert(text[0u] == '0');
@@ -89,8 +67,9 @@ std::uint64_t Token::uhexValue() const {
     return readHex(text + 2u, length - 2u);
 }
 
-std::size_t Token::stringLength() const {
-    assert(type == Type::STRING);
+inline std::size_t parseStringLength(char const * const text,
+                                     std::size_t const length)
+{
     assert(length >= 2u);
     std::size_t l = 0u;
     for (std::size_t i = 1u; i < length - 1; i++) {
@@ -104,9 +83,10 @@ std::size_t Token::stringLength() const {
     return l;
 }
 
-std::string Token::stringValue() const{
-    assert(type == Type::STRING);
-    auto const l = stringLength();
+inline std::string parseString(char const * const text,
+                               std::size_t const length)
+{
+    auto const l = parseStringLength(text, length);
     std::string r;
     r.reserve(l);
 
@@ -140,28 +120,9 @@ std::string Token::stringValue() const{
     return r;
 }
 
-std::string Token::labelToString() const {
-    if (type == Type::LABEL) {
-        assert(length >= 2u);
-        return {text + 1u, length - 1u};
-    } else {
-        assert(type == Type::LABEL_O);
-        assert(length >= 6u);
-        std::size_t l;
-        for (l = 2; text[l] != '+' && text[l] != '-'; l++) /* Do nothing */;
-        assert(text[l + 1] == '0');
-        assert(text[l + 2] == 'x');
-        return {text + 1u, l - 1u};
-    }
-}
-
-std::int64_t Token::labelOffset() const {
-    if (type == Type::LABEL) {
-        assert(text[0u] == ':');
-        assert(length >= 2u);
-        return 0u;
-    }
-    assert(type == Type::LABEL_O);
+inline std::int64_t parseLabelOffset(char const * const text,
+                                     std::size_t const length)
+{
     assert(text[0u] == ':');
     assert(length >= 6u);
     char const * h = text + 2;
@@ -178,6 +139,80 @@ std::int64_t Token::labelOffset() const {
         return static_cast<std::int64_t>(v);
     }
 }
+
+} // anonymous namespace
+
+std::uint64_t readHex(char const * c, std::size_t l) {
+    assert(c);
+
+    auto * const e = c + l;
+    std::uint64_t v = 0u;
+    do {
+        std::uint64_t digit;
+        switch (*c) {
+            #define X(c) case #c[0u] : digit = 0x ## c ## u; break
+            X(0); X(1); X(2); X(3); X(4); X(5); X(6); X(7); X(8); X(9);
+            X(A); X(B); X(C); X(D); X(E); X(F);
+            X(a); X(b); X(c); X(d); X(e); X(f);
+            #undef X
+            default:
+                std::abort();
+        }
+        v = (v * 16u) + digit;
+    } while (++c < e);
+    return v;
+}
+
+Token::Token(Type type,
+             char const * text,
+             std::size_t length,
+             std::size_t startLine,
+             std::size_t startColumn) noexcept
+    : m_type(type)
+    , m_text(text)
+    , m_length(length)
+    , m_startLine(startLine)
+    , m_startColumn(startColumn)
+    , m_parsedString(
+        [type, text, length]() {
+            switch (type) {
+                case Type::NEWLINE: break;
+                case Type::HEX: break;
+                case Type::UHEX: break;
+                case Type::STRING: return parseString(text, length);
+                case Type::LABEL:
+                case Type::DIRECTIVE:
+                    assert(length > 2u);
+                    return std::string(text + 1u, length - 1u);
+                case Type::LABEL_O: {
+                    assert(length >= 6u);
+                    std::size_t l = 2u;
+                    while (text[l] != '+' && text[l] != '-')
+                        ++l;
+                    assert(text[l + 1] == '0');
+                    assert(text[l + 2] == 'x');
+                    return std::string(text + 1u, l - 1u);
+                }
+                case Type::KEYWORD: return std::string(text, length);
+            }
+            return std::string();
+        }())
+    , m_parsedNumeric(
+        [type, text, length]() {
+            std::remove_const<decltype(m_parsedNumeric)>::type r;
+            switch (type) {
+            case Type::NEWLINE: break;
+            case Type::DIRECTIVE: break;
+            case Type::HEX: r.hex = parseHexValue(text, length); break;
+            case Type::UHEX: r.uhex = parseUhexValue(text, length); break;
+            case Type::STRING: break;
+            case Type::LABEL: r.hex = 0u; break;
+            case Type::LABEL_O: r.hex = parseLabelOffset(text, length); break;
+            case Type::KEYWORD: break;
+            }
+            return r;
+        }())
+{}
 
 std::ostream & operator<<(std::ostream & os, Token::Type const type) {
     #define SHAREMIND_LIBAS_TOKENS_T(v) \
@@ -197,18 +232,18 @@ std::ostream & operator<<(std::ostream & os, Token::Type const type) {
 }
 
 std::ostream & operator<<(std::ostream & os, Token const & token) {
-    if (token.type == Token::Type::NEWLINE)
-        return os << token.type;
-    os << token.type << '(';
+    if (token.m_type == Token::Type::NEWLINE)
+        return os << token.m_type;
+    os << token.m_type << '(';
     /// \todo Optimize this:
-    for (std::size_t i = 0u; i < token.length; ++i)
-        os << token.text[i];
-    return os << ")@" << token.start_line << ':' << token.start_column;
+    for (std::size_t i = 0u; i < token.m_length; ++i)
+        os << token.m_text[i];
+    return os << ")@" << token.m_startLine << ':' << token.m_startColumn;
 }
 
 void TokensVector::popBackNewlines() noexcept {
     while (!empty()) {
-        if (back().type != Token::Type::NEWLINE)
+        if (back().type() != Token::Type::NEWLINE)
             return;
         pop_back();
     }

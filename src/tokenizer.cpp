@@ -277,7 +277,7 @@ tokenize_begin:
 
     switch (*c) {
         case '\n':
-            if (lastToken && lastToken->type != Token::Type::NEWLINE)
+            if (lastToken && lastToken->type() != Token::Type::NEWLINE)
                 NEWTOKEN(lastToken, Token::Type::NEWLINE, c, 1u, sl, sc);
             /* FALLTHROUGH */
         case SEPARATOR_WHITESPACE:
