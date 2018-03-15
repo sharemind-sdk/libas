@@ -133,7 +133,21 @@ tokenize_begin:
             if (unlikely(*c != 'x'))
                 goto tokenize_error;
             TOKENIZE_INC_CHECK_EOF(tokenize_error);
-            goto tokenize_hex;
+            switch (*c) {
+                case HEXADECIMAL_DIGIT:
+                    break;
+                default:
+                    goto tokenize_error;
+            }
+            NEWTOKEN(lastToken,
+                     hexmin ? Token::Type::HEX : Token::Type::UHEX,
+                     c - 2 - hexmin,
+                     3u + hexmin,
+                     sl,
+                     sc);
+            hexmin = 0u;
+            hexstart = 0u;
+            goto tokenize_hex2;
         case '"':
             goto tokenize_string;
         case ':':
@@ -162,23 +176,6 @@ tokenize_directive:
     }
     NEWTOKEN(lastToken, Token::Type::DIRECTIVE, c - 1, 2u, sl, sc);
     goto tokenize_keyword2;
-
-tokenize_hex:
-
-    switch (*c) {
-        case HEXADECIMAL_DIGIT:
-            break;
-        default:
-            goto tokenize_error;
-    }
-    NEWTOKEN(lastToken,
-             hexmin ? Token::Type::HEX : Token::Type::UHEX,
-             c - 2 - hexmin,
-             3u + hexmin,
-             sl,
-             sc);
-    hexmin = 0u;
-    hexstart = 0u;
 
 tokenize_hex2:
 
