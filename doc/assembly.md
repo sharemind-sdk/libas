@@ -43,12 +43,12 @@ expression `{m,n}` are considered to be greedy.
 Tokenization takes place by detecting tokens from the following table in the
 order they appear in the table. Most tokens must be matched greedily, so they
 are only considered for output to the token stream when fully matched.
-`WHITESPACE`, `COMMENT` and certain `NEWLINE` tokens (see table) are
+`START`, `WHITESPACE`, `COMMENT` and certain `NEWLINE` tokens (see table) are
 non-significant and are not passed to the parser.
 
 | Token        | Equivalent to                  | Description                       |
 |--------------|--------------------------------|-----------------------------------|
-| `START`      | `^(\xEF\xBB\xBF)?`             | Beginning of the text with an optional [byte order mark](https://secure.wikimedia.org/wikipedia/en/wiki/Byte_order_mark). |
+| `START`      | `^(\xEF\xBB\xBF)?`             | Beginning of the text with an optional [byte order mark](https://secure.wikimedia.org/wikipedia/en/wiki/Byte_order_mark). The `START` tokens are not passed to the parser. |
 | `WHITESPACE` | `[:ws:]+`                      | Whitespace (of any length) used as a separator. `WHITESPACE` tokens are not passed to the parser. |
 | `COMMENT`    | `#[^\n]*`                      | Comment until the end of the line. `COMMENT` tokens are not passed to the parser. |
 | `NEWLINE`    | `\n+`                          | End of a line and consecutive empty lines. A `NEWLINE` token before an `EOF` token is not passed to the parser. If the previous token passed to the parser was a `NEWLINE` token, the current `NEWLINE` token is not passed to the parser. |
