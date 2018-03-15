@@ -147,7 +147,7 @@ tokenize_begin:
                      sc);
             hexmin = 0u;
             hexstart = 0u;
-            goto tokenize_hex2;
+            goto tokenize_hex;
         case '"':
             goto tokenize_string;
         case ':':
@@ -177,7 +177,7 @@ tokenize_directive:
     NEWTOKEN(lastToken, Token::Type::DIRECTIVE, c - 1, 2u, sl, sc);
     goto tokenize_keyword2;
 
-tokenize_hex2:
+tokenize_hex:
 
     TOKENIZE_INC_CHECK_EOF(tokenize_ok);
     switch (*c) {
@@ -204,7 +204,7 @@ tokenize_hex2:
             goto tokenize_error;
     }
     lastToken->length++;
-    goto tokenize_hex2;
+    goto tokenize_hex;
 
 tokenize_string:
 
@@ -286,7 +286,7 @@ tokenize_label3:
     }
     lastToken->length += 4u;
     lastToken->type = Token::Type::LABEL_O;
-    goto tokenize_hex2;
+    goto tokenize_hex;
 
 tokenize_keyword:
 
