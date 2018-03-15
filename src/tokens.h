@@ -30,9 +30,6 @@
 namespace sharemind {
 namespace Assembler {
 
-std::uint64_t readHex(char const * c, std::size_t l)
-        __attribute__ ((nonnull(1)));
-
 class Token {
 
     friend std::ostream & operator<<(std::ostream & os, Token const & token);

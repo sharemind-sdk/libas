@@ -37,6 +37,27 @@ constexpr auto const int64Min = std::numeric_limits<std::int64_t>::min();
 constexpr auto const int64Max = std::numeric_limits<std::int64_t>::max();
 constexpr auto const absInt64Min = signedToUnsigned(-(int64Min + 1)) + 1u;
 
+std::uint64_t readHex(char const * c, std::size_t l) {
+    assert(c);
+
+    auto * const e = c + l;
+    std::uint64_t v = 0u;
+    do {
+        std::uint64_t digit;
+        switch (*c) {
+            #define X(c) case #c[0u] : digit = 0x ## c ## u; break
+            X(0); X(1); X(2); X(3); X(4); X(5); X(6); X(7); X(8); X(9);
+            X(A); X(B); X(C); X(D); X(E); X(F);
+            X(a); X(b); X(c); X(d); X(e); X(f);
+            #undef X
+            default:
+                std::abort();
+        }
+        v = (v * 16u) + digit;
+    } while (++c < e);
+    return v;
+}
+
 std::int64_t parseHexValue(char const * const text,
                            std::size_t const length)
 {
@@ -141,27 +162,6 @@ inline std::int64_t parseLabelOffset(char const * const text,
 }
 
 } // anonymous namespace
-
-std::uint64_t readHex(char const * c, std::size_t l) {
-    assert(c);
-
-    auto * const e = c + l;
-    std::uint64_t v = 0u;
-    do {
-        std::uint64_t digit;
-        switch (*c) {
-            #define X(c) case #c[0u] : digit = 0x ## c ## u; break
-            X(0); X(1); X(2); X(3); X(4); X(5); X(6); X(7); X(8); X(9);
-            X(A); X(B); X(C); X(D); X(E); X(F);
-            X(a); X(b); X(c); X(d); X(e); X(f);
-            #undef X
-            default:
-                std::abort();
-        }
-        v = (v * 16u) + digit;
-    } while (++c < e);
-    return v;
-}
 
 Token::Token(Type type,
              char const * text,
