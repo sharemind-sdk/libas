@@ -241,7 +241,7 @@ void assemble(TokensVector const & ts, LinkingUnitsVector & lus) {
     int section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
     std::size_t numBindings = 0u;
     std::size_t numPdBindings = 0u;
-    void * dataToWrite = nullptr;
+    std::vector<char> dataToWrite;
     std::size_t dataToWriteLength = 0u;
 
     /* for .data and .fill: */
@@ -646,7 +646,7 @@ assemble_data_or_fill:
 
 assemble_data_opt_param:
 
-    assert(!dataToWrite);
+    assert(dataToWrite.empty());
     if (t->type() == Token::Type::UHEX) {
         auto const v = t->uhexValue();
         switch (type) {
@@ -685,10 +685,8 @@ assemble_data_opt_param:
             default:
                 abort();
         }
-        dataToWrite = malloc(dataToWriteLength);
-        if (!dataToWrite)
-            throw std::bad_alloc();
-        memcpy(dataToWrite, &v, dataToWriteLength);
+        dataToWrite.resize(dataToWriteLength);
+        std::memcpy(dataToWrite.data(), &v, dataToWriteLength);
     } else if (t->type() == Token::Type::HEX) {
         auto const v = t->hexValue();
         switch (type) {
@@ -730,21 +728,17 @@ assemble_data_opt_param:
             default:
                 abort();
         }
-        dataToWrite = malloc(dataToWriteLength);
-        if (!dataToWrite)
-            throw std::bad_alloc();
-        memcpy(dataToWrite, &v, dataToWriteLength);
+        dataToWrite.resize(dataToWriteLength);
+        std::memcpy(dataToWrite.data(), &v, dataToWriteLength);
     } else if (t->type() == Token::Type::STRING && type == 8u) {
         auto const s(t->stringValue());
         dataToWriteLength = s.size();
-        dataToWrite = std::malloc(dataToWriteLength + 1u);
-        if (!dataToWrite)
-            throw std::bad_alloc();
-        std::memcpy(dataToWrite, s.c_str(), dataToWriteLength + 1u);
+        dataToWrite.resize(dataToWriteLength + 1u);
+        std::memcpy(dataToWrite.data(), s.c_str(), dataToWriteLength + 1u);
     } else {
         goto assemble_invalid_parameter_t;
     }
-    assert(dataToWrite);
+    assert(!dataToWrite.empty());
 
     INC_DO_EOL(assemble_data_write, assemble_unexpected_token_t);
 
@@ -758,18 +752,16 @@ assemble_data_write:
         std::size_t const oldLen = lu->sections[section_index].length;
         std::size_t const newLen = oldLen + (multiplier * dataToWriteLength);
         void * newData = realloc(lu->sections[section_index].data, newLen);
-        if (unlikely(!newData)) {
-            free(dataToWrite);
+        if (unlikely(!newData))
             throw std::bad_alloc();
-        }
         lu->sections[section_index].data = newData;
         lu->sections[section_index].length = newLen;
 
         /* Actually write the values. */
         newData = ((std::uint8_t *) newData) + oldLen;
-        if (dataToWrite) {
+        if (!dataToWrite.empty()) {
             for (;;) {
-                memcpy(newData, dataToWrite, dataToWriteLength);
+                std::memcpy(newData, dataToWrite.data(), dataToWriteLength);
                 if (!--multiplier)
                     break;
                 newData = ((std::uint8_t *) newData) + dataToWriteLength;
@@ -778,10 +770,7 @@ assemble_data_write:
             memset(newData, 0, dataToWriteLength);
         }
     }
-
-    if (dataToWrite)
-        free(dataToWrite);
-    dataToWrite = nullptr;
+    dataToWrite.clear();
     goto assemble_newline;
 
 assemble_unexpected_token_t:
