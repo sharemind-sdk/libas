@@ -413,11 +413,7 @@ assemble_newline:
                 goto assemble_unexpected_token_t;
 
             std::size_t args = 0u;
-            std::size_t l = t->keywordValue().size();
-            char * name = (char *) malloc(sizeof(char) * (l + 1u));
-            if (unlikely(!name))
-                throw std::bad_alloc();
-            strncpy(name, t->keywordValue().c_str(), l);
+            std::string name = t->keywordValue();
 
             auto ot(t);
             /* Collect instruction name and count arguments: */
@@ -427,23 +423,8 @@ assemble_newline:
                 if (t->type() == Token::Type::NEWLINE) {
                     break;
                 } else if (t->type() == Token::Type::KEYWORD) {
-                    std::size_t const newSize =
-                            l + t->keywordValue().size() + 1u;
-                    if (unlikely(newSize < l))
-                        goto assemble_invalid_parameter_t;
-                    char * const newName =
-                            (char *) realloc(name,
-                                             sizeof(char) * (newSize + 1u));
-                    if (unlikely(!newName)) {
-                        free(name);
-                        throw std::bad_alloc();
-                    }
-                    name = newName;
-                    name[l] = '_';
-                    strncpy(name + l + 1u,
-                            t->keywordValue().c_str(),
-                            t->keywordValue().size());
-                    l = newSize;
+                    name.push_back('_');
+                    name.append(t->keywordValue());
                 } else if (likely((t->type() == Token::Type::UHEX)
                                   || (t->type() == Token::Type::HEX)
                                   || (t->type() == Token::Type::LABEL)
@@ -454,11 +435,10 @@ assemble_newline:
                     goto assemble_invalid_parameter_t;
                 }
             }
-            name[l] = '\0';
 
             /* Detect and check instruction: */
             SharemindVmInstruction const * const i =
-                    sharemind_vm_instruction_from_name(name);
+                    sharemind_vm_instruction_from_name(name.c_str());
             if (unlikely(!i))
                 throw AssembleException(ot,
                                         concat("Unknown instruction: ", name));
@@ -468,7 +448,6 @@ assemble_newline:
                                                "\" expects ", i->numArgs,
                                                " arguments, but only ", args,
                                                " given!"));
-            free(name);
 
             /* Detect offset for jump instructions */
             std::size_t jmpOffset;
