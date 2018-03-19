@@ -32,17 +32,19 @@
 namespace sharemind {
 namespace Assembler {
 
+SHAREMIND_DEFINE_EXCEPTION_CONST_STDSTRING_NOINLINE(Exception,, LinkerException)
+
 namespace {
 
 inline std::size_t tryAddSizes(std::size_t const a, std::size_t const b) {
     if (std::numeric_limits<std::size_t>::max() - a < b)
-        throw Exception("Resulting executable size too big!");
+        throw LinkerException("Resulting executable size too big!");
     return a + b;
 }
 
 inline std::size_t tryMulSizes(std::size_t const a, std::size_t const b) {
     if (std::numeric_limits<std::size_t>::max() / a < b)
-        throw Exception("Resulting executable size too big!");
+        throw LinkerException("Resulting executable size too big!");
     return a * b;
 }
 
@@ -58,12 +60,13 @@ char * writeSection_0x0(Section const & s,
     /* Check for unsupported output format. */
     using U = std::underlying_type<SHAREMIND_EXECUTABLE_SECTION_TYPE>::type;
     if (type >= SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT_0x0)
-        throw Exception(concat("Unsupported section type: ",
-                               static_cast<U>(type)));
+        throw LinkerException(concat("Unsupported section type: ",
+                                     static_cast<U>(type)));
 
     /* Write header: */
     if (s.length > std::numeric_limits<std::uint32_t>::max() / 8)
-        throw Exception(concat("Section of size ", s.length, " too large!"));
+        throw LinkerException(concat("Section of size ", s.length,
+                                     " too large!"));
     auto const l = static_cast<std::uint32_t>(s.length);
 
     {
@@ -96,7 +99,7 @@ char * writeSection_0x0(Section const & s,
 std::size_t size_0x0(LinkingUnitsVector const & lus) {
     assert(!lus.empty());
     if (lus.size() - 1u > std::numeric_limits<std::uint8_t>::max())
-        throw Exception("Too many linking units given!");
+        throw LinkerException("Too many linking units given!");
 
     std::size_t r = sizeof(SharemindExecutableHeader0x0);
     std::size_t li = 0u;
@@ -113,7 +116,7 @@ std::size_t size_0x0(LinkingUnitsVector const & lus) {
                     if (section.length
                         > (std::numeric_limits<std::uint32_t>::max()
                            / sizeof(SharemindCodeBlock)))
-                        throw Exception(
+                        throw LinkerException(
                                 concat("Linking unit ", li, " section ", si,
                                        " (TEXT) too large!"));
                     r = tryAddSizes(
@@ -123,7 +126,7 @@ std::size_t size_0x0(LinkingUnitsVector const & lus) {
                 } else {
                     if (section.length
                         > std::numeric_limits<std::uint32_t>::max())
-                        throw Exception(
+                        throw LinkerException(
                                 concat("Linking unit ", li, " section ", si,
                                        " too large!"));
                     if (si != SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS)
@@ -200,10 +203,10 @@ std::vector<char> link(std::uint16_t version,
                        std::uint8_t activeLinkingUnit)
 {
     if (version > 0u)
-        throw Exception(concat("Version unsupported by linker: ", version));
+        throw LinkerException(concat("Version unsupported by linker: ", version));
 
     if (lus.empty())
-        throw Exception("No linking units defined!");
+        throw LinkerException("No linking units defined!");
 
     static constexpr auto const headerSize =
             sizeof(SharemindExecutableCommonHeader);

@@ -29,6 +29,9 @@
 namespace sharemind {
 namespace Assembler {
 
+SHAREMIND_DEFINE_EXCEPTION_CONST_STDSTRING_NOINLINE(Exception,,
+                                                    TokenizerException);
+
 #define DECIMAL_DIGIT \
          '0': case '1': case '2': case '3': case '4': \
     case '5': case '6': case '7': case '8': case '9'
@@ -58,7 +61,7 @@ namespace Assembler {
 
 #define SEPARATOR_WHITESPACE ' ': case '\t': case '\r': case '\v': case '\f'
 
-#define SIMPLE_ERROR_OUT(...) throw Exception(__VA_ARGS__)
+#define SIMPLE_ERROR_OUT(...) throw TokenizerException(__VA_ARGS__)
 #define ERROR_OUT(...) SIMPLE_ERROR_OUT(concat(__VA_ARGS__))
 
 #define TOKENIZE_INC_CHECK_EOF(...) \

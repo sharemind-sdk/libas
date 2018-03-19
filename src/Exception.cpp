@@ -23,8 +23,7 @@
 namespace sharemind {
 namespace Assembler {
 
-SHAREMIND_DEFINE_EXCEPTION_CONST_STDSTRING_NOINLINE(sharemind::Exception,,
-                                                    Exception);
+SHAREMIND_DEFINE_EXCEPTION_NOINLINE(sharemind::Exception,, Exception);
 
 } /* namespace Assembler { */
 } /* namespace sharemind { */

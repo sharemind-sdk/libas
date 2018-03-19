@@ -21,11 +21,16 @@
 #define SHAREMIND_LIBAS_TOKENIZER_H
 
 #include <memory>
+#include <sharemind/ExceptionMacros.h>
+#include "Exception.h"
 #include "tokens.h"
 
 
 namespace sharemind {
 namespace Assembler {
+
+SHAREMIND_DECLARE_EXCEPTION_CONST_STDSTRING_NOINLINE(Exception,
+                                                     TokenizerException);
 
 TokensVector tokenize(char const * program, std::size_t length)
     __attribute__ ((nonnull(1), warn_unused_result));

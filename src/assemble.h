@@ -20,6 +20,7 @@
 #ifndef SHAREMIND_LIBAS_ASSEMBLE_H
 #define SHAREMIND_LIBAS_ASSEMBLE_H
 
+#include <sharemind/AssertReturn.h>
 #include <sharemind/ExceptionMacros.h>
 #include <sharemind/preprocessor.h>
 #include "Exception.h"
@@ -32,18 +33,42 @@ namespace Assembler {
 
 class AssembleException: public Exception {
 
+private: /* Types: */
+
+    struct Data {
+
+    /* Methods: */
+
+        template <typename ... Args>
+        Data(TokensVector::const_iterator tokenIterator,
+             Args && ... args)
+            : m_tokenIterator(tokenIterator)
+            , m_message(std::forward<Args>(args)...)
+        {}
+
+    /* Fields: */
+
+        TokensVector::const_iterator m_tokenIterator;
+        std::string m_message;
+
+    };
+
 public: /* Methods: */
 
     template <typename ... Args>
-    AssembleException(TokensVector::const_iterator tokenIt,
-                      Args && ... args)
-        : Exception(std::forward<Args>(args)...)
-        , m_tokenIt(tokenIt)
+    AssembleException(Args && ... args)
+        : m_data(std::make_shared<Data>(std::forward<Args>(args)...))
     {}
+
+    char const * what() const noexcept final override
+    { return assertReturn(m_data)->m_message.c_str(); }
+
+    TokensVector::const_iterator const & tokenIterator() noexcept
+    { return assertReturn(m_data)->m_tokenIterator; }
 
 private: /* Fields: */
 
-    TokensVector::const_iterator m_tokenIt;
+    std::shared_ptr<Data> m_data;
 
 };
 

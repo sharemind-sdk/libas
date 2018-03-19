@@ -24,12 +24,16 @@
 #include <cstddef>
 #include <cstdint>
 #include <sharemind/libexecutable/sharemind_executable_section_type.h>
+#include <sharemind/ExceptionMacros.h>
 #include <vector>
 #include "Exception.h"
 
 
 namespace sharemind {
 namespace Assembler {
+
+SHAREMIND_DECLARE_EXCEPTION_CONST_STDSTRING_NOINLINE(Exception,
+                                                     LinkerException);
 
 struct Section {
     ~Section() noexcept;
