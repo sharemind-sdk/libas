@@ -129,28 +129,25 @@ struct LabelSlot {
 
     LabelSlot(std::int64_t extraOffset_,
               std::size_t jmpOffset_,
-              void ** data_,
+              Section const & section_,
               std::size_t cbdata_index_,
               TokensVector::const_iterator tokenIt_,
-              int section_,
               bool doJumpLabel_,
               std::uint8_t linkingUnit_)
         : extraOffset(extraOffset_)
         , jmpOffset(jmpOffset_)
-        , data(data_)
+        , section(section_)
         , cbdata_index(cbdata_index_)
         , tokenIt(tokenIt_)
-        , section(section_)
         , doJumpLabel(doJumpLabel_)
         , linkingUnit(linkingUnit_)
     {}
 
     std::int64_t extraOffset;
     std::size_t jmpOffset;
-    void ** data;
+    Section const & section;
     std::size_t cbdata_index;
     TokensVector::const_iterator tokenIt;
-    int section;
     bool doJumpLabel;
     std::uint8_t linkingUnit;
 };
@@ -173,26 +170,25 @@ struct LabelSlotsVector: public std::vector<LabelSlot> {
             if (!assign_add_sizet_int64(&absTarget, value.extraOffset))
                 return false; /**< \todo Provide better diagnostics */
 
+            SharemindCodeBlock toWrite;
             if (!value.doJumpLabel) { /* Normal absolute label */
-                ((SharemindCodeBlock *) *value.data)[value.cbdata_index].uint64[0]
-                        = absTarget;
+                toWrite.uint64[0u] = absTarget;
             } else { /* Relative jump label */
-                if (value.section != l.section
-                    || value.linkingUnit != l.linkingUnit)
+                if (value.linkingUnit != l.linkingUnit)
                     return false; /**< \todo Provide better diagnostics */
 
-                assert(value.section == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT);
                 assert(value.jmpOffset < l.offset); /* Because we're one-pass. */
 
-                if (!substract_2sizet_to_int64(
-                        &((SharemindCodeBlock *) *value.data)[value.cbdata_index]
-                                .int64[0],
-                        absTarget,
-                        value.jmpOffset))
+                if (!substract_2sizet_to_int64(&toWrite.int64[0u],
+                                               absTarget,
+                                               value.jmpOffset))
                     return false; /**< \todo Provide better diagnostics */
-
                 /** \todo Maybe check whether there's really an instruction there */
             }
+            std::memcpy(ptrAdd(value.section.data,
+                               value.cbdata_index * sizeof(toWrite)),
+                        &toWrite,
+                        sizeof(toWrite));
             value.tokenIt = endIt;
         }
         return true;
@@ -560,10 +556,9 @@ assemble_newline:
                         lst[std::move(label)].emplace_back(
                                     ot->labelOffset(),
                                     jmpOffset,
-                                    &lu->sections[section_index].data,
+                                    lu->sections[section_index],
                                     static_cast<std::size_t>(instr - cbData),
                                     ot,
-                                    section_index,
                                     doJumpLabel,
                                     lu_index);
                     }
