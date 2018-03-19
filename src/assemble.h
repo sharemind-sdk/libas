@@ -47,7 +47,7 @@ private: /* Fields: */
 
 };
 
-void assemble(TokensVector const & ts, LinkingUnitsVector & lus);
+LinkingUnitsVector assemble(TokensVector const & ts);
 
 } /* namespace Assembler { */
 } /* namespace sharemind { */

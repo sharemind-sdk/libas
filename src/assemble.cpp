@@ -230,7 +230,11 @@ struct LabelSlotsMap: public SimpleUnorderedStringMap<LabelSlotsVector> {
         DO_EOL(eof,noexpect); \
     } while ((0))
 
-void assemble(TokensVector const & ts, LinkingUnitsVector & lus) {
+LinkingUnitsVector assemble(TokensVector const & ts) {
+    if (ts.empty())
+        throw AssembleException(ts.end(),
+                                "Won't assemble an empty tokens vector!");
+
     TokensVector::const_iterator t(ts.begin());
     TokensVector::const_iterator const e(ts.end());
     LinkingUnit * lu;
@@ -246,8 +250,6 @@ void assemble(TokensVector const & ts, LinkingUnitsVector & lus) {
     std::uint_fast8_t type;
     static std::size_t const widths[8] = { 1u, 2u, 4u, 8u, 1u, 2u, 4u, 8u };
 
-    assert(lus.empty());
-
     LabelLocationMap ll;
     ll.emplace("RODATA", 1u);
     ll.emplace("DATA", 2u);
@@ -255,11 +257,13 @@ void assemble(TokensVector const & ts, LinkingUnitsVector & lus) {
 
     LabelSlotsMap lst;
 
+    LinkingUnitsVector lus;
+    if (unlikely(ts.empty()))
+        return lus;
+
     lus.emplace_back();
     lu = &lus.back();
 
-    if (unlikely(ts.empty()))
-        return;
 
 assemble_newline:
     switch (t->type()) {
@@ -617,7 +621,7 @@ assemble_check_labels:
 
     /* Check for undefined labels: */
     if (likely(lst.empty()))
-        return;
+        return lus;
     throw AssembleException(
             lst.begin()->second.begin()->tokenIt,
             concat("Undefined label: ", lst.begin()->first));
