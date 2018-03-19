@@ -182,9 +182,11 @@ std::vector<char> link_0x0(std::vector<char> data,
             if (lu.sections[i].length > 0u
                 && (lu.sections[i].data
                     || i == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS))
-                writePtr = writeSection_0x0(lu.sections[i],
-                                            writePtr,
-                                            (SHAREMIND_EXECUTABLE_SECTION_TYPE) i);
+                writePtr =
+                        writeSection_0x0(
+                           lu.sections[i],
+                           writePtr,
+                           static_cast<SHAREMIND_EXECUTABLE_SECTION_TYPE>(i));
     }
     return data;
 }
