@@ -104,12 +104,11 @@ std::string asciiCharToPrintable(char const c) {
 
 #define NEWTOKEN(d,type,text,len,sl,sc) \
     do { \
-        ts->emplace_back((type), (text), (len), (sl), (sc)); \
-        d = &ts->back(); \
+        ts.emplace_back((type), (text), (len), (sl), (sc)); \
+        d = &ts.back(); \
     } while (0)
 
-std::unique_ptr<TokensVector> tokenize(char const * program, std::size_t length)
-{
+TokensVector tokenize(char const * program, std::size_t length) {
     assert(program);
 
     char const * c = program;
@@ -119,7 +118,7 @@ std::unique_ptr<TokensVector> tokenize(char const * program, std::size_t length)
     std::size_t sl = 1u;
     std::size_t sc = 1u;
 
-    auto ts(makeUnique<TokensVector>());
+    TokensVector ts;
     Token * lastToken = nullptr;
 
     char hexstart;
@@ -377,7 +376,7 @@ tokenize_begin:
     }
 
 tokenize_ok:
-    ts->popBackNewlines();
+    ts.popBackNewlines();
     return ts;
 }
 
