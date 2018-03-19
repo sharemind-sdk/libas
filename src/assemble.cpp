@@ -472,14 +472,21 @@ assemble_newline:
             if (unlikely(!newData))
                 throw std::bad_alloc();
             lu->sections[section_index].data = newData;
-            SharemindCodeBlock * cbdata =
-                    (SharemindCodeBlock *) lu->sections[section_index].data;
-            SharemindCodeBlock * instr =
-                    &cbdata[lu->sections[section_index].length];
-            lu->sections[section_index].length += args + 1;
+            void * instr = ptrAdd(lu->sections[section_index].data,
+                                  lu->sections[section_index].length
+                                  * sizeof(SharemindCodeBlock));
+            lu->sections[section_index].length += args + 1u;
 
             /* Write instruction code */
-            instr->uint64[0] = i->code;
+            {
+                SharemindCodeBlock toWrite;
+                toWrite.uint64[0] = i->code;
+                std::memcpy(instr, &toWrite, sizeof(toWrite));
+            }
+
+            auto const increaseInstr =
+                    [&instr]() noexcept
+                    { instr = ptrAdd(instr, sizeof(SharemindCodeBlock)); };
 
             /* Write arguments: */
             for (;;) {
@@ -487,18 +494,23 @@ assemble_newline:
                     break;
                 if (ot->type() == Token::Type::UHEX) {
                     doJumpLabel = false; /* Past first argument */
-                    instr++;
-                    instr->uint64[0] = ot->uhexValue();
+                    increaseInstr();
+                    SharemindCodeBlock toWrite;
+                    toWrite.uint64[0] = ot->uhexValue();
+                    std::memcpy(instr, &toWrite, sizeof(toWrite));
                 } else if (ot->type() == Token::Type::HEX) {
                     doJumpLabel = false; /* Past first argument */
-                    instr++;
-                    instr->int64[0] = ot->hexValue();
+                    increaseInstr();
+                    SharemindCodeBlock toWrite;
+                    toWrite.int64[0] = ot->hexValue();
+                    std::memcpy(instr, &toWrite, sizeof(toWrite));
                 } else if (likely((ot->type() == Token::Type::LABEL)
                                   || (ot->type()
                                       == Token::Type::LABEL_O)))
                 {
-                    instr++;
+                    increaseInstr();
                     auto label(ot->labelValue());
+                    SharemindCodeBlock toWrite;
 
                     /* Check whether label is defined: */
                     auto const recordIt(ll.find(label));
@@ -520,7 +532,7 @@ assemble_newline:
                             std::size_t absTarget = loc.offset;
                             if (!assign_add_sizet_int64(&absTarget,
                                                         ot->labelOffset())
-                                || !substract_2sizet_to_int64(&instr->int64[0],
+                                || !substract_2sizet_to_int64(&toWrite.int64[0],
                                                               absTarget,
                                                               jmpOffset))
                                 throw AssembleException(
@@ -542,24 +554,26 @@ assemble_newline:
                                             ot,
                                             "Invalid label offset!");
                             }
-                            instr->uint64[0] = absTarget;
+                            toWrite.uint64[0] = absTarget;
                         }
+                        std::memcpy(instr, &toWrite, sizeof(toWrite));
                     } else {
                         /* Signal a relative jump label: */
-                        SharemindCodeBlock * const cbData =
-                                (SharemindCodeBlock *)
-                                    lu->sections[section_index].data;
-
-                        assert(instr > cbData);
+                        auto const distance =
+                                ptrDist(lu->sections[section_index].data,
+                                        instr);
+                        assert(distance > 0u);
                         assert(integralLessThan(
-                                   instr - cbData,
+                                   distance,
                                    std::numeric_limits<std::size_t>::max()));
-
+                        assert(static_cast<std::size_t>(distance)
+                               % sizeof(SharemindCodeBlock) == 0u);
                         lst[std::move(label)].emplace_back(
                                     ot->labelOffset(),
                                     jmpOffset,
                                     lu->sections[section_index],
-                                    static_cast<std::size_t>(instr - cbData),
+                                    static_cast<std::size_t>(distance)
+                                    / sizeof(SharemindCodeBlock),
                                     ot,
                                     doJumpLabel,
                                     lu_index);
