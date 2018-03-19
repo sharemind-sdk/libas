@@ -27,6 +27,7 @@
 #include <sharemind/abort.h>
 #include <sharemind/codeblock.h>
 #include <sharemind/Concat.h>
+#include <sharemind/IntegralComparisons.h>
 #include <sharemind/libvmi/instr.h>
 #include <sharemind/likely.h>
 #include <sharemind/SimpleUnorderedStringMap.h>
@@ -313,7 +314,7 @@ assemble_newline:
                     } else {
                         lu = &lus[v];
                     }
-                    lu_index = (std::uint8_t) v;
+                    lu_index = static_cast<std::uint8_t>(v);
                     section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
                 }
             } else if (t->directiveValue() == "section") {
@@ -387,8 +388,9 @@ assemble_newline:
                 lu->sections[section_index].data = newData;
                 lu->sections[section_index].length = newLen;
 
-                memcpy(((char *) lu->sections[section_index].data) + oldLen,
-                       syscallSig.c_str(), syscallSig.size() + 1u);
+                std::memcpy(ptrAdd(lu->sections[section_index].data, oldLen),
+                            syscallSig.c_str(),
+                            syscallSig.size() + 1u);
 
                 if (section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND) {
                     numBindings++;
@@ -463,11 +465,10 @@ assemble_newline:
             }
 
             /* Allocate whole instruction: */
-            char * newData =
-                    (char *) realloc(lu->sections[section_index].data,
-                                     sizeof(SharemindCodeBlock)
-                                     * (lu->sections[section_index].length
-                                        + args + 1u));
+            void * newData =
+                    realloc(lu->sections[section_index].data,
+                            sizeof(SharemindCodeBlock)
+                            * (lu->sections[section_index].length + args + 1u));
             if (unlikely(!newData))
                 throw std::bad_alloc();
             lu->sections[section_index].data = newData;
@@ -550,8 +551,9 @@ assemble_newline:
                                     lu->sections[section_index].data;
 
                         assert(instr > cbData);
-                        assert(((std::uintmax_t) (instr - cbData))
-                               <= std::numeric_limits<std::size_t>::max());
+                        assert(integralLessThan(
+                                   instr - cbData,
+                                   std::numeric_limits<std::size_t>::max()));
 
                         lst[std::move(label)].emplace_back(
                                     ot->labelOffset(),
@@ -582,7 +584,13 @@ assemble_newline:
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wcovered-switch-default"
         #endif
-        default: SHAREMIND_ABORT("lAa %d\n", (int) t->type());
+        default:
+            static_assert(
+                    std::is_same<
+                            int,
+                            std::underlying_type<decltype(t->type())>::type
+                        >::value, "");
+            SHAREMIND_ABORT("lAa %d\n", static_cast<int>(t->type()));
         #ifdef __clang__
         #pragma GCC diagnostic pop
         #endif
@@ -753,13 +761,13 @@ assemble_data_write:
         lu->sections[section_index].length = newLen;
 
         /* Actually write the values. */
-        newData = ((std::uint8_t *) newData) + oldLen;
+        newData = ptrAdd(newData, oldLen);
         if (!dataToWrite.empty()) {
             for (;;) {
                 std::memcpy(newData, dataToWrite.data(), dataToWriteLength);
                 if (!--multiplier)
                     break;
-                newData = ((std::uint8_t *) newData) + dataToWriteLength;
+                newData = ptrAdd(newData, dataToWriteLength);
             };
         } else {
             memset(newData, 0, dataToWriteLength);
