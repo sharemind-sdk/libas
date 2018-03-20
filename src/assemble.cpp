@@ -24,7 +24,6 @@
 #include <cstdlib>
 #include <limits>
 #include <new>
-#include <sharemind/abort.h>
 #include <sharemind/codeblock.h>
 #include <sharemind/Concat.h>
 #include <sharemind/IntegralComparisons.h>
@@ -598,20 +597,6 @@ assemble_newline:
         case Token::Type::STRING:
         case Token::Type::LABEL_O:
             goto assemble_unexpected_token_t;
-        #ifdef __clang__
-        #pragma GCC diagnostic push
-        #pragma GCC diagnostic ignored "-Wcovered-switch-default"
-        #endif
-        default:
-            static_assert(
-                    std::is_same<
-                            int,
-                            std::underlying_type<decltype(t->type())>::type
-                        >::value, "");
-            SHAREMIND_ABORT("lAa %d\n", static_cast<int>(t->type()));
-        #ifdef __clang__
-        #pragma GCC diagnostic pop
-        #endif
     } /* switch */
 
     if (!INC_EOF_TEST)
