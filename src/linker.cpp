@@ -34,6 +34,8 @@ namespace Assembler {
 
 SHAREMIND_DEFINE_EXCEPTION_CONST_STDSTRING_NOINLINE(Exception,, LinkerException)
 
+Section::~Section() noexcept { ::free(data); }
+
 namespace {
 
 inline std::size_t tryAddSizes(std::size_t const a, std::size_t const b) {
@@ -49,52 +51,6 @@ inline std::size_t tryMulSizes(std::size_t const a, std::size_t const b) {
 }
 
 std::size_t const extraPadding[8] = { 0u, 7u, 6u, 5u, 4u, 3u, 2u, 1u };
-
-char * writeSection_0x0(Section const & s,
-                        char * p,
-                        SHAREMIND_EXECUTABLE_SECTION_TYPE type)
-{
-    assert(s.length > 0u
-           && (s.data || type == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS));
-
-    /* Check for unsupported output format. */
-    using U = std::underlying_type<SHAREMIND_EXECUTABLE_SECTION_TYPE>::type;
-    if (type >= SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT_0x0)
-        throw LinkerException(concat("Unsupported section type: ",
-                                     static_cast<U>(type)));
-
-    /* Write header: */
-    if (s.length > std::numeric_limits<std::uint32_t>::max() / 8)
-        throw LinkerException(concat("Section of size ", s.length,
-                                     " too large!"));
-    auto const l = static_cast<std::uint32_t>(s.length);
-
-    {
-        SharemindExecutableSectionHeader0x0 h;
-        SharemindExecutableSectionHeader0x0_init(&h, type, l);
-        std::memcpy(p, &h, sizeof(h));
-        p += sizeof(h);
-    }
-
-    if (type == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT) {
-        /* Write section data */
-        assert(s.length // Overflow check already done by size_0x0()
-               <= (std::numeric_limits<std::uint32_t>::max()
-                   / sizeof(SharemindCodeBlock)));
-        auto const toWrite = s.length * sizeof(SharemindCodeBlock);
-        std::memcpy(p, s.data, toWrite);
-        p += toWrite;
-    } else if (type != SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
-        /* Write section data */
-        std::memcpy(p, s.data, l);
-        p += l;
-
-        /* Extra padding: */
-        std::memset(p, '\0', extraPadding[l % 8]);
-        p += extraPadding[l % 8];
-    }
-    return p;
-}
 
 std::size_t size_0x0(LinkingUnitsVector const & lus) {
     assert(!lus.empty());
@@ -141,6 +97,52 @@ std::size_t size_0x0(LinkingUnitsVector const & lus) {
         ++li;
     }
     return r;
+}
+
+char * writeSection_0x0(Section const & s,
+                        char * p,
+                        SHAREMIND_EXECUTABLE_SECTION_TYPE type)
+{
+    assert(s.length > 0u
+           && (s.data || type == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS));
+
+    /* Check for unsupported output format. */
+    using U = std::underlying_type<SHAREMIND_EXECUTABLE_SECTION_TYPE>::type;
+    if (type >= SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT_0x0)
+        throw LinkerException(concat("Unsupported section type: ",
+                                     static_cast<U>(type)));
+
+    /* Write header: */
+    if (s.length > std::numeric_limits<std::uint32_t>::max() / 8)
+        throw LinkerException(concat("Section of size ", s.length,
+                                     " too large!"));
+    auto const l = static_cast<std::uint32_t>(s.length);
+
+    {
+        SharemindExecutableSectionHeader0x0 h;
+        SharemindExecutableSectionHeader0x0_init(&h, type, l);
+        std::memcpy(p, &h, sizeof(h));
+        p += sizeof(h);
+    }
+
+    if (type == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT) {
+        /* Write section data */
+        assert(s.length // Overflow check already done by size_0x0()
+               <= (std::numeric_limits<std::uint32_t>::max()
+                   / sizeof(SharemindCodeBlock)));
+        auto const toWrite = s.length * sizeof(SharemindCodeBlock);
+        std::memcpy(p, s.data, toWrite);
+        p += toWrite;
+    } else if (type != SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
+        /* Write section data */
+        std::memcpy(p, s.data, l);
+        p += l;
+
+        /* Extra padding: */
+        std::memset(p, '\0', extraPadding[l % 8]);
+        p += extraPadding[l % 8];
+    }
+    return p;
 }
 
 std::vector<char> link_0x0(std::vector<char> data,
@@ -195,8 +197,6 @@ std::vector<char> link_0x0(std::vector<char> data,
 }
 
 } // anonymous namespace
-
-Section::~Section() noexcept { ::free(data); }
 
 std::vector<char> link(std::uint16_t version,
                        LinkingUnitsVector const & lus,
