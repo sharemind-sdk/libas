@@ -29,6 +29,7 @@
 #include <sharemind/IntegralComparisons.h>
 #include <sharemind/libvmi/instr.h>
 #include <sharemind/likely.h>
+#include <sharemind/MakeUnique.h>
 #include <sharemind/SimpleUnorderedStringMap.h>
 #include <sstream>
 #include <tuple>
@@ -129,14 +130,14 @@ struct LabelSlot {
 
     LabelSlot(std::int64_t extraOffset_,
               std::size_t jmpOffset_,
-              Section const & section_,
+              CodeSection & codeSection_,
               std::size_t cbdata_index_,
               TokensVector::const_iterator tokenIt_,
               bool doJumpLabel_,
               std::uint8_t linkingUnit_)
         : extraOffset(extraOffset_)
         , jmpOffset(jmpOffset_)
-        , section(section_)
+        , codeSection(codeSection_)
         , cbdata_index(cbdata_index_)
         , tokenIt(tokenIt_)
         , doJumpLabel(doJumpLabel_)
@@ -145,7 +146,7 @@ struct LabelSlot {
 
     std::int64_t extraOffset;
     std::size_t jmpOffset;
-    Section const & section;
+    CodeSection & codeSection;
     std::size_t cbdata_index;
     TokensVector::const_iterator tokenIt;
     bool doJumpLabel;
@@ -185,10 +186,7 @@ struct LabelSlotsVector: public std::vector<LabelSlot> {
                     return false; /**< \todo Provide better diagnostics */
                 /** \todo Maybe check whether there's really an instruction there */
             }
-            std::memcpy(ptrAdd(value.section.data,
-                               value.cbdata_index * sizeof(toWrite)),
-                        &toWrite,
-                        sizeof(toWrite));
+            value.codeSection[value.cbdata_index] = toWrite;
             value.tokenIt = endIt;
         }
         return true;
@@ -204,6 +202,20 @@ struct LabelSlotsMap: public SimpleUnorderedStringMap<LabelSlotsVector> {
     using SimpleUnorderedStringMap<LabelSlotsVector>::operator=;
 
 };
+
+void dataSectionCreateOrAddData(std::unique_ptr<Section> & sectionPtr,
+                                void const * const data,
+                                std::size_t const dataSize,
+                                std::size_t const multiplier = 1u)
+{
+    if (!sectionPtr) {
+        sectionPtr = makeUnique<DataSection>(data, dataSize);
+    } else {
+        auto & ds = *static_cast<DataSection *>(sectionPtr.get());
+        for (std::size_t i = 0u; i < multiplier; ++i)
+            ds.addData(data, dataSize);
+    }
+}
 
 } // anonymous namespace
 
@@ -241,7 +253,6 @@ LinkingUnitsVector assemble(TokensVector const & ts) {
     int section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
     std::size_t numBindings = 0u;
     std::size_t numPdBindings = 0u;
-    std::vector<char> dataToWrite;
     std::size_t dataToWriteLength = 0u;
 
     /* for .data and .fill: */
@@ -270,20 +281,27 @@ assemble_newline:
             break;
         case Token::Type::LABEL:
         {
+            auto & sectionPtr = lu->sections[section_index];
             auto const r(
-                        ll.emplace(
-                            std::piecewise_construct,
-                            std::make_tuple(t->labelValue()),
-                            std::make_tuple(
-                                (section_index
-                                 == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND)
-                                ? numBindings
-                                : ((section_index
-                                    == SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND)
-                                   ? numPdBindings
-                                   : lu->sections[section_index].length),
-                                section_index,
-                                lu_index)));
+                    ll.emplace(
+                        std::piecewise_construct,
+                        std::make_tuple(t->labelValue()),
+                        std::make_tuple(
+                            (section_index
+                             == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND)
+                            ? numBindings
+                            : ((section_index
+                                == SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND)
+                               ? numPdBindings
+                               : sectionPtr
+                                 ? ((section_index
+                                     == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT)
+                                    ? static_cast<CodeSection *>(
+                                          sectionPtr.get())->numInstructions()
+                                    : sectionPtr->numBytes())
+                                 : 0u),
+                            section_index,
+                            lu_index)));
             if (!r.second)
                 throw AssembleException(t, concat("Duplicate label: \"",
                                                   t->labelValue(), '"'));
@@ -343,8 +361,12 @@ assemble_newline:
                     goto assemble_invalid_parameter_t;
                 }
             } else if (t->directiveValue() == "data") {
-                if (unlikely(section_index
-                             == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT))
+                if (unlikely((section_index
+                              == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT)
+                             || (section_index
+                                 == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND)
+                             || (section_index
+                                 == SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND)))
                     goto assemble_unexpected_token_t;
 
                 multiplier = 1u;
@@ -382,18 +404,9 @@ assemble_newline:
 
                 auto const syscallSig(t->stringValue());
 
-                std::size_t const oldLen = lu->sections[section_index].length;
-                std::size_t const newLen = oldLen + syscallSig.size() + 1;
-                void * newData =
-                        realloc(lu->sections[section_index].data, newLen);
-                if (unlikely(!newData))
-                    throw std::bad_alloc();
-                lu->sections[section_index].data = newData;
-                lu->sections[section_index].length = newLen;
-
-                std::memcpy(ptrAdd(lu->sections[section_index].data, oldLen),
-                            syscallSig.c_str(),
-                            syscallSig.size() + 1u);
+                dataSectionCreateOrAddData(lu->sections[section_index],
+                                           syscallSig.c_str(),
+                                           syscallSig.size() + 1u);
 
                 if (section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND) {
                     numBindings++;
@@ -450,6 +463,12 @@ assemble_newline:
                                                " arguments, but only ", args,
                                                " given!"));
 
+            // Create code section, if not yet created:
+            auto & sectionPtr = lu->sections[section_index];
+            if (!sectionPtr)
+                sectionPtr = makeUnique<CodeSection>();
+            auto & cs = *static_cast<CodeSection *>(sectionPtr.get());
+
             /* Detect offset for jump instructions */
             std::size_t jmpOffset;
             bool doJumpLabel;
@@ -459,7 +478,7 @@ assemble_newline:
                 if (c[0u] == 0x04     /* Check for jump namespace */
                     && c[2u] == 0x01) /* and imm first argument OLB */
                 {
-                    jmpOffset = lu->sections[section_index].length;
+                    jmpOffset = cs.numInstructions();
                     doJumpLabel = true;
                 } else {
                     jmpOffset = 0u;
@@ -467,29 +486,15 @@ assemble_newline:
                 }
             }
 
-            /* Allocate whole instruction: */
-            void * newData =
-                    realloc(lu->sections[section_index].data,
-                            sizeof(SharemindCodeBlock)
-                            * (lu->sections[section_index].length + args + 1u));
-            if (unlikely(!newData))
-                throw std::bad_alloc();
-            lu->sections[section_index].data = newData;
-            void * instr = ptrAdd(lu->sections[section_index].data,
-                                  lu->sections[section_index].length
-                                  * sizeof(SharemindCodeBlock));
-            lu->sections[section_index].length += args + 1u;
+            /* Reserve memory for whole instruction: */
+            cs.reserveMore(args + 1u);
 
             /* Write instruction code */
             {
                 SharemindCodeBlock toWrite;
                 toWrite.uint64[0] = i->code;
-                std::memcpy(instr, &toWrite, sizeof(toWrite));
+                cs.addCode(&toWrite, 1u);
             }
-
-            auto const increaseInstr =
-                    [&instr]() noexcept
-                    { instr = ptrAdd(instr, sizeof(SharemindCodeBlock)); };
 
             /* Write arguments: */
             for (;;) {
@@ -497,21 +502,18 @@ assemble_newline:
                     break;
                 if (ot->type() == Token::Type::UHEX) {
                     doJumpLabel = false; /* Past first argument */
-                    increaseInstr();
                     SharemindCodeBlock toWrite;
                     toWrite.uint64[0] = ot->uhexValue();
-                    std::memcpy(instr, &toWrite, sizeof(toWrite));
+                    cs.addCode(&toWrite, 1u);
                 } else if (ot->type() == Token::Type::HEX) {
                     doJumpLabel = false; /* Past first argument */
-                    increaseInstr();
                     SharemindCodeBlock toWrite;
                     toWrite.int64[0] = ot->hexValue();
-                    std::memcpy(instr, &toWrite, sizeof(toWrite));
+                    cs.addCode(&toWrite, 1u);
                 } else if (likely((ot->type() == Token::Type::LABEL)
                                   || (ot->type()
                                       == Token::Type::LABEL_O)))
                 {
-                    increaseInstr();
                     auto label(ot->labelValue());
                     SharemindCodeBlock toWrite;
 
@@ -559,27 +561,22 @@ assemble_newline:
                             }
                             toWrite.uint64[0] = absTarget;
                         }
-                        std::memcpy(instr, &toWrite, sizeof(toWrite));
+                        cs.addCode(&toWrite, 1u);
                     } else {
                         /* Signal a relative jump label: */
-                        auto const distance =
-                                ptrDist(lu->sections[section_index].data,
-                                        instr);
-                        assert(distance > 0u);
-                        assert(integralLessThan(
-                                   distance,
-                                   std::numeric_limits<std::size_t>::max()));
-                        assert(static_cast<std::size_t>(distance)
-                               % sizeof(SharemindCodeBlock) == 0u);
+                        auto const offset = cs.numInstructions();
                         lst[std::move(label)].emplace_back(
                                     ot->labelOffset(),
                                     jmpOffset,
-                                    lu->sections[section_index],
-                                    static_cast<std::size_t>(distance)
-                                    / sizeof(SharemindCodeBlock),
+                                    cs,
+                                    offset,
                                     ot,
                                     doJumpLabel,
                                     lu_index);
+
+                        // Write dummy placeholder value:
+                        SharemindCodeBlock toWrite;
+                        cs.addCode(&toWrite, 1u);
                     }
                     doJumpLabel = false; /* Past first argument */
                 } else {
@@ -647,137 +644,137 @@ assemble_data_or_fill:
         dataToWriteLength = 0u;
     }
 
-    INC_DO_EOL(assemble_data_write, assemble_data_opt_param);
-    goto assemble_data_write;
+    INC_DO_EOL(assemble_data_value_param, assemble_unexpected_token_t);
 
-assemble_data_opt_param:
+assemble_data_value_param:
 
-    assert(dataToWrite.empty());
-    if (t->type() == Token::Type::UHEX) {
-        auto const v = t->uhexValue();
-        switch (type) {
-            case 0u: /* uint8 */
-                if (v > std::numeric_limits<std::uint8_t>::max())
+    {
+        std::vector<char> dataToWrite;
+        if (t->type() == Token::Type::UHEX) {
+            auto const v = t->uhexValue();
+            switch (type) {
+                case 0u: /* uint8 */
+                    if (v > std::numeric_limits<std::uint8_t>::max())
+                        goto assemble_invalid_parameter_t;
+                    break;
+                case 1u: /* uint16 */
+                    if (v > std::numeric_limits<std::uint16_t>::max())
+                        goto assemble_invalid_parameter_t;
+                    break;
+                case 2u: /* uint32 */
+                    if (v > std::numeric_limits<std::uint32_t>::max())
+                        goto assemble_invalid_parameter_t;
+                    break;
+                case 3u: /* uint64; All should be fine here. */
+                    break;
+                case 4u: /* int8 */
+                    if (v > std::numeric_limits<std::int8_t>::max())
+                        goto assemble_invalid_parameter_t;
+                    break;
+                case 5u: /* int16 */
+                    if (v > std::numeric_limits<std::int16_t>::max())
+                        goto assemble_invalid_parameter_t;
+                    break;
+                case 6u: /* int32 */
+                    if (v > std::numeric_limits<std::int32_t>::max())
+                        goto assemble_invalid_parameter_t;
+                    break;
+                case 7u: /* int64 */
+                    if (v > std::numeric_limits<std::int64_t>::max())
+                        goto assemble_invalid_parameter_t;
+                    break;
+                case 8u: /* string */
                     goto assemble_invalid_parameter_t;
-                break;
-            case 1u: /* uint16 */
-                if (v > std::numeric_limits<std::uint16_t>::max())
+                default:
+                    abort();
+            }
+            if (section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
+                dataToWrite.resize(dataToWriteLength);
+                std::memcpy(dataToWrite.data(), &v, dataToWriteLength);
+            }
+        } else if (t->type() == Token::Type::HEX) {
+            auto const v = t->hexValue();
+            switch (type) {
+                case 0u: /* uint8 */
+                    if (v > std::numeric_limits<std::uint8_t>::max() || v < 0)
+                        goto assemble_invalid_parameter_t;
+                    break;
+                case 1u: /* uint16 */
+                    if (v > std::numeric_limits<std::uint16_t>::max() || v < 0)
+                        goto assemble_invalid_parameter_t;
+                    break;
+                case 2u: /* uint32 */
+                    if (v > std::numeric_limits<std::uint32_t>::max() || v < 0)
+                        goto assemble_invalid_parameter_t;
+                    break;
+                case 3u: /* uint64 */
+                    if (v < 0)
+                        goto assemble_invalid_parameter_t;
+                    break;
+                case 4u: /* int8 */
+                    if (v < std::numeric_limits<std::int8_t>::min()
+                        || v > std::numeric_limits<std::int8_t>::max())
+                        goto assemble_invalid_parameter_t;
+                    break;
+                case 5u: /* int16 */
+                    if (v < std::numeric_limits<std::int16_t>::min()
+                        || v > std::numeric_limits<std::int16_t>::max())
+                        goto assemble_invalid_parameter_t;
+                    break;
+                case 6u: /* int32 */
+                    if (v < std::numeric_limits<std::int32_t>::min()
+                        || v > std::numeric_limits<std::int32_t>::max())
+                        goto assemble_invalid_parameter_t;
+                    break;
+                case 7u: /* int64; All should be fine here. */
+                    break;
+                case 8u: /* string */
                     goto assemble_invalid_parameter_t;
-                break;
-            case 2u: /* uint32 */
-                if (v > std::numeric_limits<std::uint32_t>::max())
-                    goto assemble_invalid_parameter_t;
-                break;
-            case 3u: /* uint64; All should be fine here. */
-                break;
-            case 4u: /* int8 */
-                if (v > std::numeric_limits<std::int8_t>::max())
-                    goto assemble_invalid_parameter_t;
-                break;
-            case 5u: /* int16 */
-                if (v > std::numeric_limits<std::int16_t>::max())
-                    goto assemble_invalid_parameter_t;
-                break;
-            case 6u: /* int32 */
-                if (v > std::numeric_limits<std::int32_t>::max())
-                    goto assemble_invalid_parameter_t;
-                break;
-            case 7u: /* int64 */
-                if (v > std::numeric_limits<std::int64_t>::max())
-                    goto assemble_invalid_parameter_t;
-                break;
-            case 8u: /* string */
-                goto assemble_invalid_parameter_t;
-            default:
-                abort();
+                default:
+                    abort();
+            }
+            if (section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
+                dataToWrite.resize(dataToWriteLength);
+                std::memcpy(dataToWrite.data(), &v, dataToWriteLength);
+            }
+        } else if (t->type() == Token::Type::STRING && type == 8u) {
+            auto const s(t->stringValue());
+            dataToWriteLength = s.size();
+            if (section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
+                dataToWrite.resize(dataToWriteLength + 1u);
+                std::memcpy(dataToWrite.data(),
+                            s.c_str(),
+                            dataToWriteLength + 1u);
+            }
+        } else {
+            goto assemble_invalid_parameter_t;
         }
-        dataToWrite.resize(dataToWriteLength);
-        std::memcpy(dataToWrite.data(), &v, dataToWriteLength);
-    } else if (t->type() == Token::Type::HEX) {
-        auto const v = t->hexValue();
-        switch (type) {
-            case 0u: /* uint8 */
-                if (v > std::numeric_limits<std::uint8_t>::max() || v < 0)
-                    goto assemble_invalid_parameter_t;
-                break;
-            case 1u: /* uint16 */
-                if (v > std::numeric_limits<std::uint16_t>::max() || v < 0)
-                    goto assemble_invalid_parameter_t;
-                break;
-            case 2u: /* uint32 */
-                if (v > std::numeric_limits<std::uint32_t>::max() || v < 0)
-                    goto assemble_invalid_parameter_t;
-                break;
-            case 3u: /* uint64 */
-                if (v < 0)
-                    goto assemble_invalid_parameter_t;
-                break;
-            case 4u: /* int8 */
-                if (v < std::numeric_limits<std::int8_t>::min()
-                    || v > std::numeric_limits<std::int8_t>::max())
-                    goto assemble_invalid_parameter_t;
-                break;
-            case 5u: /* int16 */
-                if (v < std::numeric_limits<std::int16_t>::min()
-                    || v > std::numeric_limits<std::int16_t>::max())
-                    goto assemble_invalid_parameter_t;
-                break;
-            case 6u: /* int32 */
-                if (v < std::numeric_limits<std::int32_t>::min()
-                    || v > std::numeric_limits<std::int32_t>::max())
-                    goto assemble_invalid_parameter_t;
-                break;
-            case 7u: /* int64; All should be fine here. */
-                break;
-            case 8u: /* string */
-                goto assemble_invalid_parameter_t;
-            default:
-                abort();
-        }
-        dataToWrite.resize(dataToWriteLength);
-        std::memcpy(dataToWrite.data(), &v, dataToWriteLength);
-    } else if (t->type() == Token::Type::STRING && type == 8u) {
-        auto const s(t->stringValue());
-        dataToWriteLength = s.size();
-        dataToWrite.resize(dataToWriteLength + 1u);
-        std::memcpy(dataToWrite.data(), s.c_str(), dataToWriteLength + 1u);
-    } else {
-        goto assemble_invalid_parameter_t;
-    }
-    assert(!dataToWrite.empty());
+        assert(!dataToWrite.empty());
 
-    INC_DO_EOL(assemble_data_write, assemble_unexpected_token_t);
+        INC_DO_EOL(assemble_data_write, assemble_unexpected_token_t);
 
 assemble_data_write:
 
-    assert(section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT);
-    if (section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
-        lu->sections[SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS].length +=
-                (multiplier * dataToWriteLength);
-    } else {
-        std::size_t const oldLen = lu->sections[section_index].length;
-        std::size_t const newLen = oldLen + (multiplier * dataToWriteLength);
-        void * newData = realloc(lu->sections[section_index].data, newLen);
-        if (unlikely(!newData))
-            throw std::bad_alloc();
-        lu->sections[section_index].data = newData;
-        lu->sections[section_index].length = newLen;
-
-        /* Actually write the values. */
-        newData = ptrAdd(newData, oldLen);
-        if (!dataToWrite.empty()) {
-            for (;;) {
-                std::memcpy(newData, dataToWrite.data(), dataToWriteLength);
-                if (!--multiplier)
-                    break;
-                newData = ptrAdd(newData, dataToWriteLength);
-            };
+        assert(section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT);
+        auto & sectionPtr = lu->sections[section_index];
+        if (section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
+            if (!sectionPtr) {
+                sectionPtr = makeUnique<BssSection>(multiplier,
+                                                    dataToWriteLength);
+            } else {
+                static_cast<BssSection *>(sectionPtr.get())->addNumBytes(
+                            multiplier * dataToWriteLength);
+            }
         } else {
-            memset(newData, 0, dataToWriteLength);
+            /* Actually write the values. */
+            assert(!dataToWrite.empty());
+            dataSectionCreateOrAddData(sectionPtr,
+                                       dataToWrite.data(),
+                                       dataToWriteLength,
+                                       multiplier);
         }
+        goto assemble_newline;
     }
-    dataToWrite.clear();
-    goto assemble_newline;
 
 assemble_unexpected_token_t:
 

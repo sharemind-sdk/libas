@@ -166,30 +166,35 @@ directive.
 
 ####  `.data`
 
-`.data <type> [<value>]`
+`.data <type> <value>`
 
 | Parameter | Type(s)                   | Description |
 |-----------|---------------------------|-------------|
 | `<type>`  | `KEYWORD`                 | Type of value: `uint8`, `uint16`, `uint32`, `uint64`, `int8`, `int16`, `int32`, `int64` or `string`. |
-| `<value>` | `HEX`, `UHEX` or `STRING` | Value to write, or uninitialized if absent. If `<type>` is `string` then `<value>` is mandatory. |
+| `<value>` | `HEX`, `UHEX` or `STRING` | Value to write. |
 
-Writes a value to the current section. This directive is not allowed in the TEXT
-or BIND sections.
+Writes a value to the current section. This directive is not allowed in the
+TEXT, BIND or PDBIND sections. For BSS sections, the section is only resized,
+and no values are actually written. The number of bytes to write (or, for BSS
+sections, to add to the section size) is determined by the type of the value,
+or in case of strings, the length of the string given. The length of the string
+always contains the terminating NULL byte.
 
 
 #### `.fill`
 
-`.fill <num> <type> [<value>]`
+`.fill <num> <type> <value>`
 
 | Parameter | Type(s)                   | Description                    |
 |-----------|---------------------------|--------------------------------|
 | `<num>`   | `UHEX`                    | The number of values to write. |
 | `<type>`  | `KEYWORD`                 | Type of value: `uint8`, `uint16`, `uint32`, `uint64`, `int8`, `int16`, `int32`, `int64` or `string`. |
-| `<value>` | `HEX`, `UHEX` or `STRING` | Value to write, or uninitialized if absent. If `<type>` is `string` then `<value>` is mandatory. |
+| `<value>` | `HEX`, `UHEX` or `STRING` | Value to write. |
 
 Writes multiple values to the current section. The number of values to write
-must be greater than 0 and less than 65536. This directive is not allowed in the
-TEXT or BIND sections.
+must be greater than 0 and less than 65536. The semantics of a `.fill` directive
+are identical to `<num>` number of `.data` directives with the same `<type>` and
+`<value>` arguments.
 
 
 #### `.bind`

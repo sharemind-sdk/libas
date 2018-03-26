@@ -23,6 +23,10 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
+#include <memory>
+#include <new>
+#include <sharemind/codeblock.h>
 #include <sharemind/libexecutable/sharemind_executable_section_type.h>
 #include <sharemind/ExceptionMacros.h>
 #include <vector>
@@ -36,14 +40,97 @@ SHAREMIND_DECLARE_EXCEPTION_CONST_STDSTRING_NOINLINE(Exception,
                                                      LinkerException);
 
 struct Section {
-    ~Section() noexcept;
-    std::size_t length = 0u;
-    void * data = nullptr;
+
+    virtual ~Section() noexcept;
+
+    virtual void const * bytes() const noexcept = 0;
+    virtual std::size_t numBytes() const noexcept = 0;
+
 };
 
+class BssSection final: public Section {
+
+public: /* Methods: */
+
+    BssSection(std::size_t numElements,
+               std::size_t elementSizeInBytes)
+        : m_sizeInBytes(
+            [numElements, elementSizeInBytes]() {
+                if ((std::numeric_limits<std::size_t>::max() / numElements)
+                    < elementSizeInBytes)
+                    throw std::bad_array_new_length();
+                return numElements * elementSizeInBytes;
+            }())
+    {}
+
+    bool addNumBytes(std::size_t toAdd) noexcept {
+        if (std::numeric_limits<std::size_t>::max() - toAdd < m_sizeInBytes)
+            return false;
+        m_sizeInBytes += toAdd;
+        return true;
+    }
+
+    void const * bytes() const noexcept final override;
+    std::size_t numBytes() const noexcept final override;
+
+private: /* Fields: */
+
+    std::size_t m_sizeInBytes;
+
+};
+
+class DataSection final: public Section {
+
+public: /* Methods: */
+
+    DataSection(void const * data, std::size_t size)
+        : m_data(static_cast<char const *>(data),
+                 static_cast<char const *>(data) + size)
+    {}
+
+    void addData(void const * data, std::size_t size) {
+        m_data.insert(m_data.end(),
+                      static_cast<char const *>(data),
+                      static_cast<char const *>(data) + size);
+    }
+
+    void const * bytes() const noexcept final override;
+    std::size_t numBytes() const noexcept final override;
+
+private: /* Fields: */
+
+    std::vector<char> m_data;
+
+};
+
+class CodeSection final: public Section {
+
+public: /* Methods: */
+
+    std::size_t numInstructions() const noexcept { return m_data.size(); }
+
+    void reserveMore(std::size_t size) { m_data.reserve(m_data.size() + size); }
+
+    void addCode(SharemindCodeBlock const * data, std::size_t size)
+    { m_data.insert(m_data.end(), data, data + size); }
+
+    SharemindCodeBlock & operator[](std::size_t const i) noexcept {
+        assert(i < m_data.size());
+        return m_data[i];
+    }
+
+    void const * bytes() const noexcept final override;
+    std::size_t numBytes() const noexcept final override;
+
+private: /* Fields: */
+
+    std::vector<SharemindCodeBlock> m_data;
+
+};
 
 struct LinkingUnit {
-    std::array<Section, SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT> sections;
+    std::array<std::unique_ptr<Section>,
+               SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT> sections;
 };
 
 using LinkingUnitsVector = std::vector<LinkingUnit>;

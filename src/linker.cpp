@@ -34,7 +34,20 @@ namespace Assembler {
 
 SHAREMIND_DEFINE_EXCEPTION_CONST_STDSTRING_NOINLINE(Exception,, LinkerException)
 
-Section::~Section() noexcept { ::free(data); }
+Section::~Section() noexcept {}
+
+void const * BssSection::bytes() const noexcept { return nullptr; }
+
+std::size_t BssSection::numBytes() const noexcept { return m_sizeInBytes; }
+
+void const * DataSection::bytes() const noexcept { return m_data.data(); }
+
+std::size_t DataSection::numBytes() const noexcept { return m_data.size(); }
+
+void const * CodeSection::bytes() const noexcept { return m_data.data(); }
+
+std::size_t CodeSection::numBytes() const noexcept
+{ return m_data.size() * sizeof(SharemindCodeBlock); }
 
 namespace {
 
@@ -63,33 +76,16 @@ std::size_t size_0x0(LinkingUnitsVector const & lus) {
         r = tryAddSizes(r, sizeof(SharemindExecutableUnitHeader0x0));
         std::size_t si = 0u;
         for (auto const & section : lu.sections) {
-            if (section.length > 0u
-                && (section.data != nullptr
-                    || si == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS))
-            {
+            if (section) {
+                assert(section->numBytes() > 0u);
                 r = tryAddSizes(r, sizeof(SharemindExecutableSectionHeader0x0));
-                if (si == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT) {
-                    if (section.length
-                        > (std::numeric_limits<std::uint32_t>::max()
-                           / sizeof(SharemindCodeBlock)))
-                        throw LinkerException(
-                                concat("Linking unit ", li, " section ", si,
-                                       " (TEXT) too large!"));
-                    r = tryAddSizes(
-                            r,
-                            tryMulSizes(section.length,
-                                        sizeof(SharemindCodeBlock)));
-                } else {
-                    if (section.length
-                        > std::numeric_limits<std::uint32_t>::max())
-                        throw LinkerException(
-                                concat("Linking unit ", li, " section ", si,
-                                       " too large!"));
-                    if (si != SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS)
+                if (si != SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
+                    r = tryAddSizes(r, section->numBytes());
+                    if (si != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT) {
                         r = tryAddSizes(
                                 r,
-                                tryAddSizes(section.length,
-                                            extraPadding[section.length % 8]));
+                                extraPadding[section->numBytes() % 8]);
+                    }
                 }
             }
             ++si;
@@ -103,8 +99,8 @@ char * writeSection_0x0(Section const & s,
                         char * p,
                         SHAREMIND_EXECUTABLE_SECTION_TYPE type)
 {
-    assert(s.length > 0u
-           && (s.data || type == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS));
+    assert(s.numBytes() > 0u
+           && (s.bytes() || type == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS));
 
     /* Check for unsupported output format. */
     using U = std::underlying_type<SHAREMIND_EXECUTABLE_SECTION_TYPE>::type;
@@ -113,10 +109,10 @@ char * writeSection_0x0(Section const & s,
                                      static_cast<U>(type)));
 
     /* Write header: */
-    if (s.length > std::numeric_limits<std::uint32_t>::max() / 8)
-        throw LinkerException(concat("Section of size ", s.length,
+    if (s.numBytes() > std::numeric_limits<std::uint32_t>::max() / 8)
+        throw LinkerException(concat("Section of size ", s.numBytes(),
                                      " too large!"));
-    auto const l = static_cast<std::uint32_t>(s.length);
+    auto const l = static_cast<std::uint32_t>(s.numBytes());
 
     {
         SharemindExecutableSectionHeader0x0 h;
@@ -125,22 +121,15 @@ char * writeSection_0x0(Section const & s,
         p += sizeof(h);
     }
 
-    if (type == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT) {
+    if (type != SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
         /* Write section data */
-        assert(s.length // Overflow check already done by size_0x0()
-               <= (std::numeric_limits<std::uint32_t>::max()
-                   / sizeof(SharemindCodeBlock)));
-        auto const toWrite = s.length * sizeof(SharemindCodeBlock);
-        std::memcpy(p, s.data, toWrite);
-        p += toWrite;
-    } else if (type != SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
-        /* Write section data */
-        std::memcpy(p, s.data, l);
+        std::memcpy(p, s.bytes(), l);
         p += l;
-
-        /* Extra padding: */
-        std::memset(p, '\0', extraPadding[l % 8]);
-        p += extraPadding[l % 8];
+        if (type != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT) {
+            /* Extra padding: */
+            std::memset(p, '\0', extraPadding[l % 8]);
+            p += extraPadding[l % 8];
+        }
     }
     return p;
 }
@@ -166,11 +155,15 @@ std::vector<char> link_0x0(std::vector<char> data,
     for (auto const & lu : lus) {
         /* Calculate number of sections: */
         std::uint8_t sections = 0u;
-        for (std::size_t i = 0u; i < SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT_0x0; ++i)
-            if (lu.sections[i].length > 0u
-                && (lu.sections[i].data
-                    || i == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS))
+        for (std::size_t i = 0u;
+             i < SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT_0x0;
+             ++i)
+        {
+            if (lu.sections[i]) {
+                assert(lu.sections[i]->numBytes() > 0u);
                 sections++;
+            }
+        }
         assert(sections > 0u);
         sections--;
 
@@ -183,15 +176,19 @@ std::vector<char> link_0x0(std::vector<char> data,
         }
 
         /* Write sections: */
-        for (std::size_t i = 0u; i < SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT_0x0; ++i)
-            if (lu.sections[i].length > 0u
-                && (lu.sections[i].data
-                    || i == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS))
+        for (std::size_t i = 0u;
+             i < SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT_0x0;
+             ++i)
+        {
+            if (lu.sections[i]) {
+                assert(lu.sections[i]->numBytes() > 0u);
                 writePtr =
                         writeSection_0x0(
-                           lu.sections[i],
+                           *lu.sections[i],
                            writePtr,
                            static_cast<SHAREMIND_EXECUTABLE_SECTION_TYPE>(i));
+            }
+        }
     }
     return data;
 }
