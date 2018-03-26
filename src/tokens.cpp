@@ -199,7 +199,7 @@ Token::Token(Type type,
         }())
     , m_parsedNumeric(
         [type, text, length]() {
-            std::remove_const<decltype(m_parsedNumeric)>::type r;
+            ParsedNumeric r;
             switch (type) {
             case Type::NEWLINE: break;
             case Type::DIRECTIVE: break;

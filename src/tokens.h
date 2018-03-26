@@ -106,7 +106,8 @@ private: /* Fields: */
     std::size_t m_startLine;
     std::size_t m_startColumn;
     std::string m_parsedString;
-    union {
+    union ParsedNumeric {
+        ParsedNumeric() noexcept : hex(0) {}
         std::int64_t hex;
         std::uint64_t uhex;
     } m_parsedNumeric;
