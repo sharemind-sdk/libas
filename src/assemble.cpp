@@ -644,9 +644,7 @@ assemble_data_or_fill:
         dataToWriteLength = 0u;
     }
 
-    INC_DO_EOL(assemble_data_value_param, assemble_unexpected_token_t);
-
-assemble_data_value_param:
+    INC_CHECK_EOF;
 
     {
         std::vector<char> dataToWrite;
