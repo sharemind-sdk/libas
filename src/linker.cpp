@@ -109,26 +109,35 @@ char * writeSection_0x0(Section const & s,
                                      static_cast<U>(type)));
 
     /* Write header: */
-    if (s.numBytes() > std::numeric_limits<std::uint32_t>::max() / 8)
-        throw LinkerException(concat("Section of size ", s.numBytes(),
-                                     " too large!"));
-    auto const l = static_cast<std::uint32_t>(s.numBytes());
-
     {
+        std::uint32_t sectionSize;
+        if (type == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT) {
+            auto const ni = static_cast<CodeSection const &>(s).numInstructions();
+            if (ni > std::numeric_limits<std::uint32_t>::max() / 8)
+                throw LinkerException(concat("TEXT section of size ", s.numBytes(),
+                                             " blocks too large!"));
+            sectionSize = static_cast<std::uint32_t>(ni);
+        } else {
+            if (s.numBytes() > std::numeric_limits<std::uint32_t>::max() / 8)
+                throw LinkerException(concat("Section of size ", s.numBytes(),
+                                             " bytes too large!"));
+            sectionSize = static_cast<std::uint32_t>(s.numBytes());
+        }
         SharemindExecutableSectionHeader0x0 h;
-        SharemindExecutableSectionHeader0x0_init(&h, type, l);
+        SharemindExecutableSectionHeader0x0_init(&h, type, sectionSize);
         std::memcpy(p, &h, sizeof(h));
         p += sizeof(h);
     }
 
     if (type != SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
         /* Write section data */
-        std::memcpy(p, s.bytes(), l);
-        p += l;
+        auto const toWrite(s.numBytes());
+        std::memcpy(p, s.bytes(), toWrite);
+        p += toWrite;
         if (type != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT) {
             /* Extra padding: */
-            std::memset(p, '\0', extraPadding[l % 8]);
-            p += extraPadding[l % 8];
+            std::memset(p, '\0', extraPadding[toWrite % 8]);
+            p += extraPadding[toWrite % 8];
         }
     }
     return p;
