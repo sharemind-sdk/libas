@@ -57,12 +57,6 @@ inline std::size_t tryAddSizes(std::size_t const a, std::size_t const b) {
     return a + b;
 }
 
-inline std::size_t tryMulSizes(std::size_t const a, std::size_t const b) {
-    if (std::numeric_limits<std::size_t>::max() / a < b)
-        throw LinkerException("Resulting executable size too big!");
-    return a * b;
-}
-
 std::size_t const extraPadding[8] = { 0u, 7u, 6u, 5u, 4u, 3u, 2u, 1u };
 
 std::size_t size_0x0(LinkingUnitsVector const & lus) {
