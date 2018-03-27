@@ -216,10 +216,8 @@ std::vector<char> link(std::uint16_t version,
         SharemindExecutableCommonHeader_init(&h, version);
         std::memcpy(data.data(), &h, sizeof(h));
     }
-    return link_0x0(std::move(data),
-                    data.data() + headerSize,
-                    lus,
-                    activeLinkingUnit);
+    auto const writePtr = data.data() + headerSize;
+    return link_0x0(std::move(data), writePtr, lus, activeLinkingUnit);
 }
 
 } /* namespace Assembler { */
