@@ -137,10 +137,9 @@ char * writeSection_0x0(Section const & s,
     return p;
 }
 
-std::vector<char> link_0x0(std::vector<char> data,
-                           char * writePtr,
-                           LinkingUnitsVector const & lus,
-                           std::uint8_t activeLinkingUnit)
+void link_0x0(char * writePtr,
+              LinkingUnitsVector const & lus,
+              std::uint8_t activeLinkingUnit)
 {
     assert(!lus.empty());
     assert(lus.size() - 1u <= UINT8_MAX);
@@ -193,7 +192,6 @@ std::vector<char> link_0x0(std::vector<char> data,
             }
         }
     }
-    return data;
 }
 
 } // anonymous namespace
@@ -216,8 +214,8 @@ std::vector<char> link(std::uint16_t version,
         SharemindExecutableCommonHeader_init(&h, version);
         std::memcpy(data.data(), &h, sizeof(h));
     }
-    auto const writePtr = data.data() + headerSize;
-    return link_0x0(std::move(data), writePtr, lus, activeLinkingUnit);
+    link_0x0(data.data() + headerSize, lus, activeLinkingUnit);
+    return data;
 }
 
 } /* namespace Assembler { */
