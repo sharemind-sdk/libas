@@ -32,7 +32,7 @@ FIND_PACKAGE(Boost REQUIRED)
 FIND_PACKAGE(SharemindCHeaders REQUIRED)
 FIND_PACKAGE(SharemindCxxHeaders REQUIRED)
 FIND_PACKAGE(SharemindLibExecutable REQUIRED)
-FIND_PACKAGE(SharemindLibVmi REQUIRED)
+FIND_PACKAGE(SharemindLibVmi 0.2.0 REQUIRED)
 
 
 # Headers:
@@ -113,7 +113,7 @@ SharemindAddComponentPackage("lib"
     DEB_SECTION "libs"
     DEB_DEPENDS
         "libsharemind-executable (>= 0.1.0)"
-        "libsharemind-vmi (>= 0.1.0)"
+        "libsharemind-vmi (>= 0.2.0)"
         "libc6 (>= 2.19)"
 )
 SharemindAddComponentPackage("dev"

@@ -451,15 +451,17 @@ assemble_newline:
             }
 
             /* Detect and check instruction: */
-            SharemindVmInstruction const * const i =
-                    sharemind_vm_instruction_from_name(name.c_str());
-            if (unlikely(!i))
+            auto const & instrNameMap = instructionNameMap();
+            auto const instrIt(instrNameMap.find(name));
+            if (instrIt == instrNameMap.end()) {
                 throw AssembleException(ot,
                                         concat("Unknown instruction: ", name));
-            if (unlikely(i->numArgs != args))
+            }
+            auto const & i = instrIt->second;
+            if (unlikely(i.numArgs != args))
                 throw AssembleException(ot,
                                         concat("Instruction \"", name,
-                                               "\" expects ", i->numArgs,
+                                               "\" expects ", i.numArgs,
                                                " arguments, but only ", args,
                                                " given!"));
 
@@ -473,8 +475,8 @@ assemble_newline:
             std::size_t jmpOffset;
             bool doJumpLabel;
             {
-                char c[sizeof(i->code)];
-                memcpy(c, &(i->code), sizeof(i->code));
+                char c[sizeof(i.code)];
+                std::memcpy(c, &(i.code), sizeof(i.code));
                 if (c[0u] == 0x04     /* Check for jump namespace */
                     && c[2u] == 0x01) /* and imm first argument OLB */
                 {
@@ -492,7 +494,7 @@ assemble_newline:
             /* Write instruction code */
             {
                 SharemindCodeBlock toWrite;
-                toWrite.uint64[0] = i->code;
+                toWrite.uint64[0] = i.code;
                 cs.addCode(&toWrite, 1u);
             }
 
