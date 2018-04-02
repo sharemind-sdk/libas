@@ -31,7 +31,7 @@ SharemindSetProjectVersion()
 FIND_PACKAGE(Boost REQUIRED)
 FIND_PACKAGE(SharemindCHeaders REQUIRED)
 FIND_PACKAGE(SharemindCxxHeaders REQUIRED)
-FIND_PACKAGE(SharemindLibExecutable REQUIRED)
+FIND_PACKAGE(SharemindLibExecutable 0.2.0 REQUIRED)
 FIND_PACKAGE(SharemindLibVmi 0.2.0 REQUIRED)
 
 
@@ -112,7 +112,7 @@ SharemindAddComponentPackage("lib"
     DESCRIPTION "Sharemind Assembler library"
     DEB_SECTION "libs"
     DEB_DEPENDS
-        "libsharemind-executable (>= 0.1.0)"
+        "libsharemind-executable (>= 0.2.0)"
         "libsharemind-vmi (>= 0.2.0)"
         "libc6 (>= 2.19)"
 )
@@ -122,7 +122,7 @@ SharemindAddComponentPackage("dev"
     DEB_SECTION "libdevel"
     DEB_DEPENDS
         "libsharemind-as (= ${SharemindLibAs_VERSION})"
-        "libsharemind-executable-dev (>= 0.1.0)"
+        "libsharemind-executable-dev (>= 0.2.0)"
         "libsharemind-cheaders-dev (>= 0.1.0)"
         "libc6-dev (>= 2.19)"
 )

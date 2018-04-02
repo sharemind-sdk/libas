@@ -27,8 +27,9 @@
 #include <memory>
 #include <new>
 #include <sharemind/codeblock.h>
-#include <sharemind/libexecutable/sharemind_executable_section_type.h>
+#include <sharemind/libexecutable/libexecutable_0x0.h>
 #include <sharemind/ExceptionMacros.h>
+#include <unordered_map>
 #include <vector>
 #include "Exception.h"
 
@@ -38,6 +39,8 @@ namespace Assembler {
 
 SHAREMIND_DECLARE_EXCEPTION_CONST_STDSTRING_NOINLINE(Exception,
                                                      LinkerException);
+
+using SectionType = ExecutableSectionHeader0x0::SectionType;
 
 struct Section {
 
@@ -129,8 +132,9 @@ private: /* Fields: */
 };
 
 struct LinkingUnit {
-    std::array<std::unique_ptr<Section>,
-               SHAREMIND_EXECUTABLE_SECTION_TYPE_COUNT> sections;
+    std::unordered_map<SectionType, std::unique_ptr<Section> > sections{
+                static_cast<std::underlying_type<SectionType>::type>(
+                    SectionType::Count)};
 };
 
 using LinkingUnitsVector = std::vector<LinkingUnit>;

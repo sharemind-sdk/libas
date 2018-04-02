@@ -103,13 +103,14 @@ struct LabelLocation {
 
 /* Methods: */
 
-    LabelLocation(std::size_t offset_, int section_ = -1) noexcept
+    LabelLocation(std::size_t offset_,
+                  SectionType section_ = SectionType::Invalid) noexcept
         : offset(offset_)
         , section(section_)
     {}
 
     LabelLocation(std::size_t offset_,
-                  int section_,
+                  SectionType section_,
                   std::uint8_t linkingUnit_) noexcept
         : offset(offset_)
         , section(section_)
@@ -119,7 +120,7 @@ struct LabelLocation {
 /* Fields: */
 
     std::size_t offset;
-    int section;
+    SectionType section;
     std::uint8_t linkingUnit;
 
 };
@@ -250,7 +251,7 @@ LinkingUnitsVector assemble(TokensVector const & ts) {
     TokensVector::const_iterator const e(ts.end());
     LinkingUnit * lu;
     std::uint8_t lu_index = 0u;
-    int section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
+    auto sectionType = SectionType::Text;
     std::size_t numBindings = 0u;
     std::size_t numPdBindings = 0u;
     std::size_t dataToWriteLength = 0u;
@@ -281,26 +282,23 @@ assemble_newline:
             break;
         case Token::Type::LABEL:
         {
-            auto & sectionPtr = lu->sections[section_index];
+            auto & sectionPtr = lu->sections[sectionType];
             auto const r(
                     ll.emplace(
                         std::piecewise_construct,
                         std::make_tuple(t->labelValue()),
                         std::make_tuple(
-                            (section_index
-                             == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND)
+                            (sectionType == SectionType::Bind)
                             ? numBindings
-                            : ((section_index
-                                == SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND)
+                            : ((sectionType == SectionType::PdBind)
                                ? numPdBindings
                                : sectionPtr
-                                 ? ((section_index
-                                     == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT)
+                                 ? ((sectionType == SectionType::Text)
                                     ? static_cast<CodeSection *>(
                                           sectionPtr.get())->numInstructions()
                                     : sectionPtr->numBytes())
                                  : 0u),
-                            section_index,
+                            sectionType,
                             lu_index)));
             if (!r.second)
                 throw AssembleException(t, concat("Duplicate label: \"",
@@ -336,7 +334,7 @@ assemble_newline:
                         lu = &lus[v];
                     }
                     lu_index = static_cast<std::uint8_t>(v);
-                    section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
+                    sectionType = SectionType::Text;
                 }
             } else if (t->directiveValue() == "section") {
                 INC_CHECK_EOF;
@@ -344,40 +342,34 @@ assemble_newline:
                     goto assemble_invalid_parameter_t;
 
                 if (t->keywordValue() == "TEXT") {
-                    section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT;
+                    sectionType = SectionType::Text;
                 } else if (t->keywordValue() == "RODATA") {
-                    section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_RODATA;
+                    sectionType = SectionType::RoData;
                 } else if (t->keywordValue() == "DATA") {
-                    section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_DATA;
+                    sectionType = SectionType::Data;
                 } else if (t->keywordValue() == "BSS") {
-                    section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS;
+                    sectionType = SectionType::Bss;
                 } else if (t->keywordValue() == "BIND") {
-                    section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND;
+                    sectionType = SectionType::Bind;
                 } else if (t->keywordValue() == "PDBIND") {
-                    section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND;
+                    sectionType = SectionType::PdBind;
                 } else if (t->keywordValue() == "DEBUG") {
-                    section_index = SHAREMIND_EXECUTABLE_SECTION_TYPE_DEBUG;
+                    sectionType = SectionType::Debug;
                 } else {
                     goto assemble_invalid_parameter_t;
                 }
             } else if (t->directiveValue() == "data") {
-                if (unlikely((section_index
-                              == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT)
-                             || (section_index
-                                 == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND)
-                             || (section_index
-                                 == SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND)))
+                if (unlikely((sectionType == SectionType::Text)
+                             || (sectionType == SectionType::Bind)
+                             || (sectionType == SectionType::PdBind)))
                     goto assemble_unexpected_token_t;
 
                 multiplier = 1u;
                 goto assemble_data_or_fill;
             } else if (t->directiveValue() == "fill") {
-                if (unlikely((section_index
-                              == SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT)
-                             || (section_index
-                                 == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND)
-                             || (section_index
-                                 == SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND)))
+                if (unlikely((sectionType == SectionType::Text)
+                             || (sectionType == SectionType::Bind)
+                             || (sectionType == SectionType::PdBind)))
                     goto assemble_unexpected_token_t;
 
                 INC_CHECK_EOF;
@@ -391,10 +383,8 @@ assemble_newline:
 
                 goto assemble_data_or_fill;
             } else if (likely(t->directiveValue() == "bind")) {
-                if (unlikely((section_index
-                              != SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND)
-                             && (section_index
-                                 != SHAREMIND_EXECUTABLE_SECTION_TYPE_PDBIND)))
+                if (unlikely((sectionType != SectionType::Bind)
+                             && (sectionType != SectionType::PdBind)))
                     goto assemble_unexpected_token_t;
 
                 INC_CHECK_EOF;
@@ -404,11 +394,11 @@ assemble_newline:
 
                 auto const syscallSig(t->stringValue());
 
-                dataSectionCreateOrAddData(lu->sections[section_index],
+                dataSectionCreateOrAddData(lu->sections[sectionType],
                                            syscallSig.c_str(),
                                            syscallSig.size() + 1u);
 
-                if (section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_BIND) {
+                if (sectionType == SectionType::Bind) {
                     numBindings++;
                 } else {
                     numPdBindings++;
@@ -422,8 +412,7 @@ assemble_newline:
             goto assemble_newline;
         case Token::Type::KEYWORD:
         {
-            if (unlikely(section_index
-                         != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT))
+            if (unlikely(sectionType != SectionType::Text))
                 goto assemble_unexpected_token_t;
 
             std::size_t args = 0u;
@@ -466,7 +455,7 @@ assemble_newline:
                                                " given!"));
 
             // Create code section, if not yet created:
-            auto & sectionPtr = lu->sections[section_index];
+            auto & sectionPtr = lu->sections[sectionType];
             if (!sectionPtr)
                 sectionPtr = makeUnique<CodeSection>();
             auto & cs = *static_cast<CodeSection *>(sectionPtr.get());
@@ -526,8 +515,7 @@ assemble_newline:
 
                         /* Is this a jump instruction location? */
                         if (doJumpLabel) {
-                            if ((loc.section
-                                    != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT)
+                            if ((loc.section != SectionType::Text)
                                 || (loc.linkingUnit != lu_index))
                                 throw AssembleException(
                                         ot,
@@ -550,7 +538,7 @@ assemble_newline:
                         } else {
                             auto absTarget = loc.offset;
                             auto const offset = ot->labelOffset();
-                            if (loc.section < 0) {
+                            if (loc.section == SectionType::Invalid) {
                                 if (offset != 0)
                                     throw AssembleException(
                                             ot,
@@ -688,7 +676,7 @@ assemble_data_or_fill:
                 default:
                     abort();
             }
-            if (section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
+            if (sectionType != SectionType::Bss) {
                 dataToWrite.resize(dataToWriteLength);
                 std::memcpy(dataToWrite.data(), &v, dataToWriteLength);
             }
@@ -733,14 +721,14 @@ assemble_data_or_fill:
                 default:
                     abort();
             }
-            if (section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
+            if (sectionType != SectionType::Bss) {
                 dataToWrite.resize(dataToWriteLength);
                 std::memcpy(dataToWrite.data(), &v, dataToWriteLength);
             }
         } else if (t->type() == Token::Type::STRING && type == 8u) {
             auto const s(t->stringValue());
             dataToWriteLength = s.size();
-            if (section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
+            if (sectionType != SectionType::Bss) {
                 dataToWrite.resize(dataToWriteLength + 1u);
                 std::memcpy(dataToWrite.data(),
                             s.c_str(),
@@ -755,9 +743,9 @@ assemble_data_or_fill:
 
 assemble_data_write:
 
-        assert(section_index != SHAREMIND_EXECUTABLE_SECTION_TYPE_TEXT);
-        auto & sectionPtr = lu->sections[section_index];
-        if (section_index == SHAREMIND_EXECUTABLE_SECTION_TYPE_BSS) {
+        assert(sectionType != SectionType::Text);
+        auto & sectionPtr = lu->sections[sectionType];
+        if (sectionType == SectionType::Bss) {
             if (!sectionPtr) {
                 sectionPtr = makeUnique<BssSection>(multiplier,
                                                     dataToWriteLength);
