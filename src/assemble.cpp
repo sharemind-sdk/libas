@@ -551,7 +551,6 @@ assemble_newline:
                             }
                             toWrite.uint64[0] = absTarget;
                         }
-                        cs.addCode(&toWrite, 1u);
                     } else {
                         /* Signal a relative jump label: */
                         auto const offset = cs.numInstructions();
@@ -564,10 +563,13 @@ assemble_newline:
                                     doJumpLabel,
                                     lu_index);
 
-                        // Write dummy placeholder value:
-                        SharemindCodeBlock toWrite;
-                        cs.addCode(&toWrite, 1u);
+                        /* We still write a dummy placeholder value (from
+                           variable toWrite) to the section and replace it later
+                           once we have a value for it. We still need to
+                           initialize it to silence valgrind: */
+                        toWrite.uint64[0u] = 0u;
                     }
+                    cs.addCode(&toWrite, 1u);
                     doJumpLabel = false; /* Past first argument */
                 } else {
                     /* Skip keywords, because they're already included in the
