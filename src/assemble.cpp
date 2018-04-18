@@ -477,9 +477,6 @@ assemble_newline:
                 }
             }
 
-            /* Reserve memory for whole instruction: */
-            cs.reserveMore(args + 1u);
-
             /* Write instruction code */
             {
                 SharemindCodeBlock toWrite;
