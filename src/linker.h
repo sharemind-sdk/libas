@@ -112,8 +112,6 @@ public: /* Methods: */
 
     std::size_t numInstructions() const noexcept { return m_data.size(); }
 
-    void reserveMore(std::size_t size) { m_data.reserve(m_data.size() + size); }
-
     void addCode(SharemindCodeBlock const * data, std::size_t size)
     { m_data.insert(m_data.end(), data, data + size); }
 
