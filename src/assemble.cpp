@@ -746,8 +746,11 @@ assemble_data_write:
         auto & sectionPtr = lu->sections[sectionType];
         if (sectionType == SectionType::Bss) {
             if (!sectionPtr) {
-                sectionPtr = makeUnique<BssSection>(multiplier,
-                                                    dataToWriteLength);
+                if ((std::numeric_limits<std::size_t>::max() / multiplier)
+                    < dataToWriteLength)
+                    throw std::bad_array_new_length();
+                sectionPtr = makeUnique<BssSection>(multiplier
+                                                    * dataToWriteLength);
             } else {
                 static_cast<BssSection *>(sectionPtr.get())->addNumBytes(
                             multiplier * dataToWriteLength);

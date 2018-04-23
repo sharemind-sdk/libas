@@ -25,7 +25,6 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
-#include <new>
 #include <sharemind/codeblock.h>
 #include <sharemind/libexecutable/libexecutable_0x0.h>
 #include <sharemind/ExceptionMacros.h>
@@ -55,15 +54,8 @@ class BssSection final: public Section {
 
 public: /* Methods: */
 
-    BssSection(std::size_t numElements,
-               std::size_t elementSizeInBytes)
-        : m_sizeInBytes(
-            [numElements, elementSizeInBytes]() {
-                if ((std::numeric_limits<std::size_t>::max() / numElements)
-                    < elementSizeInBytes)
-                    throw std::bad_array_new_length();
-                return numElements * elementSizeInBytes;
-            }())
+    BssSection(std::size_t sizeInBytes)
+        : m_sizeInBytes(sizeInBytes)
     {}
 
     bool addNumBytes(std::size_t toAdd) noexcept {
