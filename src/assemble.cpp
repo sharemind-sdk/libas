@@ -23,7 +23,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <limits>
-#include <new>
 #include <sharemind/codeblock.h>
 #include <sharemind/Concat.h>
 #include <sharemind/IntegralComparisons.h>
@@ -745,15 +744,16 @@ assemble_data_write:
         assert(sectionType != SectionType::Text);
         auto & sectionPtr = lu->sections[sectionType];
         if (sectionType == SectionType::Bss) {
+            if ((std::numeric_limits<std::size_t>::max() / multiplier)
+                < dataToWriteLength)
+                throw AssembleException(t, "BSS section grew too large!");
             if (!sectionPtr) {
-                if ((std::numeric_limits<std::size_t>::max() / multiplier)
-                    < dataToWriteLength)
-                    throw std::bad_array_new_length();
                 sectionPtr = makeUnique<BssSection>(multiplier
                                                     * dataToWriteLength);
             } else {
-                static_cast<BssSection *>(sectionPtr.get())->addNumBytes(
-                            multiplier * dataToWriteLength);
+                if (!static_cast<BssSection &>(*sectionPtr).addNumBytes(
+                        multiplier * dataToWriteLength))
+                    throw AssembleException(t, "BSS section grew too large!");
             }
         } else {
             /* Actually write the values. */
