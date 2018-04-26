@@ -22,9 +22,9 @@
 
 #include <sharemind/AssertReturn.h>
 #include <sharemind/ExceptionMacros.h>
+#include <sharemind/libexecutable/Executable.h>
 #include <sharemind/preprocessor.h>
 #include "Exception.h"
-#include "linker.h"
 #include "tokens.h"
 
 
@@ -72,7 +72,7 @@ private: /* Fields: */
 
 };
 
-LinkingUnitsVector assemble(TokensVector const & ts);
+Executable assemble(TokensVector const & ts);
 
 } /* namespace Assembler { */
 } /* namespace sharemind { */

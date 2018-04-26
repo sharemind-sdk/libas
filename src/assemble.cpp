@@ -26,6 +26,7 @@
 #include <sharemind/codeblock.h>
 #include <sharemind/Concat.h>
 #include <sharemind/IntegralComparisons.h>
+#include <sharemind/libexecutable/libexecutable_0x0.h>
 #include <sharemind/libvmi/instr.h>
 #include <sharemind/likely.h>
 #include <sharemind/MakeUnique.h>
@@ -97,6 +98,7 @@ inline bool substract_2sizet_to_int64(std::int64_t * const dest,
     return true;
 }
 
+using SectionType = ExecutableSectionHeader0x0::SectionType;
 
 struct LabelLocation {
 
@@ -130,7 +132,7 @@ struct LabelSlot {
 
     LabelSlot(std::int64_t extraOffset_,
               std::size_t jmpOffset_,
-              CodeSection & codeSection_,
+              decltype(Executable::TextSection::instructions) & codeSection_,
               std::size_t cbdata_index_,
               TokensVector::const_iterator tokenIt_,
               bool doJumpLabel_,
@@ -146,7 +148,7 @@ struct LabelSlot {
 
     std::int64_t extraOffset;
     std::size_t jmpOffset;
-    CodeSection & codeSection;
+    decltype(Executable::TextSection::instructions) & codeSection;
     std::size_t cbdata_index;
     TokensVector::const_iterator tokenIt;
     bool doJumpLabel;
@@ -203,17 +205,105 @@ struct LabelSlotsMap: public SimpleUnorderedStringMap<LabelSlotsVector> {
 
 };
 
-void dataSectionCreateOrAddData(std::unique_ptr<Section> & sectionPtr,
-                                void const * const data,
-                                std::size_t const dataSize,
-                                std::size_t const multiplier = 1u)
+class ResizableDataSection: public Executable::DataSection {
+
+private: /* Types: */
+
+    using Container = std::vector<char>;
+    static_assert(std::is_same<Container::size_type, std::size_t>::value, "");
+
+public: /* Methods: */
+
+    ResizableDataSection()
+        : ResizableDataSection(std::make_shared<Container>(), 0u)
+    {}
+
+    ResizableDataSection(void const * const data,
+                         std::size_t const dataSize,
+                         std::size_t multiplier = 1u)
+        : ResizableDataSection(
+            [](void const * data,
+               std::size_t const dataSize,
+               std::size_t multiplier)
+            {
+                if ((std::numeric_limits<std::size_t>::max() / multiplier)
+                    < dataSize)
+                    throw std::bad_array_new_length();
+                auto r(std::make_shared<Container>(dataSize * multiplier));
+                writeData(r->data(), data, dataSize, multiplier);
+                return r;
+            }(data, dataSize, multiplier),
+            dataSize)
+    {}
+
+    void addData(void const * const data,
+                 std::size_t const dataSize,
+                 std::size_t multiplier = 1u)
+    {
+        assert(this->data);
+        assert(this->data.get() == m_container.data());
+
+        if (std::numeric_limits<std::size_t>::max() / multiplier < dataSize)
+            throw std::bad_array_new_length();
+        auto const toAdd = dataSize * multiplier;
+        auto const oldSize = m_container.size();
+        if ((std::numeric_limits<std::size_t>::max() - oldSize) < toAdd)
+            throw std::bad_array_new_length();
+        auto const totalDataSize = oldSize + toAdd;
+        m_container.resize(totalDataSize);
+        writeData(m_container.data() + oldSize, data, dataSize, multiplier);
+        this->data = std::shared_ptr<void>(this->data, m_container.data());
+        this->sizeInBytes = totalDataSize;
+    }
+
+private: /* Methods: */
+
+    ResizableDataSection(std::shared_ptr<Container> containerPtr,
+                         std::size_t const dataSize)
+        : Executable::DataSection(
+              std::shared_ptr<void>(containerPtr, containerPtr->data()),
+              dataSize)
+        , m_container(*containerPtr)
+    {}
+
+    static void writeData(char * writePtr,
+                          void const * const data,
+                          std::size_t const dataSize,
+                          std::size_t multiplier)
+    {
+        for (;;) {
+            std::memcpy(writePtr, data, dataSize);
+            if (!--multiplier)
+                break;
+            writePtr += dataSize;
+        }
+    }
+
+private: /* Fields: */
+
+    Container & m_container;
+
+};
+
+void dataSectionCreateOrAddData(
+        std::shared_ptr<Executable::DataSection> & sectionPtr,
+        void const * const data,
+        std::size_t const dataSize,
+        std::size_t multiplier = 1u)
 {
+    if (!dataSize || !multiplier)
+        return;
+
+    assert(data);
+
     if (!sectionPtr) {
-        sectionPtr = makeUnique<DataSection>(data, dataSize);
+        sectionPtr = std::make_shared<ResizableDataSection>(data,
+                                                            dataSize,
+                                                            multiplier);
     } else {
-        auto & ds = *static_cast<DataSection *>(sectionPtr.get());
-        for (std::size_t i = 0u; i < multiplier; ++i)
-            ds.addData(data, dataSize);
+        auto & resizeableSection =
+                *static_cast<ResizableDataSection *>(sectionPtr.get());
+        resizeableSection.addData(data, dataSize, multiplier);
     }
 }
 
@@ -241,18 +331,15 @@ void dataSectionCreateOrAddData(std::unique_ptr<Section> & sectionPtr,
         DO_EOL(eof,noexpect); \
     } while ((0))
 
-LinkingUnitsVector assemble(TokensVector const & ts) {
+Executable assemble(TokensVector const & ts) {
     if (ts.empty())
         throw AssembleException(ts.end(),
                                 "Won't assemble an empty tokens vector!");
 
     TokensVector::const_iterator t(ts.begin());
     TokensVector::const_iterator const e(ts.end());
-    LinkingUnit * lu;
     std::uint8_t lu_index = 0u;
     auto sectionType = SectionType::Text;
-    std::size_t numBindings = 0u;
-    std::size_t numPdBindings = 0u;
     std::size_t dataToWriteLength = 0u;
 
     /* for .data and .fill: */
@@ -267,12 +354,13 @@ LinkingUnitsVector assemble(TokensVector const & ts) {
 
     LabelSlotsMap lst;
 
-    LinkingUnitsVector lus;
+    Executable exe;
     if (unlikely(ts.empty()))
-        return lus;
+        return exe;
 
+    auto & lus = exe.linkingUnits;
     lus.emplace_back();
-    lu = &lus.back();
+    auto lu = &lus.back();
 
 
 assemble_newline:
@@ -281,36 +369,71 @@ assemble_newline:
             break;
         case Token::Type::LABEL:
         {
-            auto & sectionPtr = lu->sections[sectionType];
-            auto const r(
-                    ll.emplace(
-                        std::piecewise_construct,
-                        std::make_tuple(t->labelValue()),
-                        std::make_tuple(
-                            (sectionType == SectionType::Bind)
-                            ? numBindings
-                            : ((sectionType == SectionType::PdBind)
-                               ? numPdBindings
-                               : sectionPtr
-                                 ? ((sectionType == SectionType::Text)
-                                    ? static_cast<CodeSection *>(
-                                          sectionPtr.get())->numInstructions()
-                                    : sectionPtr->numBytes())
-                                 : 0u),
-                            sectionType,
-                            lu_index)));
-            if (!r.second)
-                throw AssembleException(t, concat("Duplicate label: \"",
-                                                  t->labelValue(), '"'));
+            auto const registerLabel =
+                    [&ll, &lst, &ts, t, sectionType, lu_index](
+                            std::size_t offset)
+                    {
+                        auto const r(
+                                ll.emplace(
+                                    std::piecewise_construct,
+                                    std::make_tuple(t->labelValue()),
+                                    std::make_tuple(
+                                            LabelLocation(offset,
+                                                          sectionType,
+                                                          lu_index))));
+                        if (!r.second)
+                            throw AssembleException(t, concat("Duplicate label: \"",
+                                                              t->labelValue(), '"'));
 
-            /* Fill pending label slots: */
-            auto const recordIt(lst.find(r.first->first));
-            if (recordIt != lst.end()) {
-                if (!recordIt->second.fillSlots(r.first->second, ts.end()))
-                    throw AssembleException(t, concat("Invalid label: \"",
-                                                      t->labelValue(), '"'));
-                lst.erase(recordIt);
+                        /* Fill pending label slots: */
+                        auto const recordIt(lst.find(r.first->first));
+                        if (recordIt != lst.end()) {
+                            if (!recordIt->second.fillSlots(r.first->second, ts.end()))
+                                throw AssembleException(t, concat("Invalid label: \"",
+                                                                  t->labelValue(), '"'));
+                            lst.erase(recordIt);
+                        }
+                    };
+
+            switch (sectionType) {
+                case SectionType::Text:
+                    registerLabel(lu->textSection
+                                  ? lu->textSection->instructions.size()
+                                  : 0u);
+                    break;
+                case SectionType::RoData:
+                    registerLabel(lu->roDataSection
+                                  ? lu->roDataSection->sizeInBytes
+                                  : 0u);
+                    break;
+                case SectionType::Data:
+                    registerLabel(lu->rwDataSection
+                                  ? lu->rwDataSection->sizeInBytes
+                                  : 0u);
+                    break;
+                case SectionType::Bss:
+                    registerLabel(lu->bssSection
+                                  ? lu->bssSection->sizeInBytes
+                                  : 0u);
+                    break;
+                case SectionType::Bind:
+                    registerLabel(lu->bindingsSection
+                                  ? lu->bindingsSection->bindings.size()
+                                  : 0u);
+                    break;
+                case SectionType::PdBind:
+                    registerLabel(lu->pdBindingsSection
+                                  ? lu->pdBindingsSection->pdBindings.size()
+                                  : 0u);
+                    break;
+                default:
+                    assert(sectionType == SectionType::Debug);
+                    registerLabel(lu->debugSection
+                                  ? lu->debugSection->sizeInBytes
+                                  : 0u);
+                    break;
             }
+
             break;
         }
         case Token::Type::DIRECTIVE:
@@ -391,16 +514,19 @@ assemble_newline:
                 if (unlikely(t->type() != Token::Type::STRING))
                     goto assemble_invalid_parameter_t;
 
-                auto const syscallSig(t->stringValue());
-
-                dataSectionCreateOrAddData(lu->sections[sectionType],
-                                           syscallSig.c_str(),
-                                           syscallSig.size() + 1u);
-
                 if (sectionType == SectionType::Bind) {
-                    numBindings++;
+                    if (!lu->bindingsSection)
+                        lu->bindingsSection =
+                                std::make_shared<Executable::BindingsSection>();
+                    lu->bindingsSection->bindings.emplace_back(
+                                t->stringValue());
                 } else {
-                    numPdBindings++;
+                    assert(sectionType == SectionType::PdBind);
+                    if (!lu->pdBindingsSection)
+                        lu->pdBindingsSection =
+                            std::make_shared<Executable::PdBindingsSection>();
+                    lu->pdBindingsSection->pdBindings.emplace_back(
+                                t->stringValue());
                 }
             } else {
                 throw AssembleException(t, concat("Unknown directive: .",
@@ -454,10 +580,12 @@ assemble_newline:
                                                " given!"));
 
             // Create code section, if not yet created:
-            auto & sectionPtr = lu->sections[sectionType];
-            if (!sectionPtr)
-                sectionPtr = makeUnique<CodeSection>();
-            auto & cs = *static_cast<CodeSection *>(sectionPtr.get());
+            if (!lu->textSection)
+                lu->textSection = std::make_shared<Executable::TextSection>();
+            auto & csi = lu->textSection->instructions;
+            auto const addCode =
+                    [&csi](SharemindCodeBlock c)
+                    { csi.emplace_back(std::move(c)); };
 
             /* Detect offset for jump instructions */
             std::size_t jmpOffset;
@@ -468,7 +596,7 @@ assemble_newline:
                 if (c[0u] == 0x04     /* Check for jump namespace */
                     && c[2u] == 0x01) /* and imm first argument OLB */
                 {
-                    jmpOffset = cs.numInstructions();
+                    jmpOffset = csi.size();
                     doJumpLabel = true;
                 } else {
                     jmpOffset = 0u;
@@ -480,7 +608,7 @@ assemble_newline:
             {
                 SharemindCodeBlock toWrite;
                 toWrite.uint64[0] = i.code;
-                cs.addCode(&toWrite, 1u);
+                addCode(std::move(toWrite));
             }
 
             /* Write arguments: */
@@ -491,12 +619,12 @@ assemble_newline:
                     doJumpLabel = false; /* Past first argument */
                     SharemindCodeBlock toWrite;
                     toWrite.uint64[0] = ot->uhexValue();
-                    cs.addCode(&toWrite, 1u);
+                    addCode(std::move(toWrite));
                 } else if (ot->type() == Token::Type::HEX) {
                     doJumpLabel = false; /* Past first argument */
                     SharemindCodeBlock toWrite;
                     toWrite.int64[0] = ot->hexValue();
-                    cs.addCode(&toWrite, 1u);
+                    addCode(std::move(toWrite));
                 } else if (likely((ot->type() == Token::Type::LABEL)
                                   || (ot->type()
                                       == Token::Type::LABEL_O)))
@@ -549,11 +677,11 @@ assemble_newline:
                         }
                     } else {
                         /* Signal a relative jump label: */
-                        auto const offset = cs.numInstructions();
+                        auto const offset = csi.size();
                         lst[std::move(label)].emplace_back(
                                     ot->labelOffset(),
                                     jmpOffset,
-                                    cs,
+                                    csi,
                                     offset,
                                     ot,
                                     doJumpLabel,
@@ -565,7 +693,7 @@ assemble_newline:
                            initialize it to silence valgrind: */
                         toWrite.uint64[0u] = 0u;
                     }
-                    cs.addCode(&toWrite, 1u);
+                    addCode(std::move(toWrite));
                     doJumpLabel = false; /* Past first argument */
                 } else {
                     /* Skip keywords, because they're already included in the
@@ -591,7 +719,7 @@ assemble_check_labels:
 
     /* Check for undefined labels: */
     if (likely(lst.empty()))
-        return lus;
+        return exe;
     throw AssembleException(
             lst.begin()->second.begin()->tokenIt,
             concat("Undefined label: ", lst.begin()->first));
@@ -741,24 +869,39 @@ assemble_data_or_fill:
 
 assemble_data_write:
 
-        assert(sectionType != SectionType::Text);
-        auto & sectionPtr = lu->sections[sectionType];
         if (sectionType == SectionType::Bss) {
             if ((std::numeric_limits<std::size_t>::max() / multiplier)
                 < dataToWriteLength)
                 throw AssembleException(t, "BSS section grew too large!");
-            if (!sectionPtr) {
-                sectionPtr = makeUnique<BssSection>(multiplier
-                                                    * dataToWriteLength);
+            if (!lu->bssSection) {
+                lu->bssSection =
+                        std::make_shared<Executable::BssSection>(
+                            multiplier * dataToWriteLength);
             } else {
-                if (!static_cast<BssSection &>(*sectionPtr).addNumBytes(
-                        multiplier * dataToWriteLength))
+                auto const toAdd = multiplier * dataToWriteLength;
+                auto const oldSizeInBytes = lu->bssSection->sizeInBytes;
+                if ((std::numeric_limits<std::size_t>::max() - toAdd)
+                    < oldSizeInBytes)
                     throw AssembleException(t, "BSS section grew too large!");
+                lu->bssSection->sizeInBytes = oldSizeInBytes + toAdd;
             }
         } else {
             /* Actually write the values. */
             assert(!dataToWrite.empty());
-            dataSectionCreateOrAddData(sectionPtr,
+            std::shared_ptr<Executable::DataSection> * sectionPtrPtr;
+            switch (sectionType) {
+            case SectionType::RoData:
+                sectionPtrPtr = &lu->roDataSection;
+                break;
+            case SectionType::Data:
+                sectionPtrPtr = &lu->rwDataSection;
+                break;
+            default:
+                assert(sectionType == SectionType::Debug);
+                sectionPtrPtr = &lu->debugSection;
+                break;
+            }
+            dataSectionCreateOrAddData(*sectionPtrPtr,
                                        dataToWrite.data(),
                                        dataToWriteLength,
                                        multiplier);
