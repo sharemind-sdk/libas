@@ -417,9 +417,10 @@ assemble_newline:
                                   : 0u);
                     break;
                 case SectionType::Bind:
-                    registerLabel(lu->bindingsSection
-                                  ? lu->bindingsSection->bindings.size()
-                                  : 0u);
+                    registerLabel(
+                            lu->syscallBindingsSection
+                            ? lu->syscallBindingsSection->syscallBindings.size()
+                            : 0u);
                     break;
                 case SectionType::PdBind:
                     registerLabel(lu->pdBindingsSection
@@ -515,10 +516,10 @@ assemble_newline:
                     goto assemble_invalid_parameter_t;
 
                 if (sectionType == SectionType::Bind) {
-                    if (!lu->bindingsSection)
-                        lu->bindingsSection =
-                                std::make_shared<Executable::BindingsSection>();
-                    lu->bindingsSection->bindings.emplace_back(
+                    using SBS = Executable::SyscallBindingsSection;
+                    if (!lu->syscallBindingsSection)
+                        lu->syscallBindingsSection = std::make_shared<SBS>();
+                    lu->syscallBindingsSection->syscallBindings.emplace_back(
                                 t->stringValue());
                 } else {
                     assert(sectionType == SectionType::PdBind);
