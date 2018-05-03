@@ -214,10 +214,6 @@ private: /* Types: */
 
 public: /* Methods: */
 
-    ResizableDataSection()
-        : ResizableDataSection(std::make_shared<Container>(), 0u)
-    {}
-
     ResizableDataSection(void const * const data,
                          std::size_t const dataSize,
                          std::size_t multiplier = 1u)
