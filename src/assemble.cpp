@@ -214,25 +214,25 @@ private: /* Types: */
 
 public: /* Methods: */
 
-    ResizableDataSection(void const * const data,
+    ResizableDataSection(void const * const dataPtr,
                          std::size_t const dataSize,
                          std::size_t multiplier = 1u)
         : ResizableDataSection(
-            [](void const * data,
-               std::size_t const dataSize,
-               std::size_t multiplier)
+            [](void const * dataPtr_,
+               std::size_t const dataSize_,
+               std::size_t multiplier_)
             {
-                if ((std::numeric_limits<std::size_t>::max() / multiplier)
-                    < dataSize)
+                if ((std::numeric_limits<std::size_t>::max() / multiplier_)
+                    < dataSize_)
                     throw std::bad_array_new_length();
-                auto r(std::make_shared<Container>(dataSize * multiplier));
-                writeData(r->data(), data, dataSize, multiplier);
+                auto r(std::make_shared<Container>(dataSize_ * multiplier_));
+                writeData(r->data(), dataPtr_, dataSize_, multiplier_);
                 return r;
-            }(data, dataSize, multiplier),
+            }(dataPtr, dataSize, multiplier),
             dataSize)
     {}
 
-    void addData(void const * const data,
+    void addData(void const * const dataPtr,
                  std::size_t const dataSize,
                  std::size_t multiplier = 1u)
     {
@@ -247,7 +247,7 @@ public: /* Methods: */
             throw std::bad_array_new_length();
         auto const totalDataSize = oldSize + toAdd;
         m_container.resize(totalDataSize);
-        writeData(m_container.data() + oldSize, data, dataSize, multiplier);
+        writeData(m_container.data() + oldSize, dataPtr, dataSize, multiplier);
         this->data = std::shared_ptr<void>(this->data, m_container.data());
         this->sizeInBytes = totalDataSize;
     }
