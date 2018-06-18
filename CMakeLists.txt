@@ -121,7 +121,7 @@ SharemindAddComponentPackage("dev"
     DESCRIPTION "Sharemind Assembler library development headers"
     DEB_SECTION "libdevel"
     DEB_DEPENDS
-        "libsharemind-as (= ${SharemindLibAs_VERSION})"
+        "libsharemind-as (= ${SharemindLibAs_DEB_lib_PACKAGE_VERSION})"
         "libsharemind-executable-dev (>= 0.2.0)"
         "libsharemind-cheaders-dev (>= 0.1.0)"
         "libc6-dev (>= 2.19)"
@@ -130,6 +130,6 @@ SharemindAddComponentPackage("debug"
     NAME "libsharemind-as-dbg"
     DESCRIPTION "Sharemind Assembler library debug symbols"
     DEB_SECTION "debug"
-    DEB_DEPENDS "libsharemind-as (= ${SharemindLibAs_VERSION})"
+    DEB_DEPENDS "libsharemind-as (= ${SharemindLibAs_DEB_lib_PACKAGE_VERSION})"
 )
 SharemindPackagingFinalize()
