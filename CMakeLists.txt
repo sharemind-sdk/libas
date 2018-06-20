@@ -123,7 +123,7 @@ SharemindAddComponentPackage("dev"
     DEB_DEPENDS
         "libsharemind-as (= ${SharemindLibAs_DEB_lib_PACKAGE_VERSION})"
         "libsharemind-executable-dev (>= 0.2.0)"
-        "libsharemind-cheaders-dev (>= 0.1.0)"
+        "libsharemind-cheaders-dev (>= 1.1.0)"
         "libc6-dev (>= 2.19)"
 )
 SharemindAddComponentPackage("debug"
