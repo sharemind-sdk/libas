@@ -22,7 +22,7 @@
 
 #include <cassert>
 #include <cstdint>
-#include <ostream>
+#include <iosfwd>
 #include <string>
 #include <vector>
 

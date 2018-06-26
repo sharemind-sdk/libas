@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
+#include <ostream>
 #include <sharemind/abort.h>
 #include <sharemind/IntegralComparisons.h>
 #include <sharemind/SignedToUnsigned.h>
