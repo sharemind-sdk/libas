@@ -41,7 +41,7 @@ INSTALL(FILES ${SharemindLibAs_HEADERS}
 
 
 # The library:
-SharemindSetCxx11CompileOptions(COMPILE_FLAGS "-fwrapv")
+SharemindSetCxx14CompileOptions(COMPILE_FLAGS "-fwrapv")
 SharemindNewUniqueList(LIBAS_EXTERNAL_INCLUDE_DIRS
     ${Boost_INCLUDE_DIRS}
     ${SharemindCHeaders_INCLUDE_DIRS}
