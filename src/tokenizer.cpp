@@ -22,7 +22,6 @@
 #include <cassert>
 #include <sharemind/Concat.h>
 #include <sharemind/likely.h>
-#include <sharemind/MakeUnique.h>
 #include "Exception.h"
 
 

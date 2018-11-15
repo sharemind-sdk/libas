@@ -29,7 +29,6 @@
 #include <sharemind/libexecutable/libexecutable_0x0.h>
 #include <sharemind/libvmi/instr.h>
 #include <sharemind/likely.h>
-#include <sharemind/MakeUnique.h>
 #include <sharemind/SimpleUnorderedStringMap.h>
 #include <sstream>
 #include <tuple>
