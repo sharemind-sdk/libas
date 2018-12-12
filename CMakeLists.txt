@@ -112,6 +112,7 @@ SharemindAddComponentPackage("lib"
     DEB_DEPENDS
         "libsharemind-executable (>= 0.2.0)"
         "libsharemind-vmi (>= 0.2.0)"
+        "libstdc++6 (>= 4.8.0)"
         "libc6 (>= 2.19)"
 )
 SharemindAddComponentPackage("dev"
@@ -122,7 +123,8 @@ SharemindAddComponentPackage("dev"
         "libsharemind-as (= ${SharemindLibAs_DEB_lib_PACKAGE_VERSION})"
         "libsharemind-executable-dev (>= 0.2.0)"
         "libsharemind-cheaders-dev (>= 1.1.0)"
-        "libc6-dev (>= 2.19)"
+        "libsharemind-cxxheaders-dev (>= 0.4.0)"
+        "libstdc++-dev"
 )
 SharemindAddComponentPackage("debug"
     NAME "libsharemind-as-dbg"
