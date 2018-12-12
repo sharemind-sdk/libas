@@ -41,7 +41,14 @@ INSTALL(FILES ${SharemindLibAs_HEADERS}
 
 
 # The library:
-SharemindSetCxx11CompileOptions(COMPILE_FLAGS "-fwrapv")
+IF("${SharemindCxxHeaders_VERSION}" VERSION_LESS "0.6.0")
+    SharemindSetCxx11CompileOptions(COMPILE_FLAGS "-fwrapv")
+ELSEIF("${SharemindCMakeHelpers_VERSION}" VERSION_LESS "1.4")
+    MESSAGE(FATAL_ERROR
+            "Incompatible combination of CMakeHelpers and CxxHeaders versions!")
+ELSE()
+    SharemindSetCxx14CompileOptions(COMPILE_FLAGS "-fwrapv")
+ENDIF()
 SharemindNewUniqueList(LIBAS_EXTERNAL_INCLUDE_DIRS
     ${Boost_INCLUDE_DIRS}
     ${SharemindCHeaders_INCLUDE_DIRS}
