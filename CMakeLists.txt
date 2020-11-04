@@ -41,7 +41,7 @@ INSTALL(FILES ${SharemindLibAs_HEADERS}
 
 
 # The library:
-SharemindSetCxx14CompileOptions(COMPILE_FLAGS "-fwrapv")
+SharemindSetCxx14CompileOptions()
 SharemindNewUniqueList(LIBAS_EXTERNAL_INCLUDE_DIRS
     ${Boost_INCLUDE_DIRS}
     ${SharemindCHeaders_INCLUDE_DIRS}
@@ -65,7 +65,7 @@ SharemindNewUniqueList(LIBAS_EXTERNAL_DEFINITIONS
 )
 FILE(GLOB_RECURSE SharemindLibAs_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
-SharemindAddSharedLibrary("libas"
+SharemindAddSharedLibrary(LibAs
     OUTPUT_NAME "sharemind_as"
     SOURCES
         ${SharemindLibAs_SOURCES}
@@ -77,6 +77,7 @@ SharemindAddSharedLibrary("libas"
     LINK_LIBRARIES
         ${LIBAS_EXTERNAL_LIBRARIES}
 )
+TARGET_COMPILE_OPTIONS(LibAs PRIVATE "-fwrapv")
 
 
 # Install cmake files:
