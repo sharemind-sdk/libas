@@ -23,14 +23,12 @@ PROJECT(SharemindLibAs VERSION "0.3.2" LANGUAGES "CXX")
 INCLUDE("${CMAKE_CURRENT_SOURCE_DIR}/config.local" OPTIONAL)
 INCLUDE("${CMAKE_CURRENT_BINARY_DIR}/config.local" OPTIONAL)
 
-FIND_PACKAGE(SharemindCMakeHelpers 1.4 REQUIRED)
+FIND_PACKAGE(SharemindCMakeHelpers 1.6 REQUIRED)
 
-
-FIND_PACKAGE(Boost REQUIRED)
-FIND_PACKAGE(SharemindCHeaders 1.1.0 REQUIRED)
-FIND_PACKAGE(SharemindCxxHeaders 0.4.0 REQUIRED)
-FIND_PACKAGE(SharemindLibExecutable 0.2.0 REQUIRED)
-FIND_PACKAGE(SharemindLibVmi 0.2.2 REQUIRED)
+FIND_PACKAGE(SharemindCHeaders 1.3.0 REQUIRED)
+FIND_PACKAGE(SharemindCxxHeaders 0.8.0 REQUIRED)
+FIND_PACKAGE(SharemindLibExecutable 0.4.0 REQUIRED)
+FIND_PACKAGE(SharemindLibVmi 0.4.0 REQUIRED)
 
 
 # Headers:
@@ -42,27 +40,6 @@ INSTALL(FILES ${SharemindLibAs_HEADERS}
 
 # The library:
 SharemindSetCxx14CompileOptions()
-SharemindNewUniqueList(LIBAS_EXTERNAL_INCLUDE_DIRS
-    ${Boost_INCLUDE_DIRS}
-    ${SharemindCHeaders_INCLUDE_DIRS}
-    ${SharemindCxxHeaders_INCLUDE_DIRS}
-    ${SharemindLibExecutable_INCLUDE_DIRS}
-    ${SharemindLibVmi_INCLUDE_DIRS}
-)
-SharemindNewUniqueList(LIBAS_EXTERNAL_LIBRARIES
-    ${Boost_LIBRARIES}
-    ${SharemindCHeaders_LIBRARIES}
-    ${SharemindCxxHeaders_LIBRARIES}
-    ${SharemindLibExecutable_LIBRARIES}
-    ${SharemindLibVmi_LIBRARIES}
-)
-SharemindNewUniqueList(LIBAS_EXTERNAL_DEFINITIONS
-    ${Boost_DEFINITIONS}
-    ${SharemindCHeaders_DEFINITIONS}
-    ${SharemindCxxHeaders_DEFINITIONS}
-    ${SharemindLibExecutable_DEFINITIONS}
-    ${SharemindLibVmi_DEFINITIONS}
-)
 FILE(GLOB_RECURSE SharemindLibAs_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 SharemindAddSharedLibrary(LibAs
@@ -70,29 +47,28 @@ SharemindAddSharedLibrary(LibAs
     SOURCES
         ${SharemindLibAs_SOURCES}
         ${SharemindLibAs_HEADERS}
-    INCLUDE_DIRECTORIES
-        ${LIBAS_EXTERNAL_INCLUDE_DIRS}
-    LEGACY_DEFINITIONS
-        ${LIBAS_EXTERNAL_DEFINITIONS}
-    LINK_LIBRARIES
-        ${LIBAS_EXTERNAL_LIBRARIES}
 )
+TARGET_INCLUDE_DIRECTORIES(LibAs
+    INTERFACE
+        # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src> # TODO
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/include>
+    )
+TARGET_COMPILE_DEFINITIONS(LibAs PUBLIC "__STDC_LIMIT_MACROS")
 TARGET_COMPILE_OPTIONS(LibAs PRIVATE "-fwrapv")
-
-
-# Install cmake files:
-SharemindCreateCMakeFindFiles(
-    INCLUDE_DIRS
-        "${CMAKE_INSTALL_PREFIX}/include"
-        ${LIBAS_EXTERNAL_INCLUDE_DIRS}
-    DEFINITIONS
-        ${LIBAS_EXTERNAL_DEFINITIONS}
-        "-D__STDC_LIMIT_MACROS"
-    LIBRARIES
-        ${LIBAS_EXTERNAL_LIBRARIES}
-        "-L${CMAKE_INSTALL_PREFIX}/lib"
-        "-lsharemind_as"
-)
+TARGET_LINK_LIBRARIES(LibAs
+    PRIVATE
+        "Sharemind::LibVmi"
+    PUBLIC
+        "Sharemind::CHeaders"
+        "Sharemind::CxxHeaders"
+        "Sharemind::LibExecutable"
+    )
+SharemindCreateCMakeFindFilesForTarget(LibAs
+    DEPENDENCIES
+        "SharemindCHeaders 1.3.0"
+        "SharemindCxxHeaders 0.8.0"
+        "SharemindLibExecutable 0.4.0"
+    )
 
 
 # Misc. files
