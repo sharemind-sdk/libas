@@ -39,7 +39,6 @@ INSTALL(FILES ${SharemindLibAs_HEADERS}
 
 
 # The library:
-SharemindSetCxx14CompileOptions()
 FILE(GLOB_RECURSE SharemindLibAs_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 SharemindAddSharedLibrary(LibAs
