@@ -65,7 +65,7 @@ TARGET_LINK_LIBRARIES(LibAs
 SharemindCreateCMakeFindFilesForTarget(LibAs
     DEPENDENCIES
         "SharemindCHeaders 1.3.0"
-        "SharemindCxxHeaders 0.8.0"
+        "SharemindCxxHeaders 0.9.0"
         "SharemindLibExecutable 0.4.0"
     )
 
